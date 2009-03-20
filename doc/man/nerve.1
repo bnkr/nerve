@@ -1,0 +1,199 @@
+.TH "nerve" "1" "Feb 19 2009" "" "User Manuals"
+.SH NAME
+.LP
+.B
+nerve \- control interface to the nerve daemon
+.SH SYNOPSIS
+.LP
+\fBnerve\fR \fICOMMAND\fR \fI[OPTION]\fR...
+.SH DESCRIPTION
+.LP
+\fBNerve\fR is a daemon-based music player.  This program is intended as a detached 
+command-line interface for interacting with the nerve media player daemon, including 
+a way to start, stop, and restart the daemon.
+.LP
+\fBNerve\fR is playlist based, so all the commands relate to manipulating the 
+playlist state in some way.  The file being played has a special state which is 
+seperate to the playlist, so modifications to the playlist never affect the 
+running file.
+.LP
+The manpage \fBnerved(1)\fR has some more details on the internal implementation 
+and configuration and, if you are really interested, then you might like to read
+the code documentation which is distributed in the source package.  This documentation
+will also help you if you intend to create plugins or filters for \fBnerved\fR.
+Also, the source code for this program should be fairly easy to understand if 
+you would like to make your own interface.
+.SH OPTIONS
+.LP
+\fBNerve\fR takes a command name, followed by options to the command.  This section details
+the options by the command which they apply to, and also the general options which 
+can be used in all commands.
+.LP
+Commands themselves can be abbreviated to the shortest non-ambiguous string.
+.LP
+The following options apply to all commands:
+.TP
+\fB-v\fR, \fB--verbose\fR
+Print more than usual.
+.TP
+\fB-h\fR, \fB--help\fR
+Print the help message (which looks a lot like this manpage) and exit.
+.TP
+\fB--version\fR
+Print version information and copyright and exit.
+
+.SH "PLAYLIST COMMANDS"
+Affect or get information on the playlist.
+
+.SS \fIlist\fR \fBOPTION\fR...
+Print the current playlist.
+
+.SS \fIadd\fR \fB[OPTION]\fR... \fIFILE\fR...
+Replace the playlist with \fIFILE\fR.  If \fIFILE\fR is a directory, then its contents
+are loaded.
+
+.TP
+\fB-r\fR, \fB--recursive\fR
+Recurse into sub-directories.
+.TP
+\fB-p\fR, \fB--pedantic\fR
+Fail if any of the files given are not correct in some way, (eg. unsupported format)
+.TP
+\fB-l\fR, \fB--list\fR
+Assume the \fIFILE\fR(s) are plaintext containing a list of files.  In this case, you 
+may pass \fI-\fR as a file to read from stdin.
+.TP
+\fB-c\fR, \fB--clear\fR
+Clear the playlist before adding; in otherwords the added files replace the current 
+playlist.  The running file is not terminated, though, even if it is paused.  When no
+files are present, this acts like the \fBclear\fR command.
+.TP
+\fB-C\fR, \fB--clear-all\fR
+Clear the playlist and also clear the current song.
+
+.SS \fIclear\fR [\fIOPTION\fR]...
+Clear the playlist, but don't stop the running file.  Same as '\fBnerve add\fR \fI--clear\fR' 
+with no files given.
+.TP
+\fB-C\fR, \fB-c\fR, \fB--clear\fR
+Clear the playlist and the current song, like '\fBnerve add\fR \fI--clear-all\fR'
+
+.SH "PLAYLIST STATE COMMANDS"
+
+.SS \fIstate\fR
+Print the state.  The left-hand column matches the name of the command which should be run
+to change it.
+
+.SS \fIloop [[list|song|directory] on|off|toggle]\fR
+Defaults to a 'loop list' and to toggle the value, the defaults is to toggle the current
+value.  Naturally, if the command tries to set loop when already looping something else,
+the initial loop is turned off and the new loop is turned on.
+
+.SH "CURRENT FILE COMMANDS"
+.LP
+These options affect the currently running file.
+
+.SS \fInow\fR \fBOPTION\fR...
+Print the currently playing file.
+
+.SS \fIplay\fR [\fBOPTION\fR]...
+Start playing.  Playing when something is already playing causes the file to seek to position
+0 and start playing again.
+
+.TP
+\fB-d\fR, \fB--allow-duplicates\fR
+Don't restart the song if it is already playing (allow multiple duplicate play commands in 
+other words).
+
+.SS \fIpause [on|off|toggle]\fR 
+Pause playing.  Default is to toggle.
+
+.SS \fIstop\fR 
+Stop playing.
+
+.SS \fInext\fR 
+Move to the next file in the playlist.  Returns a non-zero failure code if there are no
+files in the playlist and the playlist doesn't loop.
+
+.SS \fIprevious\fR 
+Move to the previous file in the playlist.  Returns a non-zero failure code if there is 
+no previous file and the playlist doesn't loop.
+
+.TP
+\fB-n\fR, \fB--no-loop\fR or \fB-l\fR, \fB--loop\fR
+Override the playlist loop flag.
+
+.SS \fIseek\fR [\fIOPTIONS\fR] \fIPOSITION\fR
+Seek to a position in the song.  \fIPOSITION\fR is a floating point number which may be 
+negative.  The default precision of the position is seconds, and the default action is 
+to move in the file with an offset of \fIPOSITION\fR.
+
+.TP
+\fB-s\fR, \fB--set\fR
+Move directly to the offset specified by \fIPOSITION\fR.
+.TP
+\fB-u\fR, \fB--nanoseconds\fR
+\fIPOSITON\fR represents nanoseconds.
+TODO: check this; not aware of the positibilities.
+.TP
+\fB-m\fR, \fB--minutes\fR
+\fIPOSITON\fR represents minutes.
+.TP
+\fB-h\fR, \fB--hours\fR
+\fIPOSITON\fR represents hours.
+.TP
+\fB-b\fR, \fB--bytes\fR
+\fIPOSITON\fR represents bytes.
+
+
+.SH "DAEMON COMMANDS"
+.LP
+These options start and stop the daemon.
+
+.SS \fIdaemon-start\fR 
+Start a daemon; fails with a non-zero code if the daemon is already running.
+
+.SS \fIdaemon-restart\fR 
+Restart a running daemon; fails with a non-zero code if no daemon is running.
+
+.SS \fIdaemon-stop\fR 
+Stops a running daemon.  Fails with a non-zero code if there is no daemon
+running.
+
+.SH "RETURN CODES"
+.LP 
+A zero is always shown for a successful command.  Otherwise, the following integers are
+used.  Some commands might have additional failure codes.
+
+.RS 4
+0 \- success.
+.RE
+.RS 4
+1 \- daemon is not active.
+.RE
+.RS 4
+2 \- bad/missing file.
+.RE
+.RS 4
+3 \- failed to alter running state of daemon (i.e. start/stop it).
+.RE
+.RS 4
+others \- defined by the individual commands.
+.RE
+
+.SH "CONFIGURATION"
+
+Should be self documenting.  See \fI/etc/nerve/*\fR and \fI~/.nerve/*\fR.
+
+.SH "SEE ALSO"
+.LP
+\fBnerved(1)\fR
+
+.SH AUTHORS
+.LP
+James Webber
+
+.SH COPYRIGHT
+.LP
+Copyright (C) James Webber 2008-9.  Distributed under the GNU Lesser GPL, version 3.
+

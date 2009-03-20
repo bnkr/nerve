@@ -153,7 +153,8 @@ if (WANT_DOCS)
   )
 
   if (WANT_DOCS_MAN)
-    # add_and_install_manpages("${MANDIR}" mp.1 mp2.1)
+    set(SRCMAN "${CMAKE_SOURCE_DIR}/doc/man")
+    add_and_install_manpages("${MANDIR}" "${SRCMAN}/nerve.1" "${SRCMAN}/nerved.1")
   endif()
 endif(WANT_DOCS)
 
