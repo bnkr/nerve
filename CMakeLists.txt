@@ -3,7 +3,7 @@
 ##############
 cmake_minimum_required(VERSION 2.6)
 # For ease of use later
-set(PROJECT_NAME PROJECT_NAME_HERE)
+set(PROJECT_NAME nerve)
 set(PROJECT_VERSION "0.0")
 project(${PROJECT_NAME})
 
@@ -37,8 +37,8 @@ endif()
 
 # General options
 option(WANT_DOCS "Install documentation - when off, all other docs options are off." YES)
-option(WANT_DOXYGEN_HTML "Install HTML made by doxygen" YES)
-option(WANT_DOXYGEN_PDF "Install PDF from doxygen (needs pdfLaTeX)" YES)
+option(WANT_DOXYGEN_HTML "Install HTML made by doxygen" NO)
+option(WANT_DOXYGEN_PDF "Install PDF from doxygen (needs pdfLaTeX)" NO)
 option(WANT_MAN "Install manpages if there are any." YES)
 option(WANT_DOXYGEN_REBUILD "Regenerate doxygen and install that instead of the distributed docs." NO)
 
@@ -74,6 +74,15 @@ include(CheckFunctionExists)
 # set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES SOVERSION "${PROJECT_MAJOR}")
 # set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES VERSION "${PROJECT_VERSION}")
 # target_link_libraries(${LIB_BDBG_TRACE_S} "-lboost_thread")
+
+set(BIN_NERVED "nerved")
+set(BIN_NERVE "nerve")
+
+set(NERVED_SRCS "src/nerved/main.cpp")
+set(NERVE_SRCS  "src/nerve/main.cpp")
+
+add_executable(${BIN_NERVED} ${NERVED_SRCS})
+add_executable(${BIN_NERVE}  ${NERVE_SRCS})
 
 # Do tests
 add_subdirectory("test")
@@ -111,15 +120,15 @@ add_doxygen(
 
 message(STATUS "Adding install targets.")
 
-set(INCLUDEDIR "include/")
+set(INCLUDEDIR "include")
 set(BINDIR "bin")
-set(DATADIR "share/")
-set(LIBDIR "lib/")
-set(DOCDIR "${DATADIR}/doc/${PROJECT_NAME}/")
-set(HTMLDIR "${DATADIR}/doc/${PROJECT_NAME}/")
-set(PDFDIR "${DATADIR}/doc/${PROJECT_NAME}/")
-set(DVIDIR "${DATADIR}/doc/${PROJECT_NAME}/")
-set(PSDIR "${DATADIR}/doc/${PROJECT_NAME}/")
+set(DATADIR "share")
+set(LIBDIR "lib")
+set(DOCDIR "${DATADIR}/doc/${PROJECT_NAME}")
+set(HTMLDIR "${DATADIR}/doc/${PROJECT_NAME}")
+set(PDFDIR "${DATADIR}/doc/${PROJECT_NAME}")
+set(DVIDIR "${DATADIR}/doc/${PROJECT_NAME}")
+set(PSDIR "${DATADIR}/doc/${PROJECT_NAME}")
 
 
 if (WANT_DOCS) 
@@ -149,13 +158,13 @@ if (WANT_DOCS)
 endif(WANT_DOCS)
 
 # Header files
-install(
-  DIRECTORY "include/"
-  DESTINATION "${INCLUDEDIR}/"
-  FILES_MATCHING
-  PATTERN "detail/config.hpp" EXCLUDE
-  PATTERN "*.hpp"
-)
+# install(
+#   DIRECTORY "include/"
+#   DESTINATION "${INCLUDEDIR}/"
+#   FILES_MATCHING
+#   PATTERN "detail/config.hpp" EXCLUDE
+#   PATTERN "*.hpp"
+# )
 
 # install(
 #   FILES ${CONFIG_HPP_OUTPUT}
@@ -163,13 +172,12 @@ install(
 # )
 
 # Binaries
-# install(
-#   TARGETS ${BIN_HEX2BIN} ${LIB_BDBG_TRACE_A} ${LIB_BDBG_TRACE_S}
-#   RUNTIME DESTINATION ${BINDIR}
-#   ARCHIVE DESTINATION ${LIBDIR}
-#   LIBRARY DESTINATION ${LIBDIR}
-# )
-
+install(
+  TARGETS ${BIN_NERVE} ${BIN_NERVED}
+  RUNTIME DESTINATION ${BINDIR}
+  ARCHIVE DESTINATION ${LIBDIR}
+  LIBRARY DESTINATION ${LIBDIR}
+)
 
 #################
 ## CPack Stuff ##
@@ -207,20 +215,17 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "${PROJECT_NAME} ${PROJECT-VERSION}")
 if(WIN32)
   # There is a bug in NSI that does not handle full unix paths properly. Make
   # sure there is at least one set of four (4) backlasshes.
-  # TODO: all of this, but it requires cross-compile anyway
-  set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\InstallIcon.bmp")
-  set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\MyExecutable.exe")
+  # set(CPACK_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\InstallIcon.bmp")
+  # set(CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\MyExecutable.exe")
   set(CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_INSTALL_DIRECTORY} My Famous Project")
   set(CPACK_NSIS_HELP_LINK "http:\\\\\\\\www.my-project-home-page.org")
   set(CPACK_NSIS_URL_INFO_ABOUT "http:\\\\\\\\www.my-personal-home-page.com")
   set(CPACK_NSIS_CONTACT "me@my-personal-home-page.com")
   set(CPACK_NSIS_MODIFY_PATH ON)
 else()
-  set(CPACK_STRIP_FILES "bin/MyExecutable")
-  
+  # set(CPACK_STRIP_FILES "bin/MyExecutable")
   set(CPACK_SOURCE_STRIP_FILES "")
 endif()
-
 
 include(CPack)
 
