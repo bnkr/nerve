@@ -22,8 +22,11 @@
 find_program(GZIP_EXE "gzip")
 mark_as_advanced(GZIP_EXE)
 
+# TODO: 
+#   if the manpage dir is missing I should reconfigure the build system (since it 
+#   is not really portable to use mkdir).  Perhaps I could run cmake -P make_diretyr
+#   or however that works.
 set(MANPAGE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/man-gz")
-
 if (NOT IS_DIRECTORY "${MANPAGE_OUTPUT_DIR}")
   file(MAKE_DIRECTORY ${MANPAGE_OUTPUT_DIR})
 
@@ -32,6 +35,9 @@ if (NOT IS_DIRECTORY "${MANPAGE_OUTPUT_DIR}")
     PROPERTY "ADDITIONAL_MAKE_CLEAN_FILES"
     "${MANPAGE_OUTPUT_DIR}"
   )
+
+  # TODO: doesn't work.
+  # add_dependencies(rebuild_cache "${MANPAGE_OUTPUT_DIR}")
 endif()
 
 macro(add_manpage_gz output_var input)
@@ -39,32 +45,39 @@ macro(add_manpage_gz output_var input)
   set(ampgz_out "${MANPAGE_OUTPUT_DIR}/${ampgz_basename}.gz")
   set("${output_var}" "${ampgz_out}")
 
-  message("${input} -> ${ampgz_out}")
+  message(STATUS "Add manpage ${input}")
   add_custom_command(
-    OUTPUT "${ampgz_out}"
+    OUTPUT  "${ampgz_out}"
     DEPENDS "${input}"
     COMMAND "${GZIP_EXE}" -c "${input}" > "${ampgz_out}"
     VERBATIM
     COMMENT "Gzip manpage ${ampgz_basename}"
   )
 
-  add_custom_target(manpages ALL DEPENDS "${ampgz_out}")
+  # TODO:
+  #   annoying and messy.  Can't I at least 'hide' all those extra targets 
+  #   somehow?!
+  get_filename_component(ampgz_basename ${ampgz_out} NAME)
+  add_custom_target(
+    ${ampgz_basename} ALL
+    DEPENDS "${ampgz_out}"
+  )
 endmacro(add_manpage_gz)
 
 function(add_and_install_manpages mandir)
   set(pages "${ARGV}")
+  list(REMOVE_AT pages 0)
   if (NOT pages)
     message(FATAL_ERROR "add_and_install_manpages(): at least one manpage is required.")
   endif()
 
-  list(REMOVE_AT pages 0)
   foreach (arg ${pages})
     string(LENGTH "${arg}" len)
     math(EXPR begin "${len} - 1")
     string(SUBSTRING "${arg}" "${begin}" "1" last_char)
     add_manpage_gz(output ${arg})
     set(dest "${mandir}/man${last_char}")
-    install(FILES ${output} DESTINATION ${dest})
+    install(FILES "${output}" DESTINATION ${dest})
   endforeach()
 endfunction()
 

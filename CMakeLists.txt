@@ -39,7 +39,7 @@ endif()
 option(WANT_DOCS "Install documentation - when off, all other docs options are off." YES)
 option(WANT_DOXYGEN_HTML "Install HTML made by doxygen" NO)
 option(WANT_DOXYGEN_PDF "Install PDF from doxygen (needs pdfLaTeX)" NO)
-option(WANT_MAN "Install manpages if there are any." YES)
+option(WANT_DOCS_MAN "Install manpages if there are any." YES)
 option(WANT_DOXYGEN_REBUILD "Regenerate doxygen and install that instead of the distributed docs." NO)
 
 set(DOXYGEN_DOXYFILE_TEMPLATE "${CMAKE_SOURCE_DIR}/Doxyfile.default" CACHE STRING 
@@ -50,7 +50,7 @@ mark_as_advanced(
   WANT_DOXYGEN_REBUILD
   WANT_DOXYGEN_HTML 
   WANT_DOXYGEN_PDF
-  WANT_MAN
+  WANT_DOCS_MAN
 )
 
 ###################################
@@ -125,6 +125,7 @@ set(BINDIR "bin")
 set(DATADIR "share")
 set(LIBDIR "lib")
 set(DOCDIR "${DATADIR}/doc/${PROJECT_NAME}")
+set(MANDIR "${DATADIR}/man")
 set(HTMLDIR "${DATADIR}/doc/${PROJECT_NAME}")
 set(PDFDIR "${DATADIR}/doc/${PROJECT_NAME}")
 set(DVIDIR "${DATADIR}/doc/${PROJECT_NAME}")
