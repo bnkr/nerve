@@ -103,7 +103,7 @@ if (NOT BOOST_FS_LIB)
   if (BOOST_FS_LIB)
     message("Warning: linking to boost_filesystem which doesn't have the -mt")
     message("         suffix could mean that it is not thread-safe.  If there")
-    message("         is no other library to link to then it is probably OK.")
+    message("         is no existing -mt library, then it is probably OK.")
   endif()
 endif()
 find_library(AVUTIL_LIB   "avutil")
@@ -126,6 +126,14 @@ add_executable(${BIN_NERVE}  ${NERVE_SRCS})
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
 
+  # simple-media-player
+  set(bin_name  "simple-media-player")
+  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp")
+  add_executable(${bin_name} ${src})
+  target_link_libraries("${bin_name}" 
+    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+
   # gapless-playback
   set(bin_name "gapless-playback")
   set(src "${RES_DIR}/gapless-playback.cpp")
@@ -138,14 +146,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(bin_name "tripple-gapless-playback")
   set(src "${RES_DIR}/tripple-gapless-playback.cpp")
   add_executable("${bin_name}" "${src}")
-  target_link_libraries("${bin_name}" 
-    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
-  )
-
-  # simple-media-player
-  set(bin_name  "simple-media-player")
-  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp")
-  add_executable(${bin_name} ${src})
   target_link_libraries("${bin_name}" 
     "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
   )
