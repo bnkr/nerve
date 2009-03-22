@@ -10,7 +10,46 @@ nerved \- nerve audio player daemon
 .LP
 \fBNerved\fR holds the playlist state and performs the audio processing 
 operations.  It is controlled using an IPC interface.
-.SH
+.SH OPTIONS
+.LP
+The majority of the functionality of \fBnerved\fR is configured using the 
+files but the following commandline options are available.
+.TP
+\fB-c\fR, \fB--console\fR, \fB--no-fork\fR
+Stay attached to the console.  This causes the default log to be stdout.
+.TP
+\fB-h\fR, \fB--help\fR
+Print usage information.
+.TP
+\fB--version\fR
+Print nerved version.
+.TP
+\fB-l\fR, \fB--log\fR=\fIFILE|syslog|stderr|stdout\fR
+Log to a file called \fIFILE\fR, \fIsyslog\fR, \fIstderr\fR, or \fIstdout\fR.  The 
+default is normally \fIsyslog\fR.
+.TP
+\fB-d\fR, \fB--conf-dir\fR=[\fIDIR\fR]
+Find configuration files in the dir \fIDIR\fR.  If a parameter is not given,
+then only the defaults and what is given by \fB--conf\fR is loaded.
+.TP
+\fB-a\fR, \fB--conf\fR=\fIFILE\fR
+Use the *additional* configuration file \fIFILE\fR to override values
+already set.  This option can be used multiple times.
+.TP
+\fB-v\fR, \fB--verbosity\fR=\fIdebug|notice|warning|error|critial|none\fR
+Which serverities of log message should be outputted.  By default, warnings
+are outputted.  Note that some compile-time configurations have a great 
+effect on the amount of debug output.  Generally warning is the most useful
+level.
+.TP
+\fB-s\fR, \fB--silent\fR
+Like --verbosity=none; no logging is done at all except possibly assert failures
+or genuine bugs.
+
+.SH "CONFIGURATION"
+.LP
+See \fI/etc/nerved/*\fR and \fI~/.nerved/*\fR.
+\fR
 .SH "SEE ALSO"
 .LP
 \fBnerve(1)\fR
