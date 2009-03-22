@@ -59,12 +59,28 @@ mark_as_advanced(
 
 include(CheckFunctionExists) 
 
+find_file(HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H   "ffmpeg/libavcodec/avcodec.h")
+find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
+find_file(HAVE_FFMPEG_AVCODEC_H  "ffmpeg/avcodec.h")
+find_file(HAVE_FFMPEG_AVFORMAT_H "ffmpeg/avformat.h")
+
 # Note: use booleans like bdbg.
-# configure_file("${CMAKE_SOURCE_DIR}/build-aux/config.hpp.cmake" "${CONFIG_HPP_OUTPUT}")
+set(CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
+configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${CONFIG_HPP_OUTPUT}")
 
 ###########################
 ## Building normal stuff ##
 ###########################
+
+# This one is a bit tricky.  Some versions of ffmpeg have ffmpeg/libavcodec/file.h and 
+# others have ffmpeg/file.h.  The docs use ffmpeg/file.h, but the latest versions of the
+# library doesn't agree.  Also, the headers themselves include "libavcodec/file.h".  
+# Therefore I hedge my bets using configure_file() and also setting the root directory 
+# of ffmpeg includable.  Hopefully it doesn't break anything, but if you're reading this 
+# it probably did so good luck fixing it!
+if (UNIX)
+  include_directories("/usr/include/ffmpeg/")
+endif()
 
 # Example follows:
 # add_library(${LIB_BDBG_TRACE_A} STATIC "src/lib_bdbg_trace.cpp")
@@ -75,6 +91,19 @@ include(CheckFunctionExists)
 # set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES VERSION "${PROJECT_VERSION}")
 # target_link_libraries(${LIB_BDBG_TRACE_S} "-lboost_thread")
 
+find_library(BOOST_FS_LIB "boost_filesystem-mt")
+if (NOT BOOST_FS_LIB)
+  find_library(BOOST_FS_LIB "boost_filesystem")
+  if (BOOST_FS_LIB)
+    message("Warning: linking to boost_filesystem which doesn't have the -mt")
+    message("         suffix could mean that it is not thread-safe.  If there")
+    message("         is no other library to link to then it is probably OK.")
+  endif()
+endif()
+find_library(AVUTIL_LIB   "avutil")
+find_library(AVFORMAT_LIB "avformat")
+find_library(AVCODEC_LIB  "avcodec")
+
 set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
 
@@ -83,6 +112,42 @@ set(NERVE_SRCS  "src/nerve/main.cpp")
 
 add_executable(${BIN_NERVED} ${NERVED_SRCS})
 add_executable(${BIN_NERVE}  ${NERVE_SRCS})
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
+  set(RES_DIR "src/research")
+
+  # gapless-playback
+  set(bin_name "gapless-playback")
+  set(src "${RES_DIR}/gapless-playback.cpp")
+  add_executable("${bin_name}" "${src}")
+  target_link_libraries("${bin_name}" 
+    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+
+  # tripple-gapless-playback
+  set(bin_name "tripple-gapless-playback")
+  set(src "${RES_DIR}/tripple-gapless-playback.cpp")
+  add_executable("${bin_name}" "${src}")
+  target_link_libraries("${bin_name}" 
+    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+
+  # simple-media-player
+  set(bin_name  "simple-media-player")
+  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp")
+  add_executable(${bin_name} ${src})
+  target_link_libraries("${bin_name}" 
+    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+
+  # interrupted-playback
+  set(bin_name "interrupted-playback")
+  set(src "src/research/interrupted-playback.cpp")
+  add_executable("${bin_name}" ${src})
+  target_link_libraries("${bin_name}" 
+    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+endif()
 
 # Do tests
 add_subdirectory("test")
