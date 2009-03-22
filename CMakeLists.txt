@@ -53,9 +53,9 @@ mark_as_advanced(
   WANT_DOCS_MAN
 )
 
-###################################
-## Checking for required headers ##
-###################################
+#########################################
+## Config.hpp and checking for headers ##
+#########################################
 
 include(CheckFunctionExists) 
 
@@ -64,7 +64,13 @@ find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
 find_file(HAVE_FFMPEG_AVCODEC_H  "ffmpeg/avcodec.h")
 find_file(HAVE_FFMPEG_AVFORMAT_H "ffmpeg/avformat.h")
 
-# Note: use booleans like bdbg.
+mark_as_advanced(
+  HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H
+  HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
+  HAVE_FFMPEG_AVCODEC_H
+  HAVE_FFMPEG_AVFORMAT_H
+)
+
 set(CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
 configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${CONFIG_HPP_OUTPUT}")
 
@@ -103,6 +109,10 @@ endif()
 find_library(AVUTIL_LIB   "avutil")
 find_library(AVFORMAT_LIB "avformat")
 find_library(AVCODEC_LIB  "avcodec")
+
+mark_as_advanced(
+  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB
+)
 
 set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
