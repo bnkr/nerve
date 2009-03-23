@@ -1,3 +1,8 @@
+/*!
+\file
+\brief Basis for SDL library
+*/
+
 #ifndef SDL_HPP_uyqa3zsm
 #define SDL_HPP_uyqa3zsm
 
@@ -134,6 +139,13 @@ class audio_spec {
       spec().userdata = NULL;
     }
 
+// TODO:
+//   messy design because the struct is not fully initialised until we called
+//   open.
+
+    //! \brief Size in bytes of the buffer (calculated).
+    std::size_t buffer_size() const { return spec().size;  }
+
     friend std::ostream &operator<<(std::ostream &o, const audio_spec &a) {
       const SDL_AudioSpec &s = a.spec();
 
@@ -193,6 +205,10 @@ class device_base {
     }
 
   private:
+    // "SDL_OpenAudio calculates the size and silence fields for both the desired and
+    // obtained specifications. The size field stores the total size of the audio buffer
+    // in bytes, while the silence stores the value used to represent silence in the
+    // audio buffer" - that's why it's nonconst.
     void checked_open(SDL_AudioSpec *des, SDL_AudioSpec *obt = NULL) {
       int r = SDL_OpenAudio(des, obt);
       if (r != 0) {
