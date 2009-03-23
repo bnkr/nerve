@@ -14,7 +14,7 @@ filtering/observing can be done.
 
 int main(int argc, char **argv) {
   if (argc != 2) {
-    std::cerr << "error: wrong number of arguments.  Need one file to play.." << std::endl;
+    std::cerr << "error: wrong number of arguments.  Need one file to play." << std::endl;
     return EXIT_FAILURE;
   }
 

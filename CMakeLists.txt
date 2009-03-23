@@ -63,16 +63,41 @@ find_file(HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H   "ffmpeg/libavcodec/avcodec.h")
 find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
 find_file(HAVE_FFMPEG_AVCODEC_H  "ffmpeg/avcodec.h")
 find_file(HAVE_FFMPEG_AVFORMAT_H "ffmpeg/avformat.h")
+find_file(HAVE_SDL_SDL_H "SDL/SDL.h")
 
 mark_as_advanced(
   HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H
   HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
   HAVE_FFMPEG_AVCODEC_H
   HAVE_FFMPEG_AVFORMAT_H
+  HAVE_SDL_SDL_H
 )
 
 set(CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
 configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${CONFIG_HPP_OUTPUT}")
+
+####################
+## Check for libs ##
+####################
+
+find_library(BOOST_FS_LIB "boost_filesystem-mt")
+if (NOT BOOST_FS_LIB)
+  find_library(BOOST_FS_LIB "boost_filesystem")
+  if (BOOST_FS_LIB)
+    message("Warning: linking to boost_filesystem which doesn't have the -mt")
+    message("         suffix could mean that it is not thread-safe.  If there")
+    message("         is no existing -mt library, then it is probably OK.")
+  endif()
+endif()
+find_library(AVUTIL_LIB   "avutil")
+find_library(AVFORMAT_LIB "avformat")
+find_library(AVCODEC_LIB  "avcodec")
+# defines SDL_LIBRARY and all the stuff from sdl-config bin.
+find_package(SDL REQUIRED)
+
+mark_as_advanced(
+  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB 
+)
 
 ###########################
 ## Building normal stuff ##
@@ -97,22 +122,6 @@ endif()
 # set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES VERSION "${PROJECT_VERSION}")
 # target_link_libraries(${LIB_BDBG_TRACE_S} "-lboost_thread")
 
-find_library(BOOST_FS_LIB "boost_filesystem-mt")
-if (NOT BOOST_FS_LIB)
-  find_library(BOOST_FS_LIB "boost_filesystem")
-  if (BOOST_FS_LIB)
-    message("Warning: linking to boost_filesystem which doesn't have the -mt")
-    message("         suffix could mean that it is not thread-safe.  If there")
-    message("         is no existing -mt library, then it is probably OK.")
-  endif()
-endif()
-find_library(AVUTIL_LIB   "avutil")
-find_library(AVFORMAT_LIB "avformat")
-find_library(AVCODEC_LIB  "avcodec")
-
-mark_as_advanced(
-  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB
-)
 
 set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
@@ -125,38 +134,34 @@ add_executable(${BIN_NERVE}  ${NERVE_SRCS})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
+  set(ALL_IO_LIBS 
+    "${SDL_LIBRARY}" "${BOOST_FS_LIB}" "${AVUTIL_LIB}" 
+    "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
 
   # simple-media-player
   set(bin_name  "simple-media-player")
   set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp")
   add_executable(${bin_name} ${src})
-  target_link_libraries("${bin_name}" 
-    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
-  )
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
 
   # gapless-playback
   set(bin_name "gapless-playback")
   set(src "${RES_DIR}/gapless-playback.cpp")
   add_executable("${bin_name}" "${src}")
-  target_link_libraries("${bin_name}" 
-    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
-  )
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
 
   # tripple-gapless-playback
   set(bin_name "tripple-gapless-playback")
   set(src "${RES_DIR}/tripple-gapless-playback.cpp")
   add_executable("${bin_name}" "${src}")
-  target_link_libraries("${bin_name}" 
-    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
-  )
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
 
   # interrupted-playback
   set(bin_name "interrupted-playback")
   set(src "src/research/interrupted-playback.cpp")
   add_executable("${bin_name}" ${src})
-  target_link_libraries("${bin_name}" 
-    "${BOOST_FS_LIB}" "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
-  )
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
 endif()
 
 # Do tests
