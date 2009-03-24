@@ -88,6 +88,10 @@ class audio {
 class audio_spec {
   friend class device_base;
 
+// TODO:
+//   if we refuse nonconst access to bytes and the other silence then
+//   we can pass this struct around const (given a mutable sdl struct)
+
   public:
     typedef void(*callback_type)(void *user_data, Uint8 *stream, int len);
 
@@ -96,14 +100,16 @@ class audio_spec {
     //! \brief Defer initialisation until later - intended for the obtained value output, but could be useful.
     explicit audio_spec(defer_init_type) {}
 
-    explicit audio_spec(callback_type callback, int freq = 44100, int format = AUDIO_S16SYS) {
+    explicit audio_spec(callback_type callback, int freq = 44100, int channels =  2, int samples = 1024, int format = AUDIO_S16SYS) {
       // std::memset(spec(), 0, sizeof(SDL_AudioSpec));
       spec().freq = freq;
       spec().format = format;
       spec().callback = callback;
-      spec().channels = 2;
-      spec().samples = 1024;
+      spec().channels = channels;
+      spec().samples = samples;
       spec().userdata = NULL;
+      spec().silence = 0;
+      spec().size = 0;
     }
 
 
@@ -222,8 +228,8 @@ class device : public device_base {
     const audio_spec &obtained() const { return obtained_; }
 
     //! \brief Open audio device with the requested spec (might get something different).  Status will be paused.
-    //! Desired is non-const because there are some files which are calculated.  See
-    //! \link audio_spec \endlink.
+    //! Desired is non-const because there are some values which are calculated.  See
+    //! \link audio_spec \endlink for details.
     void reopen(audio_spec &desired) {
       checked_open(desired, obtained_);
     }

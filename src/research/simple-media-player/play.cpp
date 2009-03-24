@@ -40,12 +40,11 @@ void callback(void *userdata, uint8_t *stream, int length) {
     return;
   }
 
-  int len = std::min(amount_read, length);
-  // TODO:
-  //   problem here: if the file ends with a partial buffer, sdl still wants to
-  //   play the entire thing.  Therefore, I'll need to memset 0 the rest of the
-  //   buffer.
-  std::memcpy(stream, file_buffer, len);
+  if (amount_read < length) {
+    // Zero a partial buffer if there is one.
+    std::memset(stream + amount_read, 0, length - amount_read);
+  }
+  std::memcpy(stream, file_buffer, amount_read);
   // SDL_MixAudio(stream, file_buffer, len, SDL_MIX_MAXVOLUME);
 
   buffer_file();
@@ -55,13 +54,12 @@ void callback(void *userdata, uint8_t *stream, int length) {
 
 
 void play(const char * const file) {
-  load_file_test(file);
-  exit(EXIT_SUCCESS);
+  // load_file_test(file);
   /*
   TODO:
-    The next task is to read an MP3 (or whatever).  I may as well use this as an
-    opportunity to organise a packet queue and the beginings of mixing, since a
-    lot of the problems solve themselves.
+    Update the callback (and the rest of this program) to use what I have done in
+    load_file_test.  I may as well start thinking about packet queues and mixing
+    now.  Also I need to C++ise the callback and encoding parts.
   */
 
   assert(file != NULL);
@@ -130,7 +128,7 @@ void play(const char * const file) {
 // TODO:
 //   Another problem: what about when the sample format changes mid-stream?  I
 //   guess we need to convert it... we can't really re-initialise the stream,
-//   can we?
+//   can we?  SDL's audioCVT thing might help...
 //
 // TODO:
 //   Abstracted output?  I can't just replace the callback because the output
