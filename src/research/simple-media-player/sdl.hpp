@@ -22,46 +22,13 @@
 
 
 /*
-TODO:
-  This will be based on the following tutorial with ffmpeg and sdl:
-
-    http://www.dranger.com/ffmpeg/tutorial03.html
-
-  Note that seeking gets its own chapter!
-
-    http://www.dranger.com/ffmpeg/tutorial07.html
-
-  See also:
-
-    find -name \*example\* -not -name \*svn\*
-
-  in the ffmpeg svn thingy.
-*/
-
-/*
 http://www.libsdl.org/cgi/docwiki.cgi/SDL_API - scroll down to 'Audio'
 
 http://www.libsdl.org/cgi/docwiki.cgi/Audio_Examples
 
-SDL_AudioSpec - Audio Specification Structure
-
-SDL_AudioCVT - Audio Conversion Structure
-SDL_BuildAudioCVT - Initializes a SDL_AudioCVT - structure for conversion
-SDL_ConvertAudio - Converts audio data to a desired audio format.
-
 // Note: this will be too slow and not good enough quality for my purposes - use OpenAL or
-// SDL_mixer.
+// SDL_mixer, or my own one.  I need an API for it also.
 SDL_MixAudio - Mixes audio data
-
-SDL_LockAudio - Locks out the callback function
-SDL_UnlockAudio - Unlocks the callback function
-
-SDL_OpenAudio - Opens the audio device with the desired parameters.
-SDL_CloseAudio - Shuts down audio processing and closes the audio device.
-
-// Asuming I don't need these
-SDL_LoadWAV - Loads a WAVE file
-SDL_FreeWAV - Frees previously opened WAV data
 */
 
 namespace sdl {
@@ -126,22 +93,19 @@ class audio_spec {
 
     typedef enum {defer_init} defer_init_type;
 
-    //! \brief Defer initialisation until later - intended for the obtained value output.
+    //! \brief Defer initialisation until later - intended for the obtained value output, but could be useful.
     explicit audio_spec(defer_init_type) {}
 
-    audio_spec(callback_type callback) {
+    explicit audio_spec(callback_type callback, int freq = 44100, int format = AUDIO_S16SYS) {
       // std::memset(spec(), 0, sizeof(SDL_AudioSpec));
-      spec().freq = 44100;
-      spec().format = AUDIO_S16SYS;
+      spec().freq = freq;
+      spec().format = format;
       spec().callback = callback;
       spec().channels = 2;
       spec().samples = 1024;
       spec().userdata = NULL;
     }
 
-// TODO:
-//   messy design because the struct is not fully initialised until we called
-//   open.
 
     //! \brief Size in bytes of the buffer (calculated).
     std::size_t buffer_size() const { return spec().size;  }
@@ -258,6 +222,8 @@ class device : public device_base {
     const audio_spec &obtained() const { return obtained_; }
 
     //! \brief Open audio device with the requested spec (might get something different).  Status will be paused.
+    //! Desired is non-const because there are some files which are calculated.  See
+    //! \link audio_spec \endlink.
     void reopen(audio_spec &desired) {
       checked_open(desired, obtained_);
     }

@@ -134,14 +134,16 @@ add_executable(${BIN_NERVE}  ${NERVE_SRCS})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
+  message("${SDL_LIBRARY}")
   set(ALL_IO_LIBS 
-    "${SDL_LIBRARY}" "${BOOST_FS_LIB}" "${AVUTIL_LIB}" 
+    ${SDL_LIBRARY} "${BOOST_FS_LIB}" 
+    "${AVUTIL_LIB}" 
     "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
   )
 
   # simple-media-player
   set(bin_name  "simple-media-player")
-  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp")
+  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp" "${RES_DIR}/${bin_name}/load_file_test.cpp")
   add_executable(${bin_name} ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
 
