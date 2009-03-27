@@ -176,15 +176,17 @@ ok:
     //! \brief Direct accessor to the codec informational data.  Enormous struct.
     // TODO:
     //   better to initialise an codec_context object based on a fully constructed
-    //   audio_stream because that struct is too gigantic to wrap here.
+    //   audio_stream because that struct is too gigantic to wrap here.  Might be
+    //   a good idea to initialise multiple subsets of this in order to modularise
+    //   the data.
     //! http://www.dranger.com/ffmpeg/data.html#AVCodecContext
     AVCodecContext &codec_context() { return *stream_->codec; }
     const AVCodecContext &codec_context() const { return *stream_->codec; }
 
     //! \brief Mostly to with the actual en/de-coding process.
     //TODO:
-    //  *Might* be better to init this based on an audio_stream; depends how.where the
-    //  codec is used.
+    //  *Might* be better to init a codec object based on an audio_stream; depends
+    //  how/where the codec is used and how much stuff I have to wrap.
     AVCodec &codec() { return *codec_; }
     const AVCodec &codec() const { return *codec_; }
 

@@ -1,9 +1,10 @@
 #include "ffmpeg.hpp"
+#include "sdl.hpp"
 
 #include "play.hpp"
 #include "load_file_test.hpp"
+#include "aligned_memory.hpp"
 
-#include "sdl.hpp"
 #include <iostream>
 #include <fstream>
 
@@ -12,6 +13,8 @@
 
 #include <bdbg/trace/short_macros.hpp>
 #include <bdbg/trace/static_definitions.hpp>
+
+#include <algorithm>
 
 #include <boost/thread.hpp>
 #include <boost/cstdint.hpp>
@@ -55,6 +58,7 @@ void file_reading_callback(void *userdata, uint8_t *stream, int length) {
 
 #endif
 
+
 std::size_t sdl_buffer_size = 0;
 
 #include <queue>
@@ -68,7 +72,9 @@ typedef para::sync_traits<std::queue<void *>, boost::mutex, boost::unique_lock<b
 typedef sync_traits_type::monitor_tuple_type synced_type;
 synced_type synced_queue;
 
-
+// messy - prolly needs a bool callback_finished_printing_data.
+boost::mutex finish_mut;
+boost::condition_variable finish_cond;
 
 bool finished = false;
 
@@ -112,79 +118,50 @@ class stacked_block_pool_allocator {
 //! \brief Read buffers from a queue and push them to the output stream.
 void ffmpeging_callback(void *userdata, uint8_t *stream, int length) {
   typedef sync_traits_type::monitor_type monitor_type;
-  while (true)  {
-    void *buffer = NULL;
-    {
-      monitor_type m(synced_queue, &continue_predicate);
-      // TODO: anoying.  Two interfaces to the data.  Monitored<T> will fix it I guess.
-      synced_type::value_type &q = synced_queue.data();
-      if (finished && q.empty()) {
-        // wait for more data
+
+  // trc("callback");
+  void *buffer = NULL;
+  {
+    monitor_type m(synced_queue, &continue_predicate);
+    // trc("woke up");
+    // TODO: anoying.  Two interfaces to the data.  Monitored<T> will fix it I guess.
+    synced_type::value_type &q = synced_queue.data();
+    if (finished && q.empty()) {
+      // TODO:
+      //   accesses to terminate must be sunchronised as well - ctonainer_type
+      //   should actually be a type which has this added.
+      // wait for more data
+
+      {
         // TODO:
-        //   accesses to terminate must be sunchronised as well - ctonainer_type
-        //   should actually be a type which has this added.
-        m.wait_condition().wait(m.lock()); // abbreviate to q.wait();
-        continue;
+        //   it blocks forever if the decoding thread is slower than this
+        //   one.  The main thread needs to monitor a boolean which we set to
+        //   "I've quit".
+        trc("notifying exit");
+        boost::unique_lock<boost::mutex> lk(finish_mut);
+        finish_cond.notify_all();
+        boost::thread::yield();
       }
 
+      // normally we would just return from the thread here, but SDL controls
+      // it so we have to wait for the main thread to shut sdl down.  We DON'T
+      // wait on anything because otherwise we end up deadlocking; we might have
+      // to deal with calling this code path a couple of times until SDL finally
+      // terminates.
+      return;
+    }
+    else {
       buffer = q.front();
       q.pop();
     }
-
-    std::memcpy(stream, buffer, length);
-    // pool.deallocate(buffer);
-    free(buffer);
   }
+
+  // trc("writing output data of length " << length);
+  std::memcpy(stream, buffer, length);
+  // pool.deallocate(buffer);
+  std::free(buffer);
 }
 
-namespace ffmpeg {
-
-//! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
-class frame {
-  public:
-    frame(ffmpeg::file &file) : file_(file) {
-      int ret = av_read_frame(&file.format_context(), &packet_);
-      finished_ = (ret != 0);
-    }
-
-    ~frame() { av_free_packet(&packet_); }
-
-    //! Stream finished?
-    bool finished() const { return finished_; }
-
-    const uint8_t *data() { return packet_.data; }
-    int size() { return packet_.size; }
-
-
-  private:
-    ffmpeg::file &file_;
-    AVPacket packet_;
-    bool finished_;
-
-};
-
-//! \brief Decodes audio based on the data context of the audio stream.
-class audio_decoder {
-  public:
-    audio_decoder(ffmpeg::audio_stream &s)
-    : stream_(s) {}
-
-    // TODO:
-    //   this is a really messy way to do it.  How can I make it so you don't have
-    //   to always specify those buffers but still keep it reasonable to use.  I think
-    //   I just need to restrict how it works; for example return a pointer to the
-    //   output or something.  It all depends exactly what other stateful things I
-    //   have to do, eg, when no data is found.
-    //
-    //! \brief All sizes are in *bytes* not num elts.
-    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
-      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
-    }
-
-  private:
-    audio_stream &stream_;
-};
-}
 
 void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
   /*
@@ -201,9 +178,6 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
 
   Finally, the output must be at least AVCODEC_MAX_AUDIO_FRAME_SIZE.
   */
-
-  // TODO: won't always be this size.
-  int sdl_buffer_size = 1024;
 
   // so messy...
   finished = false;
@@ -228,20 +202,44 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
     //TODO: use a pool
     // uint8_t *output_buf = (uint8_t *) pool.allocate();
 
-    uint8_t *output_buf = (uint8_t *) std::malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE); // sdl_buffer_size);
-    // presumably size % sizeof(int16_t) == 0
+    int real_buffer_size = AVCODEC_MAX_AUDIO_FRAME_SIZE; // sdl_buffer_size;
+    // TODO:
+    //   align it (use aligned_memory);  Even better make it in terms of
+    //   int16_t; then we don't need to worry about getting the right
+    //   bytesize.
+    //
+
+    const std::size_t buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+    // assumption is that it needs some N of 16 bit integers.
+    assert(buffer_bytes % sizeof(int16_t) == 0);
+    const std::size_t buffer_size = buffer_bytes / sizeof(int16_t);
+    const std::size_t alignment = 16;
+    aligned_memory<alignment, buffer_size, int16_t> buffer;
+
+    struct {
+      uint8_t *samples;
+      std::size_t index;
+      const std::size_t size;
+    } working_buffer = {NULL, 0, sdl_buffer_size};
 
     do {
-      int output_buf_size = sdl_buffer_size;
+      int16_t *output_buf = buffer.ptr();
+      int output_buf_size = buffer_bytes;
       // TODO:
       //   data(), size() might have to be aligned, and also the last byte should
       //   be set null.  Why doesn't ffmpeg do it, though.  It's their bloody data
       //   and I don't want to copy it!
 
-      int count = decoder.decode((int16_t*) output_buf, &output_buf_size, fr.data(), fr.size());
+      // TODO:
+      //   this is not a nice interface.  When I have more data about how this
+      //   will work, I should abstract it.
+      int count = decoder.decode(buffer.ptr(), &output_buf_size, fr.data(), fr.size());
       std::cout << "Read data:" << std::endl;
-      std::cout << "  bytes read:" << count << std::endl;
-      std::cout << "  output buf size:" << output_buf_size << std::endl;
+      std::cout << "  bytes inputted:      " << fr.size() << std::endl;
+      std::cout << "  output buffer size:  " << real_buffer_size << std::endl;
+      // I guess this is bytes of the input stream which is used.
+      std::cout << "  bytes of input used: " << count << std::endl;
+      std::cout << "  output buf size:     " << output_buf_size << std::endl;
 
       // Skip error frame.
       if (count < 0) {
@@ -253,31 +251,66 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
         continue;
       }
 
-      if (count < sdl_buffer_size) {
-        std::cout << "less bytes read than are needed in the buffer:" << count << " vs. " << sdl_buffer_size  << std::endl;
-        // TODO: what happens now?  Probably this will happen at the end of file...
-      }
-
       if (count < fr.size()) {
         std::cout << "less bytes read than the input size: " << count << " vs. " << fr.size() << std::endl;
         // TODO: what happens here?
       }
 
       // further  processing on audio buffer here.
-
       {
-        trc("");
-        // No need to monitor wait, just push the data as soon as we get a lock
-        // TODO:
-        //   clearly this has added nothing over using standard synchronisation.  monitoed<T>
-        //   makes it a bit better, but at least having a nicer way to obtain that uinque_lock
-        //   type makes it better.  Probably sync_traits should place them somewhere visible.
-        boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
-        synced_type::value_type &q = synced_queue.data();
-        // Problem is that the fucking queue isn't pooled either.  I'll have to
-        // make a better one.
-        q.push(output_buf);
-        synced_queue.wait_condition().notify_one();
+        // split/combine it in to sdl-sized blocks ready for output
+        assert(sdl_buffer_size > 0);
+
+        working_buffer.samples = (uint8_t *) std::malloc(working_buffer.size);
+        working_buffer.index = 0;
+
+        std::size_t index = 0;
+        while (index < output_buf_size) {
+          trc("continue filling the sample buffer starting at position " << working_buffer.index << " from the stream buf at pos " << index);
+          uint8_t *sample_buffer = &working_buffer.samples[working_buffer.index];
+          std::size_t bytes_left = working_buffer.size - working_buffer.index;
+          std::size_t stream_available = output_buf_size - index;
+          std::size_t copy_len = std::min(stream_available, bytes_left);
+          std::size_t uncopied_bytes = stream_available - copy_len;
+
+          trc("from a size of " << working_buffer.size << ", we have " << bytes_left << " bytes to fill.");
+          trc("we start copying from the stream at " << index);
+          trc("the stream has " << stream_available << " bytes available.");
+          trc("we will therefore copy " << copy_len << " bytes");
+          trc("there will be " << uncopied_bytes  << " bytes left in the stream.");
+
+          std::memcpy(sample_buffer, &output_buf[index], copy_len);
+          index += copy_len;
+          working_buffer.index += copy_len;
+
+          trc("stream index has become " << index);
+          trc("output index has become " << working_buffer.index);
+
+          if (working_buffer.index == working_buffer.size) {
+            trc("working buffer is full");
+            // No need to monitor wait, just push the data as soon as we get a lock
+            // TODO:
+            //   clearly this has added nothing over using standard synchronisation.  monitoed<T>
+            //   makes it a bit better, but at least having a nicer way to obtain that uinque_lock
+            //   type makes it better.  Probably sync_traits should place them somewhere visible.
+            //   Perahps we want a writer_ptr which notifies the wait_condition?
+            synced_type::value_type &q = synced_queue.data();
+            {
+              boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
+              // Problem is that the fucking queue isn't pooled either.  I'll have to
+              // make a better one.
+              q.push(working_buffer.samples);
+              trc("after push, queue size is now " << q.size());
+              synced_queue.wait_condition().notify_one();
+              boost::thread::yield();
+            }
+            working_buffer.samples = (uint8_t*) std::malloc(working_buffer.size);
+            std::memset(working_buffer.samples, 0, working_buffer.size);
+            working_buffer.index = 0;
+          }
+
+          trc("index into output buffer is " << index << ".  Continue = " << (index < output_buf_size));
+        }
 
         break;
       }
@@ -321,6 +354,7 @@ void play(const char * const file) {
       dev.reopen(desired);
       std::cout << "got:\n" << dev.obtained() << std::endl;
       assert(desired.buffer_size() == dev.obtained().buffer_size());
+      sdl_buffer_size = dev.obtained().buffer_size();
     }
 
     std::cout << "pre-buffering" << std::endl;
@@ -354,8 +388,11 @@ void play(const char * const file) {
     r = pthread_mutex_unlock(&mutex);
     assert(r == 0);
 #else
-    // TODO: do file reading here.
     read_packets(ffile, audio);
+
+    std::cout << "wait to be told to exit" << std::endl;
+    boost::unique_lock<boost::mutex> lk(finish_mut);
+    finish_cond.wait(lk);
 #endif
 
     std::cout << "shutting down" << std::endl;

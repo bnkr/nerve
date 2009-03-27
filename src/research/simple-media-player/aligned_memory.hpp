@@ -33,14 +33,16 @@ class dynamic_aligned_memory : public boost::noncopyable {
   private:
     void alloc(std::size_t size) {
       base_ = (T*) std::malloc(size * sizeof(T) + Alignment);
-      std::size_t remainder = ((std::size_t) base_) % Alignment;
-      aligned_base_ = (T*) (((std::size_t) base_) + remainder);
+      std::size_t offset = Alignment - ((std::size_t) base_) % Alignment;
+      aligned_base_ = (T*) (((std::size_t) base_) + offset);
       assert(((std::size_t) aligned_base_) % Alignment == 0);
     }
 
     T *base_;
     T *aligned_base_;
 };
+
+#include <iostream>
 
 //! \brief Size is the number of elements.
 // TODO: unit test this
@@ -55,17 +57,25 @@ class aligned_memory : public boost::noncopyable {
     static const std::size_t byte_size  = Size * sizeof(T);
 
     aligned_memory() {
-      const std::size_t byte_offset = ((std::size_t) data_) % Alignment;
+      // Faster:
+      //
+      //   byte_offset = align + (((std::size_t ) data_ - 1) & ~(alignment - 1))
+      //
+      // but I have to assert Alignment is a power of two statically.
+      //
+      // Use
+      //   is_power_of_two = x && ! ( (x-1) & x );
+      const std::size_t byte_offset = Alignment - ((std::size_t) data_) % Alignment;
       base_ = (T*) (((std::size_t) data_) + byte_offset);
       assert(((std::size_t) base_) % Alignment == 0);
     }
 
-    T *ptr() { return base_; }
-    const T *ptr() const { return base_; }
+    pointer_type ptr() { return base_; }
+    const pointer_type ptr() const { return base_; }
 
   private:
-    uint8_t data_[Size * sizeof(T) + Alignment];
-    T * const base_;
+    uint8_t data_[byte_size + Alignment];
+    pointer_type base_;
 };
 
 #endif
