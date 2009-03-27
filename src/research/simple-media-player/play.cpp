@@ -10,13 +10,14 @@
 #include <pthread.h>
 #include <cstdlib>
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-std::ifstream in;
 
 #include <boost/thread.hpp>
 #include <boost/cstdint.hpp>
 
+#if SIMPLE_WAVE_FILE_READER
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+std::ifstream in;
 
 int amount_read = 0;
 std::size_t file_buffer_size = 0;
@@ -50,8 +51,7 @@ void file_reading_callback(void *userdata, uint8_t *stream, int length) {
   buffer_file();
 }
 
-// boost::scoped_array<char> last_log;
-
+#endif
 
 #include <queue>
 #include <para/locking.hpp>
@@ -60,8 +60,7 @@ void file_reading_callback(void *userdata, uint8_t *stream, int length) {
 //   class here.  The second is the queue accessor.  Maybe I use
 //
 
-typedef para::sync_traits<std::queue<void *>, boost::mutex, boost::lock_guard<boost::mutex>, boost::condition_variable> sync_traits_type;
-
+typedef para::sync_traits<std::queue<void *>, boost::mutex, boost::unique_lock<boost::mutex>, boost::condition_variable> sync_traits_type;
 typedef sync_traits_type::monitor_tuple_type synced_type;
 synced_type synced_queue;
 
@@ -75,7 +74,7 @@ bool continue_predicate() {
   //   problematic to say the least.  I wanted data to be untouched
   //   outside of lockness.  Well, I might have to pass the data to
   //   the predicate?  It's messay though.
-  return ! queue.data().empty() || finished;
+  return ! synced_queue.data().empty() || finished;
 }
 
 // nevr mind this for a while.  Check boost anyway.  The crucial part of
@@ -108,22 +107,24 @@ class stacked_block_pool_allocator {
 
 //! \brief Read buffers from a queue and push them to the output stream.
 void ffmpeging_callback(void *userdata, uint8_t *stream, int length) {
+  typedef sync_traits_type::monitor_type monitor_type;
   while (true)  {
-    // TODO: access_ptr is a silly name.  Call it monitored_ptr.
-    container_type::value_type buffer = NULL;
+    void *buffer = NULL;
     {
       monitor_type m(synced_queue, &continue_predicate);
-      synced_queue::data_type &q = m.data();
+      // TODO: anoying.  Two interfaces to the data.  Monitored<T> will fix it I guess.
+      synced_type::value_type &q = synced_queue.data();
       if (finished && q.empty()) {
         // wait for more data
         // TODO:
         //   accesses to terminate must be sunchronised as well - ctonainer_type
         //   should actually be a type which has this added.
-        q.cond().wait(q.lock()); // abbreviate to q.wait();
+        m.wait_condition().wait(m.lock()); // abbreviate to q.wait();
         continue;
       }
 
-      buffer = q->pop_back();
+      buffer = q.front();
+      q.pop();
     }
 
     std::memcpy(stream, buffer, length);
@@ -133,16 +134,13 @@ void ffmpeging_callback(void *userdata, uint8_t *stream, int length) {
 }
 
 namespace ffmpeg {
-class stream_reader {
-  public:
-};
 
 //! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
 class frame {
   public:
-    frame(ffmpeg::file &file) {
-      ret_ = av_read_frame(&file.format_context(), &packet_);
-      finished_ = (ret_ != 0);
+    frame(ffmpeg::file &file) : file_(file) {
+      int ret = av_read_frame(&file.format_context(), &packet_);
+      finished_ = (ret != 0);
     }
 
     ~frame() { av_free_packet(&packet_); }
@@ -153,10 +151,34 @@ class frame {
     const uint8_t *data() { return packet_.data; }
     int size() { return packet_.size; }
 
+
   private:
+    ffmpeg::file &file_;
     AVPacket packet_;
     bool finished_;
 
+};
+
+//! \brief Decodes audio based on the data context of the audio stream.
+class audio_decoder {
+  public:
+    audio_decoder(ffmpeg::audio_stream &s)
+    : stream_(s) {}
+
+    // TODO:
+    //   this is a really messy way to do it.  How can I make it so you don't have
+    //   to always specify those buffers but still keep it reasonable to use.  I think
+    //   I just need to restrict how it works; for example return a pointer to the
+    //   output or something.  It all depends exactly what other stateful things I
+    //   have to do, eg, when no data is found.
+    //
+    //! \brief All sizes are in *bytes* not num elts.
+    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
+      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
+    }
+
+  private:
+    audio_stream &stream_;
 };
 }
 
@@ -180,7 +202,7 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
   // so messy...
   finished = false;
   // wtf do I need that for?
-  // ffmpeg::stream_reader sr(s);
+  ffmpeg::audio_decoder decoder(s);
   do {
     // TODO:
     //   need to find a way to limit the size of the queue.  I guess we need to
@@ -201,6 +223,7 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
     // uint8_t *output_buf = (uint8_t *) pool.allocate();
 
     uint8_t *output_buf = (uint8_t *) std::malloc(sdl_buffer_size);
+    // presumably size % sizeof(int16_t) == 0
 
     do {
       int output_buf_size = sdl_buffer_size;
@@ -209,7 +232,7 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
       //   be set null.  Why doesn't ffmpeg do it, though.  It's their bloody data
       //   and I don't want to copy it!
 
-      int count = fr.decode_audio((int16_t*) output_buf, &output_buf_size, fr.data(), fr.size());
+      int count = decoder.decode((int16_t*) output_buf, &output_buf_size, fr.data(), fr.size());
       std::cout << "Read data:" << std::endl;
       std::cout << "  bytes read:" << count << std::endl;
       std::cout << "  output buf size:" << output_buf_size << std::endl;
@@ -238,10 +261,16 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
 
       {
         // No need to monitor wait, just push the data as soon as we get a lock
-        guarded_type::locked_ptr q(queue);
+        // TODO:
+        //   clearly this has added nothing over using standard synchronisation.  monitoed<T>
+        //   makes it a bit better, but at least having a nicer way to obtain that uinque_lock
+        //   type makes it better.  Probably sync_traits should place them somewhere visible.
+        boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
+        synced_type::value_type &q = synced_queue.data();
         // Problem is that the fucking queue isn't pooled either.  I'll have to
         // make a better one.
-        q->push(output_buf);
+        q.push(output_buf);
+        synced_queue.wait_condition().notify_one();
 
         break;
       }
@@ -265,7 +294,7 @@ void play(const char * const file) {
     sdl::device dev(aud);
     ffmpeg::initialiser ff;
     ffmpeg::file ffile(file);
-    file.dump_format(file);
+    ffile.dump_format(file);
     ffmpeg::audio_stream audio(ffile);
 
 #if SIMPLE_WAVE_FILE_READER
@@ -275,11 +304,11 @@ void play(const char * const file) {
 
     {
 #if SIMPLE_WAVE_FILE_READER
-      sdl::audio_spec::callback_type = file_reading_callback;
+      sdl::audio_spec::callback_type cb = &file_reading_callback;
 #else
-      sdl::audio_spec::callback_type = ffmpeging_callback;
+      sdl::audio_spec::callback_type cb = &ffmpeging_callback;
 #endif
-      sdl::audio_spec desired(file_reading_callback);
+      sdl::audio_spec desired(cb);
       std::cout << "Opening audio." << std::endl;
       std::cout << "wanted:\n" << desired << std::endl;
       dev.reopen(desired);

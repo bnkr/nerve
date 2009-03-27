@@ -76,7 +76,7 @@ void load_file_test(const char *filename) {
 
     // Output must be 16-byte alligned because SSE needs it.
     const uint8_t align = 16;
-    typedef aligned_memory<align, int16_t> aligned_memory_type;
+    typedef dynamic_aligned_memory<align, int16_t> aligned_memory_type;
     const std::size_t buffer_byte_size = AVCODEC_MAX_AUDIO_FRAME_SIZE * 2;
     assert(buffer_byte_size % sizeof(aligned_memory_type::value_type) == 0);
     aligned_memory_type mem(buffer_byte_size / sizeof(aligned_memory_type::value_type));

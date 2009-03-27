@@ -99,6 +99,10 @@ find_library(BOOST_PROGOPT_LIB "boost_program_options-mt")
 if (NOT BOOST_PROGOPT_LIB)
   find_library(BOOST_PROGOPT_LIB "boost_program_options")
 endif()
+find_library(BOOST_THREAD_LIB "boost_thread-mt")
+if (NOT BOOST_THREAD_LIB)
+  find_library(BOOST_THREAD_LIB "boost_thread")
+endif()
 
 find_library(AVUTIL_LIB   "avutil")
 find_library(AVFORMAT_LIB "avformat")
@@ -107,7 +111,8 @@ find_library(AVCODEC_LIB  "avcodec")
 find_package(SDL REQUIRED)
 
 mark_as_advanced(
-  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB BOOST_PROGOPT_LIB
+  BOOST_FS_LIB BOOST_PROGOPT_LIB BOOST_THREAD_LIB
+  AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB 
 )
 
 ###########################
@@ -149,34 +154,38 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
   message("${SDL_LIBRARY}")
   set(ALL_IO_LIBS 
-    ${SDL_LIBRARY} "${BOOST_FS_LIB}" 
+    ${SDL_LIBRARY} 
     "${AVUTIL_LIB}" 
     "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+  )
+
+  set(UTILITY_LIBS
+    "${BOOST_FS_LIB}" "${BOOST_THREAD_LIB}"
   )
 
   # simple-media-player
   set(bin_name  "simple-media-player")
   set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp" "${RES_DIR}/${bin_name}/load_file_test.cpp")
   add_executable(${bin_name} ${src})
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # gapless-playback
   set(bin_name "gapless-playback")
   set(src "${RES_DIR}/gapless-playback.cpp")
   add_executable("${bin_name}" "${src}")
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # tripple-gapless-playback
   set(bin_name "tripple-gapless-playback")
   set(src "${RES_DIR}/tripple-gapless-playback.cpp")
   add_executable("${bin_name}" "${src}")
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # interrupted-playback
   set(bin_name "interrupted-playback")
   set(src "src/research/interrupted-playback.cpp")
   add_executable("${bin_name}" ${src})
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS})
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 endif()
 
 # Do tests
