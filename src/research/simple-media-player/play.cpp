@@ -10,6 +10,8 @@
 #include <pthread.h>
 #include <cstdlib>
 
+#include <bdbg/trace/short_macros.hpp>
+#include <bdbg/trace/static_definitions.hpp>
 
 #include <boost/thread.hpp>
 #include <boost/cstdint.hpp>
@@ -52,6 +54,8 @@ void file_reading_callback(void *userdata, uint8_t *stream, int length) {
 }
 
 #endif
+
+std::size_t sdl_buffer_size = 0;
 
 #include <queue>
 #include <para/locking.hpp>
@@ -182,7 +186,7 @@ class audio_decoder {
 };
 }
 
-void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
+void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
   /*
   From the docs:
 
@@ -194,6 +198,8 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
 
   Input must be "at least 4 byte aligned".  ffmpeg doesn't always do it
   in data.
+
+  Finally, the output must be at least AVCODEC_MAX_AUDIO_FRAME_SIZE.
   */
 
   // TODO: won't always be this size.
@@ -222,7 +228,7 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
     //TODO: use a pool
     // uint8_t *output_buf = (uint8_t *) pool.allocate();
 
-    uint8_t *output_buf = (uint8_t *) std::malloc(sdl_buffer_size);
+    uint8_t *output_buf = (uint8_t *) std::malloc(AVCODEC_MAX_AUDIO_FRAME_SIZE); // sdl_buffer_size);
     // presumably size % sizeof(int16_t) == 0
 
     do {
@@ -260,6 +266,7 @@ void read_packets(ffmpeg::file file, ffmpeg::audio_stream &s) {
       // further  processing on audio buffer here.
 
       {
+        trc("");
         // No need to monitor wait, just push the data as soon as we get a lock
         // TODO:
         //   clearly this has added nothing over using standard synchronisation.  monitoed<T>
@@ -313,6 +320,7 @@ void play(const char * const file) {
       std::cout << "wanted:\n" << desired << std::endl;
       dev.reopen(desired);
       std::cout << "got:\n" << dev.obtained() << std::endl;
+      assert(desired.buffer_size() == dev.obtained().buffer_size());
     }
 
     std::cout << "pre-buffering" << std::endl;
@@ -347,6 +355,7 @@ void play(const char * const file) {
     assert(r == 0);
 #else
     // TODO: do file reading here.
+    read_packets(ffile, audio);
 #endif
 
     std::cout << "shutting down" << std::endl;

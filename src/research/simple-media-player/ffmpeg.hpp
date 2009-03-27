@@ -193,6 +193,52 @@ ok:
     AVCodec *codec_;
 };
 
+//! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
+class frame {
+  public:
+    frame(ffmpeg::file &file) : file_(file) {
+      int ret = av_read_frame(&file.format_context(), &packet_);
+      finished_ = (ret != 0);
+    }
+
+    ~frame() { av_free_packet(&packet_); }
+
+    //! Stream finished?
+    bool finished() const { return finished_; }
+
+    const uint8_t *data() { return packet_.data; }
+    int size() { return packet_.size; }
+
+
+  private:
+    ffmpeg::file &file_;
+    AVPacket packet_;
+    bool finished_;
+
+};
+
+//! \brief Decodes audio based on the data context of the audio stream.
+class audio_decoder {
+  public:
+    audio_decoder(ffmpeg::audio_stream &s)
+    : stream_(s) {}
+
+    // TODO:
+    //   this is a really messy way to do it.  How can I make it so you don't have
+    //   to always specify those buffers but still keep it reasonable to use.  I think
+    //   I just need to restrict how it works; for example return a pointer to the
+    //   output or something.  It all depends exactly what other stateful things I
+    //   have to do, eg, when no data is found.
+    //
+    //! \brief All sizes are in *bytes* not num elts.
+    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
+      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
+    }
+
+  private:
+    audio_stream &stream_;
+};
+
 } // ns ffmpeg
 
 
