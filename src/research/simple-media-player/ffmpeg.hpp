@@ -51,20 +51,20 @@ BASIC_EXCEPTION(unsupported_codec_error);
 
 #undef BASIC_EXCEPTION
 
-//! \brief Initialise the library.
-class library {
+//! \brief Initialise the library and interface to the static parts.
+class initialiser {
   public:
-    library(int log_level = AV_LOG_WARNING) {
+    initialiser(int log_level = AV_LOG_WARNING) {
       av_log_set_level(AV_LOG_DEBUG);
       av_register_all();
+      // log callback stuff here.
     }
 };
 
 //! \brief Wrapper for AVFormatContext.
+//TODO: maybe should take the initialiser?  But it needs a better name...
 class file {
   public:
-    AVFormatContext *format_;
-
     // \brief Open the header and inspect the streams.
     file(const char * const file) {
       // I need a get_last_error message function, or at least some kind of errno?.
@@ -91,7 +91,7 @@ class file {
       av_close_input_file(format_);
     }
 
-    //! \brief Print the format to stdout.  \c filename is merely informational.
+    //! \brief Print the format to stderr.  \c filename is merely informational.
     void dump_format(const char *filename = NULL) const {
       // TODO: what are those otehr parameters for?
       ::dump_format(format_, 0, filename, 0);
@@ -106,6 +106,9 @@ class file {
     AVFormatContext &format_context() { return *format_; }
 
     std::size_t num_streams() const { return format_context().nb_streams; }
+
+  private:
+    AVFormatContext *format_;
 };
 
 //! \brief Interface to the audio stream and codec data.

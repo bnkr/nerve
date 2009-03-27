@@ -15,7 +15,7 @@
 //   There's not much point in having this kind of storage unless you can make the
 //   buffer of a variable size; otherwise just use static_aligned_memory.
 template <std::size_t Alignment, class T = uint8_t>
-class aligned_memory : public boost::noncopyable {
+class dynamic_aligned_memory : public boost::noncopyable {
   public:
     typedef T  value_type;
     typedef T* pointer_type;
@@ -23,8 +23,8 @@ class aligned_memory : public boost::noncopyable {
     static const std::size_t alignment = Alignment;
 
     // \brief Size in num elements.
-    aligned_memory(std::size_t size) { alloc(size); }
-    ~aligned_memory() { std::free(base_); }
+    dynamic_aligned_memory(std::size_t size) { alloc(size); }
+    ~dynamic_aligned_memory() { std::free(base_); }
 
     //! \brief Return aligned storage.
     T *ptr() { return aligned_base_; }
@@ -45,7 +45,7 @@ class aligned_memory : public boost::noncopyable {
 //! \brief Size is the number of elements.
 // TODO: unit test this
 template <std::size_t Alignment, std::size_t Size, class T = uint8_t>
-class static_aligned_memory : public boost::noncopyable {
+class aligned_memory : public boost::noncopyable {
   public:
     typedef T  value_type;
     typedef T* pointer_type;
@@ -54,7 +54,7 @@ class static_aligned_memory : public boost::noncopyable {
     static const std::size_t size       = Size;
     static const std::size_t byte_size  = Size * sizeof(T);
 
-    static_aligned_memory() {
+    aligned_memory() {
       const std::size_t byte_offset = ((std::size_t) data_) % Alignment;
       base_ = (T*) (((std::size_t) data_) + byte_offset);
       assert(((std::size_t) base_) % Alignment == 0);

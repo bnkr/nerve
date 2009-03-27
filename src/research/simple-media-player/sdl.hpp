@@ -100,7 +100,9 @@ class audio_spec {
     //! \brief Defer initialisation until later - intended for the obtained value output, but could be useful.
     explicit audio_spec(defer_init_type) {}
 
-    explicit audio_spec(callback_type callback, int freq = 44100, int channels =  2, int samples = 1024, int format = AUDIO_S16SYS) {
+    // samples calculates the byte size.
+    // TODO: what exactly is the data.
+    explicit audio_spec(callback_type callback, int freq = 44100, int samples = 1024, int channels = 2, int format = AUDIO_S16SYS) {
       // std::memset(spec(), 0, sizeof(SDL_AudioSpec));
       spec().freq = freq;
       spec().format = format;

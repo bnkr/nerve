@@ -62,7 +62,7 @@ void load_file_test(const char *filename) {
   // http://www.dranger.com/ffmpeg/data.html - abbreviated data type list
 
   try {
-    ffmpeg::library lib(AV_LOG_DEBUG);
+    ffmpeg::initialiser lib(AV_LOG_DEBUG);
     ffmpeg::file file(filename);
     file.dump_format(filename);
 
@@ -70,10 +70,12 @@ void load_file_test(const char *filename) {
 
     // TODO:
     //   obv. this stuff has to be c++alised.
+    //   - init a frame with an audio_stream
+    //   - init a decoded frame with a frame
+    //   Only problem is moving that buffer data.
 
     // Output must be 16-byte alligned because SSE needs it.
     const uint8_t align = 16;
-    // use uint8 so the padding will work.
     typedef aligned_memory<align, int16_t> aligned_memory_type;
     const std::size_t buffer_byte_size = AVCODEC_MAX_AUDIO_FRAME_SIZE * 2;
     assert(buffer_byte_size % sizeof(aligned_memory_type::value_type) == 0);
@@ -81,7 +83,7 @@ void load_file_test(const char *filename) {
     int16_t *output_buf = mem.ptr();
 
     AVPacket packet;
-    while(av_read_frame(&file.format_context(), &packet) >= 0) {
+    while (av_read_frame(&file.format_context(), &packet) >= 0) {
       dump_packet(packet);
 
       // Reset this every time because decode writes back to it.
