@@ -73,8 +73,14 @@ mark_as_advanced(
   HAVE_SDL_SDL_H
 )
 
-set(CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
-configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${CONFIG_HPP_OUTPUT}")
+set(NERVED_CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
+configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${NERVED_CONFIG_HPP_OUTPUT}")
+
+set(NERVE_VERSION ${PROJECT_VERSION})
+set(NERVE_HOST_SYSTEM ${CMAKE_HOST_SYSTEM})
+set(NERVE_TARGET_SYSTEM ${CMAKE_SYSTEM})
+set(NERVE_CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerve_config.hpp")
+configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerve_config.hpp.cmake" "${NERVE_CONFIG_HPP_OUTPUT}")
 
 ####################
 ## Check for libs ##
@@ -89,6 +95,11 @@ if (NOT BOOST_FS_LIB)
     message("         is no existing -mt library, then it is probably OK.")
   endif()
 endif()
+find_library(BOOST_PROGOPT_LIB "boost_program_options-mt")
+if (NOT BOOST_PROGOPT_LIB)
+  find_library(BOOST_PROGOPT_LIB "boost_program_options")
+endif()
+
 find_library(AVUTIL_LIB   "avutil")
 find_library(AVFORMAT_LIB "avformat")
 find_library(AVCODEC_LIB  "avcodec")
@@ -96,7 +107,7 @@ find_library(AVCODEC_LIB  "avcodec")
 find_package(SDL REQUIRED)
 
 mark_as_advanced(
-  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB 
+  BOOST_FS_LIB AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB BOOST_PROGOPT_LIB
 )
 
 ###########################
@@ -127,10 +138,12 @@ set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
 
 set(NERVED_SRCS "src/nerved/main.cpp")
-set(NERVE_SRCS  "src/nerve/main.cpp")
+set(NERVE_SRCS  "src/nerve/main.cpp" "src/nerve/settings.cpp")
 
 add_executable(${BIN_NERVED} ${NERVED_SRCS})
 add_executable(${BIN_NERVE}  ${NERVE_SRCS})
+target_link_libraries(${BIN_NERVE} ${BOOST_PROGOPT_LIB})
+target_link_libraries(${BIN_NERVE} ${BOOST_PROGOPT_LIB})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
