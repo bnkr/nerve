@@ -44,7 +44,7 @@ class dynamic_aligned_memory : public boost::noncopyable {
 
 #include <iostream>
 
-//! \brief Size is the number of elements.
+//! \brief Aligned buffer container - size is the number of elements, not bytes.
 // TODO: unit test this
 template <std::size_t Alignment, std::size_t Size, class T = uint8_t>
 class aligned_memory : public boost::noncopyable {

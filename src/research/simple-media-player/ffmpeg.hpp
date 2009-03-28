@@ -208,8 +208,8 @@ class frame {
     //! Stream finished?
     bool finished() const { return finished_; }
 
-    const uint8_t *data() { return packet_.data; }
-    int size() { return packet_.size; }
+    const uint8_t *data() const{ return packet_.data; }
+    int size() const { return packet_.size; }
 
 
   private:
@@ -240,6 +240,133 @@ class audio_decoder {
   private:
     audio_stream &stream_;
 };
+}
+
+#include "aligned_memory.hpp"
+#include <cstring>
+
+namespace ffmpeg {
+
+//! \brief Audio decoding context - reads frames into buffers of size n.
+//! This is very stateful.  There will usually be data left over from
+//! a frame, so this must not go out of scope until we are 100% finished
+//! with the entire stream (at least).
+//TODO:
+//  could I make an object which makes this one a bit safer to use?
+class xaudio_decoder {
+  public:
+    //! \brief Buffer size is what should be given to the audio output.
+    xaudio_decoder(ffmpeg::audio_stream &s, std::size_t packet_size)
+    : stream_(s), buffer_index_(0), packet_(NULL), packet_size_(packet_size) {
+      // my assumption is that it needs some N of 16 bit integers, even
+      // though we actually just write random stuff to it.
+      assert(buffer_bytes % sizeof(int16_t) == 0);
+      reset_packet();
+    }
+
+    //! \brief Set the internal state for this new frame.
+    void decode_frame(const ffmpeg::frame &fr) {
+      reset_buffer();
+
+      int buffer_size = buffer_type::byte_size;
+      int used_bytes = decode(buffer_.ptr(), &buffer_size, fr.data(), fr.size());
+
+      if (used_bytes < fr.size())  {
+        // what do we do?  Can it even happen?
+      }
+
+      if (buffer_size <= 0) {
+        // TODO: more detail
+        std::cerr <<  "nothign to decode" << std::endl;
+        // do what?  We must read another frame.
+        // return false;
+      }
+      else {
+        // don't set this unless we know it's unsigned.
+        buffer_size_ = (std::size_t) buffer_size;
+      }
+    }
+
+    //! \brief Get the next packet_size sized buffer from the frame, or NULL if there isn't one.
+    //TODO: return something like an auto_ptr of course
+    void *get_packet() {
+      if (buffer_index_ < buffer_size_) {
+        const std::size_t bytes_left = packet_size_ - packet_index_;
+        const std::size_t stream_available = buffer_size_ - buffer_index_;
+        const std::size_t copy_len = std::min(stream_available, bytes_left);
+
+        uint8_t *sample_buffer = ((uint8_t *) packet_) + packet_index_;
+        uint8_t *stream_buffer = ((uint8_t *) buffer_.ptr()) + buffer_index_;
+
+        std::memcpy(sample_buffer, stream_buffer, copy_len);
+        packet_index_ += copy_len;
+        buffer_index_ += copy_len;
+
+        // We filled up a buffer
+        if (packet_index_ == packet_size_) {
+          return reset_packet();
+        }
+      }
+      return NULL;
+    }
+
+    //! \brief Get a packet with unfilled bytes set nul.  A new state is NOT allocated.
+    void *get_final_packet() {
+      void *p = get_packet();
+      if (p != NULL) {
+        std::cerr << "get_final_packet(): error: something has gone horribly wrong -- there are packets left to output!" << std::endl;
+      }
+
+      std::memset(((uint8_t*)packet_ + packet_index_), 0, packet_index_ - packet_size_);
+      p = packet_;
+      packet_ = NULL;
+
+      return p;
+    }
+
+
+  private:
+    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
+      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
+    }
+
+    //! \brief Returns old packet (on the heap).
+    void *reset_packet() {
+      /// TODO:
+      ///   need to use some kind of allocator to get these; also an RAII type.
+      void *p = packet_;
+      packet_ = std::malloc(packet_size_);
+      packet_index_ = 0;
+      return packet_;
+    }
+
+    void reset_buffer() {
+      buffer_index_ = 0;
+      buffer_size_ = 0;
+    }
+
+    ffmpeg::audio_stream &stream_;
+
+    static const std::size_t buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+    static const std::size_t buffer_size = buffer_bytes / sizeof(int16_t);
+    static const std::size_t alignment = 16;
+
+    typedef aligned_memory<alignment, buffer_size, int16_t> buffer_type;
+    buffer_type buffer_;
+
+    // refering to the actually used bytes.
+    std::size_t buffer_size_;
+    std::size_t buffer_index_;
+
+    void *packet_;
+    const std::size_t packet_size_;
+    std::size_t packet_index_;
+};
+
+class decoded_block {
+
+};
+
 
 } // ns ffmpeg
 

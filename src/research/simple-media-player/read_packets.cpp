@@ -108,85 +108,42 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s) {
 
   // so messy...
   finished = false;
-  ffmpeg::audio_decoder decoder(s);
-
   assert(sdl_buffer_size > 0);
-  processing_data working_buffer(sdl_buffer_size);
 
-  const std::size_t buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-  // assumption is that it needs some N of 16 bit integers.
-  assert(buffer_bytes % sizeof(int16_t) == 0);
-  const std::size_t buffer_size = buffer_bytes / sizeof(int16_t);
-  const std::size_t alignment = 16;
-  aligned_memory<alignment, buffer_size, int16_t> buffer;
+  ffmpeg::xaudio_decoder xdecoder(s, sdl_buffer_size);
 
   do {
-    // TODO:
-    //   need to find a way to limit the size of the queue.  I guess we need to
-    //   wait on the same conditoon.
     ffmpeg::frame fr(file);
     if (fr.finished()) {
       trc("Finished!");
       // in the next version I need to swap over to the next file here and continue
-      // on to the next buffer.  What happens if the last iteration there was only
-      // a partial-buffer?
+      // on to the next buffer.  We can just move the file object up loop prolly?
+      // Mixing them together is a whole other mission though.
       break;
     }
 
-    // TODO:
-    //   see audio_decode_frame from the tute.  Complicatedness with
-    //   static variable.
-
-    //TODO: use a pool
-    // uint8_t *output_buf = (uint8_t *) pool.allocate();
-
-    do {
-      int16_t *output_buf = buffer.ptr();
-      int output_buf_size = buffer_bytes;
-      // TODO:
-      //   data(), size() might have to be aligned, and also the last byte should
-      //   be set null.  Why doesn't ffmpeg do it, though.  It's their bloody data
-      //   and I don't want to copy it!
+    xdecoder.decode_frame(fr);
+    void *sample_buffer = xdecoder.get_packet();
+    while (sample_buffer != NULL) {
+      synced_type::value_type &q = synced_queue.data();
+      {
+        boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
+        // Problem is that the fucking queue isn't pooled either.  I'll have to
+        // make a better one.
+        q.push(sample_buffer);
+        trc("after push, queue size is now " << q.size());
+        synced_queue.wait_condition().notify_one();
+      }
 
       // TODO:
-      //   this is not a nice interface.  When I have more data about how this
-      //   will work, I should abstract it.  This and the working_data and process_data
-      //   stuff should all go in a stateful object.  We just repeatedly pull blocks
-      //   from the obj like, while (x.has_blocks()) { queue.push(x.read_block()); }
-      //   Of course we need it up a scope because it stores data between frames.
-      int count = decoder.decode(buffer.ptr(), &output_buf_size, fr.data(), fr.size());
-#if 0
-      std::cout << "Read data:" << std::endl;
-      std::cout << "  bytes inputted:      " << fr.size() << std::endl;
-      std::cout << "  output buffer size:  " << buffer_bytes << std::endl;
-      std::cout << "  bytes of input used: " << count << std::endl;
-      std::cout << "  output buf size:     " << output_buf_size << std::endl;
-#endif
+      //   need to find a way to limit the size of the queue.  I guess we need to
+      //   wait on the same conditoon. I can actually wait on the existing ones.
 
-      // Skip error frame.
-      if (count < 0) {
-        trc("skip error frame");
-        break;
-      }
-
-      // Data not ready yet.
-      if (output_buf_size <= 0) {
-        trc("nothing to decore");
-        continue;
-      }
-
-      if (count < fr.size()) {
-        // TODO: what happens here?
-        std::cout << "less bytes read than the input size: " << count << " vs. " << fr.size() << std::endl;
-      }
-
-      // further  processing on audio buffer here.
-
-      process_data(working_buffer, output_buf, output_buf_size);
-      break;
-    } while (true);
-
+      sample_buffer = xdecoder.get_packet();
+    }
   } while (true);
+
+// TODO: use xdecoder.get_final_packet();
 
   // put the remainder of the working buffer on the stream.
   finished = true;
