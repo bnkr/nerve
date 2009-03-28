@@ -16,7 +16,7 @@ bool queue_small_enough() {
 void push_packet(void *sample_buffer) {
   synced_type::value_type &q = synced_queue.data();
   {
-    trc("push packet " << sample_buffer);
+    // trc("push packet " << sample_buffer);
     boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
     // Problem is that the fucking queue isn't pooled either.  I'll have to
     // make a better one.
@@ -42,7 +42,10 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
   // this would be replaced by some way of waiting until the playlist has members again.
   finished = false;
 
-  trc("chunking " << file_name << " with the packet state at " << state.ptr());
+  trc("chunking " << file_name);
+  trc("packetptr at " << state.ptr());
+  trc("index is " << state.index());
+
   ffmpeg::file file(file_name);
   file.dump_format(file_name);
   ffmpeg::audio_stream audio(file);
@@ -55,15 +58,51 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
       break;
     }
 
+    // TODO:
+    //   Somewhere around here I need to get rid of the gaps.  I will probably need to
+    //   know about the stream context since I am going to need to know about the end
+    //   of  the frame.  I am also going to need to process the stream *before* it
+    //   gets pushed into the state.  Therefore, somewhere in get_packet() or decode().
+    //
+    //   decode() - good choice as I can work backwards and just truncate the buffer.
+    //     I must know if it's the last frame in the file.
+    //
+    //     Actually decode() is the only choice.  If the frame is entirely silence then
+    //     I can just drop the entire frame there and then.  I guess the real problem is
+    //     dropping silent frames when I don't want them dropped.
+    //
+    //   get_packet() - might need to do it anyway if I have generalised stream
+    //     processing because that means you can process in even sized chunks which
+    //     might be desireable.
+    //
+    // It should probably be something like
+    //
+    // ffmpeg::audio_decoder dec(fr);
+    // // one of which is 'if last frame, truncate buffer'
+    // dec.preprocess(plugins_list);
+    //
+    // each {|sample_block|
+    //   block_process(sample_block);
+    //   observer_process(sample_block);
+    // }
+    //
+    // An interesting extension would be to organise a multi-threaded
+    // processing pipeline.  Each stage has a monitored queue for
+    // packets to mess with.
+    //
+
+    // TODO:
+    //   the decoder should be declared here now I have detached the state.
     decoder.decode(fr);
 
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
-      trc("got buf: " << sample_buffer);
+      // trc("got buf: " << sample_buffer);
       push_packet(sample_buffer);
       sample_buffer = decoder.get_packet();
     }
   }
+
   trc("finished chunking " << file_name);
   trc("packetptr at " << state.ptr());
   trc("index is " << state.index());

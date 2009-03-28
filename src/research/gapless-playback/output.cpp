@@ -50,6 +50,6 @@ void sdl_callback(void*,uint8_t *stream, int length) {
   std::memcpy(stream, buffer, length);
   // pool.deallocate(buffer);
   // trc("freeing " << buffer);
-  // std::free(buffer);
+  std::free(buffer);
 }
 

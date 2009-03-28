@@ -9,6 +9,7 @@ informational.
 #define FFMPEG_HPP_7awlau1z
 
 #include <nerved_config.hpp>
+#include <bdbg/trace/short_macros.hpp>
 
 // FFmpeg developers hate C++, and not without good reason!  But then I have
 // always been a masochist...
@@ -362,7 +363,7 @@ class audio_decoder {
     : stream_(stream), buffer_index_(0), packet_(packet_state) {
       // my assumption is that it needs some N of 16 bit integers, even
       // though we actually just write random stuff to it.
-      assert(buffer_bytes % sizeof(int16_t) == 0);
+      assert(total_buffer_bytes % sizeof(int16_t) == 0);
     }
 
     //! \deprecated use decode(fr);
@@ -393,14 +394,14 @@ class audio_decoder {
       */
       reset_buffer();
 
-      int buffer_size = buffer_type::byte_size;
-      int used_bytes = decode(buffer_.ptr(), &buffer_size, fr.data(), fr.size());
+      int used_buffer_size = buffer_type::byte_size;
+      int used_bytes = decode(buffer_.ptr(), &used_buffer_size, fr.data(), fr.size());
 
       if (used_bytes < fr.size())  {
         // what do we do?  Can it even happen?
       }
 
-      if (buffer_size <= 0) {
+      if (used_buffer_size <= 0) {
         // TODO: more detail
         std::cerr <<  "nothign to decode" << std::endl;
         // do what?  We must read another frame.
@@ -408,8 +409,46 @@ class audio_decoder {
       }
       else {
         // don't set this unless we know it's unsigned.
-        buffer_size_ = (std::size_t) buffer_size;
+        buffer_size_ = (std::size_t) used_buffer_size;
+
+        // TODO:
+        //   this will be a problem if we're not using signed 16bit I guess.
+        //   It doesn't appear to work anyway.  There is still a slight pop;
+        //   no real difference between this and the original.
+        //
+        //   Also I should only do it on the last frame of a file.
+        //
+        // TODO:
+        //   Truncating in the middle is not good enough.  I must only truncate
+        //   contiguous periods of silence.  Otherwise you get popping.
+        truncate_silence<int16_t>();
+
+        // TODO:
+        //   This dies horribly - loads of white noise is outputted.
+        // truncate_silence<uint8_t>();
       }
+    }
+
+    //! \brief Truncate the buffer if it ends with silence.
+    template <class UnitsOf>
+    void truncate_silence() {
+      trc("started with a buffer of " << buffer_size_ << " bytes");
+      std::size_t elts = buffer_size_ / sizeof(UnitsOf);
+      trc("there are " << elts <<  " of that unit in the array");
+      std::size_t num_trimmed = 0;
+      UnitsOf *samples = (UnitsOf*) buffer_.ptr();
+      for (int i = elts - 1; i >= 0; --i) {
+        // trc(i);
+        if (samples[i] == 0) {
+          buffer_size_ -= sizeof(UnitsOf);
+          num_trimmed++;
+        }
+        else {
+          break;
+        }
+      }
+      trc("truncated to " << buffer_size_ <<  " bytes.");
+      trc("trimmed      " << num_trimmed  << " times.");
     }
 
     //! \brief Get the next packet_size sized buffer from the frame, or NULL if there isn't one.
@@ -467,15 +506,16 @@ class audio_decoder {
     ffmpeg::audio_stream &stream_;
 
     // work out the aligned buffer type
-    static const std::size_t buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-    static const std::size_t buffer_size = buffer_bytes / sizeof(int16_t);
+    static const std::size_t total_buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+    static const std::size_t total_buffer_size = total_buffer_bytes / sizeof(int16_t);
     static const std::size_t alignment = 16;
-    typedef aligned_memory<alignment, buffer_size, int16_t> buffer_type;
+    typedef aligned_memory<alignment, total_buffer_size, int16_t> buffer_type;
 
     buffer_type buffer_;
 
     // the amount of the buffer which was written to by ffmpeg.
     std::size_t buffer_size_;
+    // stateful data - where have we outputted this frame up to?
     std::size_t buffer_index_;
 
     // working state
