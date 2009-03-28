@@ -266,7 +266,11 @@ class audio_decoder {
     }
 
     //! \brief Get the next packet_size sized buffer from the frame, or NULL if there isn't one.
-    //TODO: return something like an auto_ptr of course
+    //TODO:
+    //  return something like an auto_ptr of course; really it should be done via.
+    //  an allocator or even some kind of visitor function?  That would be less
+    //  error prone, certainly.  Ideally I want to put it in a queue which is
+    //  a memory pool.
     void *get_packet() {
       if (buffer_index_ < buffer_size_) {
         const std::size_t bytes_left = packet_size_ - packet_index_;
@@ -295,7 +299,7 @@ class audio_decoder {
         std::cerr << "get_final_packet(): error: something has gone horribly wrong -- there are packets left to output!" << std::endl;
       }
 
-      std::memset(((uint8_t*)packet_ + packet_index_), 0, packet_index_ - packet_size_);
+      std::memset(((uint8_t*)packet_ + packet_index_), 0, packet_size_ - packet_index_);
       p = packet_;
       packet_ = NULL;
 

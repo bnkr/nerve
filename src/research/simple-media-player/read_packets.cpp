@@ -5,6 +5,21 @@
 #include "aligned_memory.hpp"
 #include "shared_data.hpp"
 
+void push_packet(void *sample_buffer) {
+  synced_type::value_type &q = synced_queue.data();
+  {
+    boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
+    // Problem is that the fucking queue isn't pooled either.  I'll have to
+    // make a better one.
+    q.push(sample_buffer);
+    synced_queue.wait_condition().notify_one();
+  }
+
+  // TODO:
+  //   need to find a way to limit the size of the queue.  I guess we need to
+  //   wait on the same conditoon. I can actually wait on the existing ones.
+}
+
 void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s, const sdl::audio_spec &audio_spec) {
   /*
   From the docs:
@@ -47,25 +62,13 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s, const sdl::audio_
     xdecoder.decode_frame(fr);
     void *sample_buffer = xdecoder.get_packet();
     while (sample_buffer != NULL) {
-      synced_type::value_type &q = synced_queue.data();
-      {
-        boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
-        // Problem is that the fucking queue isn't pooled either.  I'll have to
-        // make a better one.
-        q.push(sample_buffer);
-        trc("after push, queue size is now " << q.size());
-        synced_queue.wait_condition().notify_one();
-      }
-
-      // TODO:
-      //   need to find a way to limit the size of the queue.  I guess we need to
-      //   wait on the same conditoon. I can actually wait on the existing ones.
-
+      push_packet(sample_buffer);
       sample_buffer = xdecoder.get_packet();
     }
   } while (true);
 
-// TODO: use xdecoder.get_final_packet();
+  void *p = xdecoder.get_final_packet();
+  push_packet(p);
 
   // put the remainder of the working buffer on the stream.
   finished = true;
