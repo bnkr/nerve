@@ -1,4 +1,5 @@
-Nerve is a daemon-based audio player which aims for output quality insteaf of 
-making a flashy user interface.  It's main features are software mixing and
+Nerve is a multi-threaded stream-based frequency processing engine daemon (ie, 
+an MP3 player).  The emphasis is on output quality and it does not have a
+GUI intrinsic to the application.  It's main features are software mixing and
 removing gaps between tracks for seamless playback.  It uses ffmpeg and sdl,
 and therefore is fast and supports a great number of platforms.

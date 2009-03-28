@@ -9,10 +9,11 @@ typedef para::sync_traits<std::queue<void *>, boost::mutex, boost::unique_lock<b
 typedef sync_traits_type::monitor_tuple_type synced_type;
 extern synced_type synced_queue;
 
-// messy - prolly needs a bool callback_finished_printing_data.
+// messy - prolly needs a bool callback_finished_printing_data to do a monitor while on.
 extern boost::mutex finish_mut;
 extern boost::condition_variable finish_cond;
 
+// again messy - should be part of the queue data (it is protected by that mutex)
 extern bool finished;
 
 #endif

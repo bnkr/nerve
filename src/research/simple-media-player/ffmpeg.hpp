@@ -29,6 +29,7 @@ extern "C" {
 
 #include <stdexcept>
 #include <cassert>
+#include <iostream> // debug
 
 namespace ffmpeg {
 
@@ -57,6 +58,8 @@ class initialiser {
     initialiser(int log_level = AV_LOG_WARNING) {
       av_log_set_level(AV_LOG_DEBUG);
       av_register_all();
+      //typedef void(*callback_type)(void *, int, const char *, va_list);
+      //av_log_set_callback(test_loading_log_cb);
       // log callback stuff here.
     }
 };
@@ -68,22 +71,54 @@ class file {
     // \brief Open the header and inspect the streams.
     file(const char * const file) {
       // I need a get_last_error message function, or at least some kind of errno?.
-      //av_log_set_callback(test_loading_log_cb);
 
       // no docs somewhere
       AVInputFormat *const forced_format = NULL;
       // http://www.dranger.com/ffmpeg/data.html#AVFormatParameters
       AVFormatParameters *const parameters = NULL;
-      // what is the buffer size for?
+      // what is this buffer size for?
       const std::size_t buffer_size = 0;
-      if (av_open_input_file(&format_, file, forced_format, buffer_size, parameters) != 0) {
-        // TODO: why?
+
+      int ret = av_open_input_file(&format_, file, forced_format, buffer_size, parameters);
+      if (ret != 0) {
+        // TODO: why?  Have to do some of my own validation here I guess.
         throw file_error("couldn't open file");
       }
       assert(format_ != NULL);
 
-      if (av_find_stream_info(format_) != 0) {
-        throw ffmpeg_error("av_find_stream_info");
+      dump_format(file);
+
+      ret = av_find_stream_info(format_);
+      if (ret != 0) {
+        std::cerr << "error num: " <<  ret << " becomes " << strerror(ret) << std::endl;
+        // TODO: say why.
+        //
+        switch (ret) {
+          // case AVERROR_UNKNOWN: // duplicated AVERROR_INVALIDDATA
+            // std::cout << "AVERROR_UNKNOWN" << std::endl; break;
+          case AVERROR_IO:
+            std::cout << "AVERROR_IO" << std::endl; break;
+          case AVERROR_NUMEXPECTED:
+            std::cout << "AVERROR_NUMEXPECTED" << std::endl; break;
+          case AVERROR_INVALIDDATA:
+            std::cout << "AVERROR_INVALIDDATA" << std::endl; break;
+          case AVERROR_NOMEM:
+            std::cout << "AVERROR_NOMEM" << std::endl; break;
+          case AVERROR_NOFMT:
+            std::cout << "AVERROR_NOFMT" << std::endl; break;
+          case AVERROR_NOTSUPP:
+            std::cout << "AVERROR_NOTSUPP" << std::endl; break;
+          case AVERROR_NOENT:
+            std::cout << "AVERROR_NOENT" << std::endl; break;
+          case AVERROR_EOF:
+            std::cout << "AVERROR_EOF" << std::endl; break;
+          case AVERROR_PATCHWELCOME:
+            std::cout << "AVERROR_PATCHWELCOME" << std::endl; break;
+          default:
+            std::cout << "unexpected error code" << std::endl; break;
+        }
+
+        throw stream_error("could not find codec parameters");
       }
     }
 
@@ -300,10 +335,9 @@ class audio_decoder {
       }
 
       std::memset(((uint8_t*)packet_ + packet_index_), 0, packet_size_ - packet_index_);
-      p = packet_;
-      packet_ = NULL;
 
-      return p;
+
+      return clear_packet();
     }
 
 
@@ -327,19 +361,29 @@ class audio_decoder {
       buffer_size_ = 0;
     }
 
+    //! \brief Like reset_packet(), but don't allocate a new one.
+    void *clear_packet() {
+      void *p = packet_;
+      packet_ = NULL;
+      packet_index_ = 0;
+      return p;
+    }
+
     ffmpeg::audio_stream &stream_;
 
+    // work out the aligned buffer type
     static const std::size_t buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
     static const std::size_t buffer_size = buffer_bytes / sizeof(int16_t);
     static const std::size_t alignment = 16;
-
     typedef aligned_memory<alignment, buffer_size, int16_t> buffer_type;
+
     buffer_type buffer_;
 
     // refering to the actually used bytes.
     std::size_t buffer_size_;
     std::size_t buffer_index_;
 
+    // working state
     void *packet_;
     const std::size_t packet_size_;
     std::size_t packet_index_;

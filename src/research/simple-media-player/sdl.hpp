@@ -118,6 +118,9 @@ class audio_spec {
     //! \brief Size in bytes of the buffer (calculated).
     std::size_t buffer_size() const { return spec().size;  }
 
+    //! \brief This can be something other than 0 if you're not using signed audio!
+    int silence() const { return spec().silence; }
+
     friend std::ostream &operator<<(std::ostream &o, const audio_spec &a) {
       const SDL_AudioSpec &s = a.spec();
 
@@ -144,9 +147,10 @@ class audio_spec {
 
       o << "\n";
       o << "Channels:          " << (int) s.channels << "\n";
-      o << "Silence:           " << (int) s.silence << "\n";
+      o << "Silence value:     " << (int) s.silence << "\n";
       o << "Buffer in samples: " << s.samples << "\n";
       o << "Buffer in bytes:   " << s.size << "\n";
+      // TODO: work out buffer length in ms
       o << "Callback:          " << (void*) s.callback << "\n";
       o << "Userdata:          " << (void*) s.userdata;
       return o;

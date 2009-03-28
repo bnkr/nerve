@@ -121,7 +121,9 @@ void ffmpeging_callback(void *userdata, uint8_t *stream, int length) {
         // TODO:
         //   it blocks forever if the decoding thread is slower than this
         //   one.  The main thread needs to monitor a boolean which we set to
-        //   "I've quit".
+        //   "I've quit".  This is another place where the writer_monitor would
+        //   be really useful (which notifies the condition when the lock is
+        //   released).
         trc("notifying exit");
         boost::unique_lock<boost::mutex> lk(finish_mut);
         finish_cond.notify_all();
@@ -201,6 +203,7 @@ void play(const char * const file) {
     std::cout << "playing" << std::endl;
 
     dev.unpause();
+    std::cout << "Audio status is now: " << aud.status_name() << std::endl;
 
 #if SIMPLE_WAVE_FILE_READER
     std::cout << "unpaused; now waiting" << std::endl;
@@ -285,4 +288,11 @@ void play(const char * const file) {
 //   turn it off; otherwise I can just wait for a number of ms of a low enoguh
 //   volume before dropping packets).  This way I can get rid of sizeale gaps in
 //   the middle of songs for those bbloody punk bands and their hidden tracks.
+//
+// TODO:
+//   Things to test:
+//   - when one file is an error, missing, etc, then the next file is played
+//     ok.
+//   - two sequencial files have gapless playback (prolly use has to listen?)
+//   - file interrupted by another has gaplessness.
 //
