@@ -1,3 +1,34 @@
+# TODO: work out WTF this function is doing and port it to my  
+#       syntax
+#   boost_test_compile_fail(testname 
+#                           [source1]
+#                           [COMPILE_FLAGS compileflags])
+
+# macro(boost_test_compile_fail testname)
+#   boost_test_parse_args(${testname} ${ARGN})
+#   Determine the include directories to pass along to the underlying
+#   project.
+#   get_directory_property(BOOST_TEST_INCLUDE_DIRS INCLUDE_DIRECTORIES)
+#   set(BOOST_TEST_INCLUDES "")
+#   foreach(DIR ${BOOST_TEST_INCLUDE_DIRS})
+#     set(BOOST_TEST_INCLUDES "${BOOST_TEST_INCLUDES}:${DIR}")
+#   endforeach(DIR ${BOOST_TEST_INCLUDE_DIRS})
+#     
+#   if(BOOST_TEST_OKAY)
+#     add_test("${PROJECT_NAME}::${testname}"
+#        ${CMAKE_CTEST_COMMAND}
+#              --build-and-test
+#              ${Boost_SOURCE_DIR}/tools/build/CMake/CompileTest
+#              ${Boost_BINARY_DIR}/tools/build/CMake/CompileTest
+#              --build-generator ${CMAKE_GENERATOR}
+#              --build-makeprogram ${MAKEPROGRAM}
+#        --build-project CompileTest
+#        --build-options -DSOURCE=${CMAKE_CURRENT_SOURCE_DIR}/${BOOST_TEST_SOURCES} -DINCLUDES=${BOOST_TEST_INCLUDES} -DCOMPILE_FLAGS=${BOOST_TEST_COMPILE_FLAGS})
+#     set_tests_properties("${PROJECT_NAME}::${testname}" PROPERTIES WILL_FAIL ON)
+#   endif(BOOST_TEST_OKAY)
+# endmacro(boost_test_compile_fail)
+
+
 # Find wine.
 if (WIN32 AND CMAKE_CROSSCOMPILING AND CMAKE_HOST_UNIX)
   find_program(WINE_EXE wine)

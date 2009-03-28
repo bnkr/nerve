@@ -165,7 +165,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
 
   # simple-media-player
   set(bin_name  "simple-media-player")
-  set(src "${RES_DIR}/${bin_name}/main.cpp" "${RES_DIR}/${bin_name}/play.cpp" "${RES_DIR}/${bin_name}/load_file_test.cpp")
+  set(src 
+    "${RES_DIR}/${bin_name}/main.cpp" 
+    "${RES_DIR}/${bin_name}/play.cpp" 
+    "${RES_DIR}/${bin_name}/load_file_test.cpp"
+    "${RES_DIR}/${bin_name}/read_packets.cpp"
+    "${RES_DIR}/${bin_name}/shared_data.cpp"
+  )
   add_executable(${bin_name} ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
