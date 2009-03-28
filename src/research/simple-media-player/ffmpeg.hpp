@@ -218,28 +218,6 @@ class frame {
     bool finished_;
 
 };
-
-//! \brief Decodes audio based on the data context of the audio stream.
-class audio_decoder {
-  public:
-    audio_decoder(ffmpeg::audio_stream &s)
-    : stream_(s) {}
-
-    // TODO:
-    //   this is a really messy way to do it.  How can I make it so you don't have
-    //   to always specify those buffers but still keep it reasonable to use.  I think
-    //   I just need to restrict how it works; for example return a pointer to the
-    //   output or something.  It all depends exactly what other stateful things I
-    //   have to do, eg, when no data is found.
-    //
-    //! \brief All sizes are in *bytes* not num elts.
-    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
-      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
-    }
-
-  private:
-    audio_stream &stream_;
-};
 }
 
 #include "aligned_memory.hpp"
@@ -253,10 +231,10 @@ namespace ffmpeg {
 //! with the entire stream (at least).
 //TODO:
 //  could I make an object which makes this one a bit safer to use?
-class xaudio_decoder {
+class audio_decoder {
   public:
     //! \brief Buffer size is what should be given to the audio output.
-    xaudio_decoder(ffmpeg::audio_stream &s, std::size_t packet_size)
+    audio_decoder(ffmpeg::audio_stream &s, std::size_t packet_size)
     : stream_(s), buffer_index_(0), packet_(NULL), packet_size_(packet_size) {
       // my assumption is that it needs some N of 16 bit integers, even
       // though we actually just write random stuff to it.
@@ -337,7 +315,7 @@ class xaudio_decoder {
       void *p = packet_;
       packet_ = std::malloc(packet_size_);
       packet_index_ = 0;
-      return packet_;
+      return p;
     }
 
     void reset_buffer() {
@@ -362,6 +340,7 @@ class xaudio_decoder {
     const std::size_t packet_size_;
     std::size_t packet_index_;
 };
+
 
 class decoded_block {
 

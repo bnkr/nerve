@@ -181,7 +181,6 @@ void play(const char * const file) {
       dev.reopen(desired);
       std::cerr << "SDL configuration:\n" << dev.obtained() << std::endl;
       assert(desired.buffer_size() == dev.obtained().buffer_size());
-      sdl_buffer_size = dev.obtained().buffer_size();
     }
 
     std::cout << "pre-buffering" << std::endl;
@@ -215,7 +214,7 @@ void play(const char * const file) {
     r = pthread_mutex_unlock(&mutex);
     assert(r == 0);
 #else
-    read_packets(ffile, audio);
+    read_packets(ffile, audio, dev.obtained());
 
     std::cout << "wait to be told to exit" << std::endl;
     boost::unique_lock<boost::mutex> lk(finish_mut);
