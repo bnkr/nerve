@@ -89,6 +89,10 @@ class file {
       dump_format(file);
 
       ret = av_find_stream_info(format_);
+      // TODO:
+      //   this fails whenever I open one of my .avi with error code 22.  I can't work
+      //   out what this means, and since the code is exactly the same as the tutorial
+      //   it's a bit of a mystery.
       if (ret != 0) {
         std::cerr << "error num: " <<  ret << " becomes " << strerror(ret) << std::endl;
         // TODO: say why.

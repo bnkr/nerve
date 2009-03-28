@@ -177,7 +177,9 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
 
   # gapless-playback
   set(bin_name "gapless-playback")
-  set(src "${RES_DIR}/gapless-playback.cpp")
+  set(src 
+    "${RES_DIR}/${bin_name}/main.cpp"
+  )
   add_executable("${bin_name}" "${src}")
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
