@@ -179,14 +179,18 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(bin_name "gapless-playback")
   set(src 
     "${RES_DIR}/${bin_name}/main.cpp"
+    "${RES_DIR}/${bin_name}/play.cpp" 
+    "${RES_DIR}/${bin_name}/output.cpp" 
+    "${RES_DIR}/${bin_name}/chunkinate.cpp" 
+    "${RES_DIR}/${bin_name}/shared_data.cpp" 
   )
-  add_executable("${bin_name}" "${src}")
+  add_executable("${bin_name}" ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # tripple-gapless-playback
   set(bin_name "tripple-gapless-playback")
   set(src "${RES_DIR}/tripple-gapless-playback.cpp")
-  add_executable("${bin_name}" "${src}")
+  add_executable("${bin_name}" ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # interrupted-playback

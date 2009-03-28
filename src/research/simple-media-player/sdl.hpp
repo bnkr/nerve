@@ -34,18 +34,21 @@ SDL_MixAudio - Mixes audio data
 namespace sdl {
 
 //! \brief Convenience base for all errors; what() is SDL_GetError unless specified in ctor
-struct sdl_error : public std::runtime_error {
-  sdl_error(const char *e = NULL) : runtime_error(((e == NULL) ? SDL_GetError() : e)) {}
+struct error : public std::runtime_error {
+  error(const char *e = NULL) : runtime_error(((e == NULL) ? SDL_GetError() : e)) {}
 };
 
+//!\deprecated Use the type directly
+typedef error sdl_error;
+
 //! \brief SDL_Init failure.
-struct init_error : public sdl_error {
-  init_error(const char *e = NULL) : sdl_error(e) {}
+struct init_error : public error {
+  init_error(const char *e = NULL) : error(e) {}
 };
 
 //! \brief SDL_OpenAudio failure.
-struct open_error : public sdl_error {
-  open_error(const char *e = NULL) : sdl_error(e) {}
+struct open_error : public error {
+  open_error(const char *e = NULL) : error(e) {}
 };
 
 //! \brief RAII object for SDL_Init and SDL_quit and interface for static audio stuff.
@@ -100,7 +103,6 @@ class audio_spec {
     //! \brief Defer initialisation until later - intended for the obtained value output, but could be useful.
     explicit audio_spec(defer_init_type) {}
 
-    // samples calculates the byte size.
     // TODO: what exactly is the data.
     explicit audio_spec(callback_type callback, int freq = 44100, int samples = 1024, int channels = 2, int format = AUDIO_S16SYS) {
       // std::memset(spec(), 0, sizeof(SDL_AudioSpec));
@@ -122,10 +124,16 @@ class audio_spec {
     int silence() const { return spec().silence; }
 
     friend std::ostream &operator<<(std::ostream &o, const audio_spec &a) {
-      const SDL_AudioSpec &s = a.spec();
+      a.dump_spec(o);
+      return o;
+    }
 
-      o << "Frequency:         " << s.freq << "\n";
-      o << "Format:            ";
+    //! \brief like operator<< but you can indent it.  Doesn't have a newline terminating.
+    std::ostream &dump_spec(std::ostream &o, const char *prefix = "") const {
+      const SDL_AudioSpec &s = spec();
+
+      o << prefix << "Frequency:         " << s.freq << "\n";
+      o << prefix << "Format:            ";
       switch (s.format) {
         case AUDIO_U8:
           o << "u8"; break;
@@ -146,13 +154,13 @@ class audio_spec {
       }
 
       o << "\n";
-      o << "Channels:          " << (int) s.channels << "\n";
-      o << "Silence value:     " << (int) s.silence << "\n";
-      o << "Buffer in samples: " << s.samples << "\n";
-      o << "Buffer in bytes:   " << s.size << "\n";
+      o << prefix << "Channels:          " << (int) s.channels << "\n";
+      o << prefix << "Silence value:     " << (int) s.silence << "\n";
+      o << prefix << "Buffer in samples: " << s.samples << "\n";
+      o << prefix << "Buffer in bytes:   " << s.size << "\n";
       // TODO: work out buffer length in ms
-      o << "Callback:          " << (void*) s.callback << "\n";
-      o << "Userdata:          " << (void*) s.userdata;
+      o << prefix << "Callback:          " << (void*) s.callback << "\n";
+      o << prefix << "Userdata:          " << (void*) s.userdata;
       return o;
     }
 

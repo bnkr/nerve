@@ -86,8 +86,6 @@ class file {
       }
       assert(format_ != NULL);
 
-      dump_format(file);
-
       ret = av_find_stream_info(format_);
       // TODO:
       //   this fails whenever I open one of my .avi with error code 22.  I can't work
@@ -261,8 +259,95 @@ class frame {
 
 #include "aligned_memory.hpp"
 #include <cstring>
+#include <cstdlib>
 
 namespace ffmpeg {
+
+//! \brief Seperate stateful object which builds packets.
+//! It must be seperate so it can exist in a higher scope than a file
+//! and its audio stream.  This is to be used by the audio_decoder, and
+//! should never need to be touched by the other code.
+//
+//TODO:
+//  given that the state is seperate, I could now cause the audio_decoder
+//  to immediately read the frame in ctor instead of doing it seperately.
+//  This would make things safer to use.
+class packet_state : boost::noncopyable {
+  public:
+    //! \brief The packet size is the size of the buffer to pass to the output queue.
+    //! Silence value is normally 0, but sometimes it's not!
+    packet_state(std::size_t packet_size, int silence_value)
+    : packet_(NULL), packet_size_(packet_size), packet_index_(0), silence_value_(silence_value) {
+      packet_ = std::malloc(packet_size);
+      assert(packet_ != NULL);
+    }
+
+    ~packet_state() {
+      std::free(packet_);
+    }
+
+    std::size_t index() const { return packet_index_; }
+    std::size_t size() const { return packet_size_; }
+
+    //! \brief Append the most possible; return how many appened.
+    std::size_t append_max(void *buffer, std::size_t max_bytes)  {
+      const std::size_t bytes_left = packet_size_ - packet_index_;
+      const std::size_t copy_len = std::min(max_bytes, bytes_left);
+
+      uint8_t *sample_buffer = ((uint8_t *) packet_) + packet_index_;
+      std::memcpy(sample_buffer, buffer, copy_len);
+      packet_index_ += copy_len;
+
+      return copy_len;
+    }
+
+    //! \brief Set unused bytes to silence and return the ptr on the heap.
+    void *get_final() {
+      finalise();
+      return clear();
+    }
+
+    // TODO:
+    //   resize() could be necessary later.  It's a problem if the packet size is
+    //   reduced though.  Forcing to clear first is a workaround, but not a very
+    //   nice one... possibly it's a neceesary one though if you end up having
+    //   to restart the audio thread anyway.
+
+    //! \brief Returns old packet (on the heap).
+    void *reset() {
+      /// TODO:
+      ///   need to use some kind of allocator to get these; also an RAII type.
+      void *p = clear();
+      assert(packet_ == NULL);
+      assert(p != NULL);
+      packet_ = std::malloc(packet_size_);
+      // std::cout << "reset(): release: " << p << std::endl;
+      // std::cout << "reset(): alloc:   " << packet_ << std::endl;
+      return p;
+    }
+
+    //! \brief Like reset_packet(), but don't allocate a new one.
+    void *clear() {
+      void *p = packet_;
+      packet_ = NULL;
+      packet_index_ = 0;
+      return p;
+    }
+
+    //! \brief For observation only!  Use the stateful functions.
+    const void *ptr() { return packet_; }
+
+  private:
+    //! \brief Set the remainder of the buffer to silence
+    void finalise() {
+      std::memset(((uint8_t*)packet_ + packet_index_), silence_value_, packet_size_ - packet_index_);
+    }
+
+    void *packet_;
+    const std::size_t packet_size_;
+    std::size_t packet_index_;
+    const int silence_value_;
+};
 
 //! \brief Audio decoding context - reads frames into buffers of size n.
 //! This is very stateful.  There will usually be data left over from
@@ -273,16 +358,39 @@ namespace ffmpeg {
 class audio_decoder {
   public:
     //! \brief Buffer size is what should be given to the audio output.
-    audio_decoder(ffmpeg::audio_stream &s, std::size_t packet_size)
-    : stream_(s), buffer_index_(0), packet_(NULL), packet_size_(packet_size) {
+    audio_decoder(packet_state &packet_state, ffmpeg::audio_stream &stream)
+    : stream_(stream), buffer_index_(0), packet_(packet_state) {
       // my assumption is that it needs some N of 16 bit integers, even
       // though we actually just write random stuff to it.
       assert(buffer_bytes % sizeof(int16_t) == 0);
-      reset_packet();
+    }
+
+    //! \deprecated use decode(fr);
+    void decode_frame(const ffmpeg::frame &fr) {
+      decode(fr);
     }
 
     //! \brief Set the internal state for this new frame.
-    void decode_frame(const ffmpeg::frame &fr) {
+    void decode(const ffmpeg::frame &fr) {
+      /*
+      From the docs:
+
+      For the input buffer we over allocate by FF_INPUT_BUFFER_PADDING_SIZE
+      because optimised readers will read in longer bitlengths.  We never
+      actually read data up to that length and the last byte must be zero
+      (ffmpeg doesn't always do that).
+
+      Output must be 16-byte alligned because SSE needs it.
+
+      Input must be "at least 4 byte aligned".  Again ffmpeg doesn't always
+      do it in fr.data().
+
+      Finally, the output must be at least AVCODEC_MAX_AUDIO_FRAME_SIZE.
+
+      TODO:
+        it seems weird that ffmpeg's own data is not OK to put directly
+        into the decoder.
+      */
       reset_buffer();
 
       int buffer_size = buffer_type::byte_size;
@@ -312,37 +420,38 @@ class audio_decoder {
     //  a memory pool.
     void *get_packet() {
       if (buffer_index_ < buffer_size_) {
-        const std::size_t bytes_left = packet_size_ - packet_index_;
         const std::size_t stream_available = buffer_size_ - buffer_index_;
-        const std::size_t copy_len = std::min(stream_available, bytes_left);
-
-        uint8_t *sample_buffer = ((uint8_t *) packet_) + packet_index_;
         uint8_t *stream_buffer = ((uint8_t *) buffer_.ptr()) + buffer_index_;
 
-        std::memcpy(sample_buffer, stream_buffer, copy_len);
-        packet_index_ += copy_len;
-        buffer_index_ += copy_len;
+        buffer_index_ += packet_.append_max(stream_buffer, stream_available);
 
         // We filled up a buffer
-        if (packet_index_ == packet_size_) {
-          return reset_packet();
+        if (packet_.index() == packet_.size()) {
+          void *p = packet_.reset();
+          // std::cout << "get_packet(): " << p << std::endl;
+          return p;
+        }
+        else {
+          // we are not allowed to overrun the buffer.
+          assert(packet_.index() < packet_.size());
+          return NULL;
         }
       }
-      return NULL;
+      else {
+        return NULL;
+      }
     }
 
     //! \brief Get a packet with unfilled bytes set nul.  A new state is NOT allocated.
-    void *get_final_packet() {
-      void *p = get_packet();
-      if (p != NULL) {
-        std::cerr << "get_final_packet(): error: something has gone horribly wrong -- there are packets left to output!" << std::endl;
-      }
+    // void *get_final_packet() {
+    //   void *p = get_packet();
+    //   if (p != NULL) {
+    //     std::cerr << "get_final_packet(): error: something has gone horribly wrong -- there are packets left to output!" << std::endl;
+    //   }
 
-      std::memset(((uint8_t*)packet_ + packet_index_), 0, packet_size_ - packet_index_);
-
-
-      return clear_packet();
-    }
+    //   packet_.finalise();
+    //   return packet_.clear();
+    // }
 
 
   private:
@@ -350,27 +459,9 @@ class audio_decoder {
       return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
     }
 
-    //! \brief Returns old packet (on the heap).
-    void *reset_packet() {
-      /// TODO:
-      ///   need to use some kind of allocator to get these; also an RAII type.
-      void *p = packet_;
-      packet_ = std::malloc(packet_size_);
-      packet_index_ = 0;
-      return p;
-    }
-
     void reset_buffer() {
       buffer_index_ = 0;
       buffer_size_ = 0;
-    }
-
-    //! \brief Like reset_packet(), but don't allocate a new one.
-    void *clear_packet() {
-      void *p = packet_;
-      packet_ = NULL;
-      packet_index_ = 0;
-      return p;
     }
 
     ffmpeg::audio_stream &stream_;
@@ -383,14 +474,12 @@ class audio_decoder {
 
     buffer_type buffer_;
 
-    // refering to the actually used bytes.
+    // the amount of the buffer which was written to by ffmpeg.
     std::size_t buffer_size_;
     std::size_t buffer_index_;
 
     // working state
-    void *packet_;
-    const std::size_t packet_size_;
-    std::size_t packet_index_;
+    packet_state &packet_;
 };
 
 

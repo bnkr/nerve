@@ -1,37 +1,52 @@
 /*!
 \file
-\brief Initial prototype of gapless media playing of two files
+\brief Initial prototype of gapless media playing of two or more files.
 
 Deals with mixing stuff together, and especially different formats and
-sample rates etc.
+sample rates etc.  It also serves as the first prototype to the playlist
+manager so we can work out how interrupted songs will work and so on.
 */
+
+#include "playlist.hpp"
+#include "play.hpp"
+
+#include <bdbg/trace/static_definitions.hpp>
 
 #include <boost/filesystem.hpp>
 
 #include <cstdlib>
 #include <iostream>
+#include <list>
+#include <algorithm>
+#include <queue>
 
-void alsa_prototype(const char *first, const char *second) {
+struct list_printer {
+  std::size_t i;
 
-}
+  list_printer() : i(1) {}
+
+  void operator()(const char *v) {
+    std::cout << "# " << i << ". " << v << std::endl;
+    i++;
+  }
+};
 
 int main(int argc, char **argv) {
   namespace fs = boost::filesystem;
 
-  if (argc != 3) {
-    std::cerr << "Error: wrong number of arguments." << std::endl;
+  if (argc < 2) {
+    std::cerr << "Error: not enough arguments.  Gimmie some songs to play!" << std::endl;
     return EXIT_FAILURE;
   }
-
-  std::cout << "#1 " << argv[1] << std::endl;
-  std::cout << "#2 " << argv[2] << std::endl;
+  else if (argc < 3) {
+    std::cerr << "Warning: can't test gaplessness with only one file." << std::endl;
+  }
 
   {
     bool argh = false;
-    for (std::size_t i = 1; i < 3; ++i) {
+    for (std::size_t i = 1; i < argc; ++i) {
       char *file = argv[i];
       if (! fs::exists(file)) {
-        argv[i];
         argh = true;
         std::cerr << "error: file '" << file << "' does not exist." << std::endl;
       }
@@ -40,7 +55,12 @@ int main(int argc, char **argv) {
     if (argh) return EXIT_FAILURE;
   }
 
-  alsa_prototype(argv[1], argv[2]);
-  return EXIT_SUCCESS;
+  playlist_type playlist(&argv[1], &argv[argc]);
+
+  std::cout << "Playlist:" << std::endl;
+  list_printer pr;
+  std::for_each(playlist.begin(), playlist.end(), pr);
+
+  return play_from_list(playlist);
 }
 

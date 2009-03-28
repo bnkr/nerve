@@ -295,4 +295,6 @@ void play(const char * const file) {
 //     ok.
 //   - two sequencial files have gapless playback (prolly use has to listen?)
 //   - file interrupted by another has gaplessness.
+//   - two sequencial files where the second changes some output property like
+//     number of channels or frequency rate.
 //

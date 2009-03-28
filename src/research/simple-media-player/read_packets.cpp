@@ -21,25 +21,6 @@ void push_packet(void *sample_buffer) {
 }
 
 void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s, const sdl::audio_spec &audio_spec) {
-  /*
-  From the docs:
-
-  For the input buffer we over allocate by FF_INPUT_BUFFER_PADDING_SIZE
-  because optimised readers will read in longer bitlengths.  We never
-  actually read data up to that length and the last byte must be zero
-  (again ffmpeg doesn't always do that).
-
-  Output must be 16-byte alligned because SSE needs it.
-
-  Input must be "at least 4 byte aligned".  ffmpeg doesn't always do it
-  in data.
-
-  Finally, the output must be at least AVCODEC_MAX_AUDIO_FRAME_SIZE.
-
-  TODO:
-    it seems weird that ffmpeg's own data is not OK to put directly
-    into the decoder.
-  */
 
   // so messy...
   finished = false;
