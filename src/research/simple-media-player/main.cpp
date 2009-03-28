@@ -13,9 +13,12 @@ filtering/observing can be done.
 #include "play.hpp"
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
+  if (argc < 2) {
     std::cerr << "error: wrong number of arguments.  Need one file to play." << std::endl;
     return EXIT_FAILURE;
+  }
+  else if (argc > 2) {
+    std::cerr << "warning: too many arguments.  Only the first will be used." << std::endl;
   }
 
   const char * const file = argv[1];
