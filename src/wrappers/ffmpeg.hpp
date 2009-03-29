@@ -14,6 +14,9 @@ internal stuff.
 #ifndef FFMPEG_HPP_7awlau1z
 #define FFMPEG_HPP_7awlau1z
 
+// TODO:
+//   this implies that later on, the wrappers should be part of nerved instead
+//   of the client.  Perhaps the client should be a completely seperate package?
 #include <nerved_config.hpp>
 #include <bdbg/trace/short_macros.hpp>
 
@@ -368,7 +371,7 @@ class frame {
 };
 }
 
-#include "aligned_memory.hpp"
+#include "../include/aligned_memory.hpp"
 #include <cstring>
 #include <cstdlib>
 
