@@ -118,10 +118,19 @@ class audio_spec {
 
 
     //! \brief Size in bytes of the buffer (calculated).
-    std::size_t buffer_size() const { return spec().size;  }
+    std::size_t buffer_size() const { return spec().size; }
+
+    //! \brief Buffer size in samples.
+    int buffer_samples() const { return spec().samples; }
+
+    //! \brief Audio sample rate.
+    uint32_t frequency() const { return spec().freq; }
 
     //! \brief This can be something other than 0 if you're not using signed audio!
     int silence() const { return spec().silence; }
+
+    //! \brief Time period in miliseconds of the buffer calculated by ms = (buffer_samples() * 1000) / frequency().
+    int period() const { return (buffer_samples() * 1000 ) / frequency(); }
 
     friend std::ostream &operator<<(std::ostream &o, const audio_spec &a) {
       a.dump_spec(o);

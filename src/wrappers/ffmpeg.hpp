@@ -4,6 +4,12 @@
 
 Note that here we take the conventions of ffmpeg where the term `context' means
 informational.
+
+Ffmpeg is a pretty complicated library and this wrapper aims to simplify it as
+well as add needed functionality like splitting the stream into packets for sdl
+output.  In order to do this, the classes here wrap the ffmpeg structs and expose
+a subset of their fields.  These are the ones you actually need, rather than
+internal stuff.
 */
 #ifndef FFMPEG_HPP_7awlau1z
 #define FFMPEG_HPP_7awlau1z
@@ -65,10 +71,10 @@ class initialiser {
     }
 };
 
-//! \brief Wrapper for AVFormatContext.
-//TODO: maybe should take the initialiser?  But it needs a better name...
+//! \brief Wrapper for AVFormatContext, involving all the opening/closing etc..
 class file {
   public:
+    //TODO: should take the initialiser?  But it needs a better name...
     // \brief Open the header and inspect the streams.
     file(const char * const file) {
       // I need a get_last_error message function, or at least some kind of errno?.
@@ -129,10 +135,15 @@ class file {
       av_close_input_file(format_);
     }
 
+    //! \deprecated Use dump().
+    void dump_format(const char *f = NULL) { dump(f); }
+
     //! \brief Print the format to stderr.  \c filename is merely informational.
-    void dump_format(const char *filename = NULL) const {
+    void dump(const char *filename = NULL) const {
       // TODO: what are those otehr parameters for?
-      ::dump_format(format_, 0, filename, 0);
+      const int is_output = 0;
+      const int index = 0; // I think this is the stream index...
+      ::dump_format(format_, index, filename, is_output);
     }
 
 // TODO:
@@ -143,7 +154,29 @@ class file {
     const AVFormatContext &format_context() const { return *format_; };
     AVFormatContext &format_context() { return *format_; }
 
+    // Note: some of these are deduced from the stream context - never set them.
+
+    //! \brief How many streams in the file (some of which might be audio streams).
     std::size_t num_streams() const { return format_context().nb_streams; }
+    //! \brief Or 0 if unknown.
+    int64_t file_size() const { return format_context().file_size; }
+    //! \brief In units of AV_TIME_BASE.  Seconds = duration / AV_TIME_BASE.  us = duration % AV_TIME_BASE.
+    int64_t duration() const { return format_context().duration; }
+    //! \brief In AV_TIME_BASE.  Seconds = duration / AV_TIME_BASE.  us = duration % AV_TIME_BASE.
+    int64_t start_time() const { return format_context().start_time; }
+    //! \brief Divide by 1000 to get kb/s of course.
+    int bit_rate() const { return format_context().bit_rate; }
+
+    //! \brief Calculate duration into the correct units.
+    void calculate_duration(int &hours, int &mins, int &secs, int &ms) const {
+      secs = duration() / AV_TIME_BASE;
+      int us = duration() % AV_TIME_BASE;
+      mins = secs / 60;
+      secs %= 60;
+      hours = mins / 60;
+      mins %= 60;
+      ms = (100 * us) / AV_TIME_BASE;
+    }
 
   private:
     AVFormatContext *format_;
@@ -207,54 +240,131 @@ ok:
     ~audio_stream() { avcodec_close(&codec_context()); }
 
     //! \brief Contains codec data amongst other things.
-    //! See: http://www.dranger.com/ffmpeg/data.html#AVStream
+    //! See:
+    //! - http://www.dranger.com/ffmpeg/data.html#AVStream
+    //! - http://www.irisa.fr/texmex/people/dufouil/ffmpegdoxy/structAVStream.html
     AVStream &stream() { return *stream_; }
     const AVStream &stream() const { return *stream_; }
 
     //! \brief Direct accessor to the codec informational data.  Enormous struct.
-    // TODO:
-    //   better to initialise an codec_context object based on a fully constructed
-    //   audio_stream because that struct is too gigantic to wrap here.  Might be
-    //   a good idea to initialise multiple subsets of this in order to modularise
-    //   the data.
-    //! http://www.dranger.com/ffmpeg/data.html#AVCodecContext
+    //! Use \link codec_context \endlink unless giving this to an ffmpeg function.
+    //
     AVCodecContext &codec_context() { return *stream_->codec; }
     const AVCodecContext &codec_context() const { return *stream_->codec; }
 
     //! \brief Mostly to with the actual en/de-coding process.
     //TODO:
     //  *Might* be better to init a codec object based on an audio_stream; depends
-    //  how/where the codec is used and how much stuff I have to wrap.
+    //  how/where the codec is used and how much stuff I have to wrap.  I think it's
+    //  only used in
     AVCodec &codec() { return *codec_; }
     const AVCodec &codec() const { return *codec_; }
+
+    //! \brief All timestamps of *this stream* are encoded in this way.
+    //! Use timestamp * av_q2d(time_base()) on packet timestamps etc.
+    const AVRational &time_base() const { return stream().time_base; }
 
   private:
     AVStream *stream_;
     AVCodec *codec_;
 };
 
+//! \brief Friendly interface for the AVCodecContext struct.
+//! See:
+//! - http://www.dranger.com/ffmpeg/data.html#AVCodecContext
+//! - http://www.irisa.fr/texmex/people/dufouil/ffmpegdoxy/structAVCodecContext.html
+class codec_context {
+  public:
+    codec_context(audio_stream &str) : st_(str) { }
+
+    int sample_rate() const { return ctx().sample_rate; }
+    int channels() const { return ctx().channels; }
+
+  private:
+    audio_stream &st_;
+
+    AVCodecContext &ctx() { return st_.codec_context(); }
+    const AVCodecContext &ctx() const { return st_.codec_context(); }
+};
+
 //! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
+//! See:
+//! - http://cekirdek.pardus.org.tr/~ismail/ffmpeg-docs/structAVPacket.html
 class frame {
   public:
     frame(ffmpeg::file &file) : file_(file) {
+      // TODO: formatContext stores an AVPacket.  Does that mean I am doing a useless copy here?
       int ret = av_read_frame(&file.format_context(), &packet_);
       finished_ = (ret != 0);
     }
 
     ~frame() { av_free_packet(&packet_); }
 
+    //! \name Packet accessors
+    //@{
     //! Stream finished?
     bool finished() const { return finished_; }
 
-    const uint8_t *data() const{ return packet_.data; }
+    //! \brief Data buffer in the frame packet.
+    const uint8_t *data() const { return packet_.data; }
     int size() const { return packet_.size; }
 
+    //! \brief Timestamp of when to output this in units of time_base.
+    //TODO: how do I get the time_base from here - is it the AVstream one?
+    int64_t presentation_time() const { return packet_.pts; }
+
+    //! \brief Byte position in stream.
+    int64_t position() const { return packet_.pos; }
+    //@}
+
+    //! \brief The file this frame was pulled from.
+    ffmpeg::file &file() { return file_; }
+    const ffmpeg::file &file() const { return file_; }
+
+    //! \brief This also shows all the field purposes.
+    std::ostream &dump(std::ostream &o, const char *pf = "") {
+      std::cout << pf << "presentation ts:  " << packet_.pts << std::endl;
+      std::cout << pf << "decompression ts: " << packet_.dts << std::endl;
+      std::cout << pf << "data:             " << (void*) packet_.data << std::endl;
+      int al;
+      std::size_t input_buf = (std::size_t) packet_.data;
+      if (input_buf % 16 == 0) {
+        al = 16;
+      }
+      else if (input_buf % 8 == 0) {
+        al = 8;
+      }
+      else if (input_buf % 4 == 0) {
+        al = 4;
+      }
+      else if (input_buf % 2 == 0) {
+        al = 2;
+      }
+      else if (input_buf % 1 == 0) {
+        al = 1;
+      }
+      else {
+        al = -1;
+      }
+      std::cout << pf << "data alignment:   " << al << std::endl;
+      std::cout << pf << "size:             " << packet_.size << std::endl;
+      std::cout << pf << "stream index:     " << packet_.stream_index << std::endl;
+      std::cout << pf << "packet_ flag:      " << packet_.flags << " ("
+        << ((packet_.flags == PKT_FLAG_KEY) ? "keyframe" : "non-keyframe") <<  ")" << std::endl;
+      std::cout << pf << "presentation dur: " << packet_.duration << std::endl;
+      std::cout << pf << "deallocator:      " << (void*) packet_.destruct << std::endl;
+      std::cout << pf << "byte offset:      " << packet_.pos << std::endl;
+
+      return o;
+    }
+
+    //! \brief Use accessor member functions if possible.
+    const AVPacket &packet() const { return packet_; }
 
   private:
     ffmpeg::file &file_;
     AVPacket packet_;
     bool finished_;
-
 };
 }
 
@@ -350,12 +460,9 @@ class packet_state : boost::noncopyable {
     const int silence_value_;
 };
 
-//! \brief Audio decoding context - reads frames into buffers of size n.
-//! This is very stateful.  There will usually be data left over from
-//! a frame, so this must not go out of scope until we are 100% finished
-//! with the entire stream (at least).
-//TODO:
-//  could I make an object which makes this one a bit safer to use?
+//! \brief Reads frames into buffers of a given size in a packet_state.
+//! Loop on get_packet().  Remember to get any remaining data in packet_state when
+//! completely done.
 class audio_decoder {
   public:
     //! \brief Buffer size is what should be given to the audio output.
@@ -398,14 +505,14 @@ class audio_decoder {
       int used_bytes = decode(buffer_.ptr(), &used_buffer_size, fr.data(), fr.size());
 
       if (used_bytes < fr.size())  {
-        // what do we do?  Can it even happen?
+        // We can keep going, but there will be output errors.
+        // TODO: more detail.
+        std::cerr << "warning: less bytes read from the stream than were available." << std::endl;
       }
 
       if (used_buffer_size <= 0) {
-        // TODO: more detail
-        std::cerr <<  "nothign to decode" << std::endl;
-        // do what?  We must read another frame.
-        // return false;
+        // TODO: more detail.
+        std::cerr <<  "warning: nothing to decode." << std::endl;
       }
       else {
         // don't set this unless we know it's unsigned.
@@ -413,15 +520,85 @@ class audio_decoder {
 
         // TODO:
         //   this will be a problem if we're not using signed 16bit I guess.
-        //   It doesn't appear to work anyway.  There is still a slight pop;
-        //   no real difference between this and the original.
         //
+        // TODO:
         //   Also I should only do it on the last frame of a file.
         //
         // TODO:
         //   Truncating in the middle is not good enough.  I must only truncate
-        //   contiguous periods of silence.  Otherwise you get popping.
-        truncate_silence<int16_t>();
+        //   contiguous periods of silence.  Otherwise you get popping in he middle
+        //   of the song.  It doesn't appear to work anyway.  There is still a
+        //   slight pop; no real difference between this and the original prebuffering
+        //   only version.
+        //
+        //   If wikipedia is to be believed:
+        //     "Encoder/decoder overall delay is not defined, which means there is no
+        //     official provision for gapless playback. However, some encoders such as
+        //     LAME can attach additional metadata that will allow players that can handle
+        //     it to deliver seamless playback."
+        //
+        //   It later implies that you can use silence detection to get rid of
+        //   silence.  http://en.wikipedia.org/wiki/Gapless_playback
+        //
+
+        // TODO:
+        //   better to use a byte offset.  Or even a timestamp?  Well.. if we
+        //   do that then it also needs to be checked inside of truncate
+        //
+        //   Gah how the fuck... ideally I want to do this in unit of miliseconds
+        //   because bytes are going to be somethign differnet.  There just *must*
+        //   be a proper representation for this!
+        //
+        //   This has stuff about timestamps:
+        //   - http://www.dranger.com/ffmpeg/tutorial05.html
+
+        AVCodecContext &ct = stream_.codec_context();
+        // trc("frame number: " << ct.frame_number);
+        // trc("frame size: " << ct.frame_size);
+        // trc("fnum * fsize = " << ct.frame_number * ct.frame_size);
+        // trc("file size: " << fr.file().file_size());
+
+        // trc("file start_time: " << fr.file().start_time());
+        // trc("packet decode ts: " << fr.packet().dts);
+
+        // trc("frame number: " << ct.frame_number);
+        // trc("block align: " << ct.block_align);
+
+        // trc("stats out: " << ct.stats_out);
+        // trc("stats in: " << ct.stats_in);
+
+        // trc("data offset: " << fr.file().format_context().data_offset);
+
+        // trc("packet present ts: " << fr.packet().pts);
+        // trc("file duration: " << fr.file().duration() * av_q2d(stream_.time_base()));
+        // trc("dur * AV_TIME_BASE: " << ((double) fr.file().duration()) * AV_TIME_BASE);
+        trc("file duration * time_base: " << fr.file().duration() * av_q2d(stream_.time_base()));
+        trc("packet present ts * time_base: " << fr.packet().pts * av_q2d(stream_.time_base()));
+
+        // double duration =  (stream_.duration()/(double)mov->time_scale);
+        // double bit_rate = (stream_size * 8.0)/duration;
+
+        // trc("duration: " << duration);
+        // trc("bitrate: " << bit_rate);
+
+        // exit(0);
+
+        // this is pretty bizare- it doesnt' seem to make  the slightest bit
+        // of difference, and sometimes it just completely destroys the sound!
+        // TODO:
+        //   maybe there is a gap at the *begining* of the second file?  It
+        //   definitely *seems* to be at the end when I play it... yah even
+        //   mplayer puts the little spit in at the end of the first file.
+        //   Maybe it's a genuine artifact as opposed to silence... it
+        //   does it too for known good files...
+        //
+        //   I notice mpd has the same problem, only to a lesser extent...
+        if (ct.frame_number >= 458) {
+          // Ehh... not only does it fail to remove the end gap, it also
+          // puts gaps in other places!
+          truncate_silence<int16_t>(30);
+        }
+
 
         // TODO:
         //   This dies horribly - loads of white noise is outputted.
@@ -431,7 +608,7 @@ class audio_decoder {
 
     //! \brief Truncate the buffer if it ends with silence.
     template <class UnitsOf>
-    void truncate_silence() {
+    void truncate_silence(const int threshold) {
       trc("started with a buffer of " << buffer_size_ << " bytes");
       std::size_t elts = buffer_size_ / sizeof(UnitsOf);
       trc("there are " << elts <<  " of that unit in the array");
@@ -439,7 +616,7 @@ class audio_decoder {
       UnitsOf *samples = (UnitsOf*) buffer_.ptr();
       for (int i = elts - 1; i >= 0; --i) {
         // trc(i);
-        if (samples[i] == 0) {
+        if (samples[i] <= threshold) {
           buffer_size_ -= sizeof(UnitsOf);
           num_trimmed++;
         }

@@ -1,1 +1,0 @@
-../simple-media-player/sdl.hpp

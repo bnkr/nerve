@@ -217,7 +217,7 @@ endif()
 set(DOXYGEN_CMAKE_VERBOSE "yes")
 
 set(DOXYGEN_TARGET "doxygen")
-set(DOXYGEN_INPUT_PATHS "include/")
+set(DOXYGEN_INPUT_PATHS "include/ src/")
 doxgyen_setup_flags(
   DOXYGEN_FLAGS 
   "${DOXYGEN_TARGET}"
