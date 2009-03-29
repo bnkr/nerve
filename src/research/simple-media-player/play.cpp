@@ -245,15 +245,6 @@ void play(const char * const file) {
 // ** notes on the gapless version ** //
 //
 // TODO:
-//   In the gapless version, I'll need to mix the two buffers together.  This
-//   indicates that I will absolutely have to organise the buffering in another
-//   thread.
-//
-//   Still... it needs to be synchronus anyway... I absolutely must avoid any
-//   kind of stutter; if that means doing all the loading in this thread then
-//   that's fine.
-//
-// TODO:
 //   Another problem: what about when the sample format changes mid-stream?  I
 //   guess we need to convert it... we can't really re-initialise the stream,
 //   can we?  SDL's audioCVT thing might help...
@@ -273,12 +264,6 @@ void play(const char * const file) {
 //   preferably) cause the player thread to block, rather than keep polling.
 //
 // TODO:
-//   When the playlist is finished, I must play silence; some soundcards pop if
-//   that is not done.  I guess the answer is just to dump one period of silence
-//   in whenever the playlist is empty?  If we get a new one then we can nuke the
-//   silence... also there's still the probelm of partial buffers...
-//
-// TODO:
 //   Other libs do not involve their own audio thread.  I will need to account for that
 //   somehow.
 //
@@ -288,13 +273,3 @@ void play(const char * const file) {
 //   turn it off; otherwise I can just wait for a number of ms of a low enoguh
 //   volume before dropping packets).  This way I can get rid of sizeale gaps in
 //   the middle of songs for those bbloody punk bands and their hidden tracks.
-//
-// TODO:
-//   Things to test:
-//   - when one file is an error, missing, etc, then the next file is played
-//     ok.
-//   - two sequencial files have gapless playback (prolly use has to listen?)
-//   - file interrupted by another has gaplessness.
-//   - two sequencial files where the second changes some output property like
-//     number of channels or frequency rate.
-//

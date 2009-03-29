@@ -1,5 +1,5 @@
 #include "chunkinate.hpp"
-#include "ffmpeg.hpp"
+#include "../../wrappers/ffmpeg.hpp"
 #include "shared_data.hpp"
 
 #include <boost/thread.hpp>
@@ -50,7 +50,6 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
   file.dump_format(file_name);
   ffmpeg::audio_stream audio(file);
 
-  ffmpeg::audio_decoder decoder(state, audio);
   while (true) {
     ffmpeg::frame fr(file);
     if (fr.finished()) {
@@ -59,42 +58,89 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     }
 
     // TODO:
-    //   Somewhere around here I need to get rid of the gaps.  I will probably need to
-    //   know about the stream context since I am going to need to know about the end
-    //   of  the frame.  I am also going to need to process the stream *before* it
-    //   gets pushed into the state.  Therefore, somewhere in get_packet() or decode().
+    //   Plugins, stream processors.
     //
-    //   decode() - good choice as I can work backwards and just truncate the buffer.
-    //     I must know if it's the last frame in the file.
+    //   It should probably be something like
     //
-    //     Actually decode() is the only choice.  If the frame is entirely silence then
-    //     I can just drop the entire frame there and then.  I guess the real problem is
-    //     dropping silent frames when I don't want them dropped.
+    //   ffmpeg::audio_decoder dec(fr);
+    //   // one of which is 'if last frame, truncate buffer'
+    //   dec.preprocess(plugins_list);
     //
-    //   get_packet() - might need to do it anyway if I have generalised stream
-    //     processing because that means you can process in even sized chunks which
-    //     might be desireable.
+    //   each {|sample_block|
+    //     block_process(sample_block);
+    //     observer_process(sample_block);
+    //   }
     //
-    // It should probably be something like
+    //   An interesting extension would be to organise a multi-threaded
+    //   processing pipeline.  Each stage has a monitored queue for
+    //   packets to mess with.
     //
-    // ffmpeg::audio_decoder dec(fr);
-    // // one of which is 'if last frame, truncate buffer'
-    // dec.preprocess(plugins_list);
+    //   Additionally observer vs. manipulator plugins.  Meh, I think I
+    //   can work it out in general.
     //
-    // each {|sample_block|
-    //   block_process(sample_block);
-    //   observer_process(sample_block);
-    // }
+    // TODO:
+    //   What about a crossfade plug?  That would need to somehow take the packets and
+    //   store them somewhere until there's enough to fade properly.  It has to work on
+    //   the stream data clearly.  Perhaps there is a better way of doing thsi:
     //
-    // An interesting extension would be to organise a multi-threaded
-    // processing pipeline.  Each stage has a monitored queue for
-    // packets to mess with.
+    //   chunk_state state;
+    //   // another long state class - perhaps the chunk state is
+    //   // part of the internals?  That class is way too messy anyway.
+    //   processor proc(state, plugins_list_or_something);
+    //   ...
+    //   each frame {
+    //     frame fr(file);
+    //     proc.process(frame);
     //
+    //     // Or perhaps the chunker appears as part of the processor process?
+    //     proc.make_chunks(post_chunks());
+    //   }
+    //
+    //   This implies a certain level of abstraction.  There is no need for the processor
+    //   to know about the ffmpeg lib or the sdl lib.  That is a good thing, but we'll leave
+    //   it until later since it's easier to work with the frame interface.
+    //
+    //   The internals of the processor are rather difficult because we might need to
+    //   defer processing a frame until later.  Regarding crossfade, we are going to need
+    //   to know when a frame is the last frame in the file which I'm still having trouble
+    //   with (or better the generalised position within the file at any given point).
+    //
+    //   Having to copy that buffer is really tricky.
+    //
+    // TODO:
+    //   Upmixer:
+    //   - the processor needs to know how many channels to mix up to.
+    //   - the sample buffer needs to be configured appropriately so packet_state needs
+    //     to know about it somehow.
+    //     - Again implies that packet_state should be part of processor
+    //     - also implies processor needs to know about the obtained output (although
+    //       it still does not need to know about SDL specifically).  Perhaps we can
+    //       have a generic audio_spec type later on?  Again - we ignore this stuff for
+    //       now because output plugins are not my focus.
+    //
+    // TODO:
+    //   Gap killing:
+    //   - crossfade will help.
+    //   - I need to *detect* the artifact above all else.  Then I can remove it.
+    //   - re-encoding stuff may be skewing my test data, eg rip to wav and the artifact
+    //     is still there (contradicted by .wav rips), reencode and it adds another one.
+    //     - contradicted by .wav rips working 100% gapless.
+    //
+    //
+    // TODO:
+    //   Seeking, interrupt.  Need to flush the buffers.  Tricky work because the buffer's
+    //   so bloody big :).  Not to mention later stream processor hassles.
 
     // TODO:
     //   the decoder should be declared here now I have detached the state.
+    ffmpeg::audio_decoder decoder(state, audio);
     decoder.decode(fr);
 
+    // TODO:
+    //   would prolly be faster to have the loop inside the decoder and we go:
+    //
+    //     decoder.iterate_packets(packet_pusher());
+    //
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       // trc("got buf: " << sample_buffer);

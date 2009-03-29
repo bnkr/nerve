@@ -1,7 +1,7 @@
 #include "play.hpp"
 #include "chunkinate.hpp"
-#include "ffmpeg.hpp"
-#include "sdl.hpp"
+#include "../../wrappers/ffmpeg.hpp"
+#include "../../wrappers/sdl.hpp"
 #include "output.hpp"
 #include "shared_data.hpp"
 
