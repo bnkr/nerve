@@ -4,6 +4,7 @@
 #include "../../wrappers/sdl.hpp"
 #include "output.hpp"
 #include "shared_data.hpp"
+#include "file_output.hpp"
 
 #include <bdbg/trace/short_macros.hpp>
 
@@ -12,15 +13,18 @@
 int play_from_list(playlist_type &list) {
   trc("Begin.");
   try {
+    // TODO:
+    //   what happens to this stuff when I do output plugins?  I don't really want to
+    //   op new them
     sdl::audio aud;
     sdl::device dev(aud);
     {
       sdl::audio_spec::callback_type cb = sdl_callback;
       sdl::audio_spec desired(cb);
-      std::cout << "Opening audio:" << std::endl;
+      // std::cout << "Opening audio:" << std::endl;
       // desired.dump_spec(std::cout, "  ") << std::endl;
       dev.reopen(desired);
-      std::cout << "Got:" << std::endl;
+      // std::cout << "Got:" << std::endl;
       // dev.obtained().dump_spec(std::cout, "  ") << std::endl;
     }
     ffmpeg::initialiser ff;
@@ -28,8 +32,18 @@ int play_from_list(playlist_type &list) {
 
     ffmpeg::packet_state state(dev.obtained().buffer_size(), dev.obtained().silence());
 
-    // TODO: oops.  I was supposed to prebuffer.
-    dev.unpause();
+    // TODO:
+    //   really horrible way of doing it!  First of all file output needs to be
+    //   an observer plugin.  Seconds, we need to init the file output *or* the
+    //   sdl output if we're doing it this way.
+    bool make_file_output = false;
+    if (make_file_output) {
+      output::file("./dump.pcm", dev.obtained().buffer_size());
+    }
+    else {
+      dev.unpause();
+    }
+
 
     trc("Chunking files.");
     typedef playlist_type::const_iterator iter_type;
@@ -53,7 +67,9 @@ int play_from_list(playlist_type &list) {
     //   It's iffy to put the quit inside the playlist tho.  They aren't exactly
     //   related.
     boost::unique_lock<boost::mutex> lk(finish_mut);
-    finish_cond.wait(lk);
+    while (! output_closed) {
+      finish_cond.wait(lk);
+    }
   }
   catch (sdl::error &e) {
     std::cerr << "Error: sdl init failed: " << e.what() << std::endl;

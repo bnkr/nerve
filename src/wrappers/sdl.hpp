@@ -116,8 +116,11 @@ class audio_spec {
       spec().size = 0;
     }
 
+    //! \brief Mono = 1, stereo = 2, etc.
+    int channels() const { return spec().channels; }
+    void channels(int n) { spec().channels = n; }
 
-    //! \brief Size in bytes of the buffer (calculated).
+    //! \brief Size in bytes of the buffer (calculated from sizeof(data) * samples() * channels()).
     std::size_t buffer_size() const { return spec().size; }
 
     //! \brief Buffer size in samples.
@@ -125,6 +128,7 @@ class audio_spec {
 
     //! \brief Audio sample rate.
     uint32_t frequency() const { return spec().freq; }
+    uint32_t frequency(uint32_t f) { return spec().freq = f; }
 
     //! \brief This can be something other than 0 if you're not using signed audio!
     int silence() const { return spec().silence; }
@@ -137,8 +141,26 @@ class audio_spec {
       return o;
     }
 
+    // \brief Only tests non-calculated functions and *does* include userdata.
+    friend bool operator==(const audio_spec &lhs, const audio_spec &rhs) {
+      return
+        lhs.spec().freq == rhs.spec().freq &&
+        lhs.spec().format == rhs.spec().format &&
+        lhs.spec().callback == rhs.spec().callback &&
+        lhs.spec().channels == rhs.spec().channels &&
+        lhs.spec().samples == rhs.spec().samples &&
+        lhs.spec().userdata == rhs.spec().userdata;
+    }
+
+    friend bool operator!=(const audio_spec &lhs, const audio_spec &rhs) {
+      return ! (rhs == lhs);
+    }
+
+    //! \deprecated Use dump()
+    std::ostream &dump_spec(std::ostream &o, const char *prefix = "") const { return dump(o, prefix); }
+
     //! \brief like operator<< but you can indent it.  Doesn't have a newline terminating.
-    std::ostream &dump_spec(std::ostream &o, const char *prefix = "") const {
+    std::ostream &dump(std::ostream &o, const char *prefix = "") const {
       const SDL_AudioSpec &s = spec();
 
       o << prefix << "Frequency:         " << s.freq << "\n";
@@ -161,13 +183,13 @@ class audio_spec {
         default:
           o << "(unexpected value)";
       }
-
       o << "\n";
+
       o << prefix << "Channels:          " << (int) s.channels << "\n";
       o << prefix << "Silence value:     " << (int) s.silence << "\n";
       o << prefix << "Buffer in samples: " << s.samples << "\n";
       o << prefix << "Buffer in bytes:   " << s.size << "\n";
-      // TODO: work out buffer length in ms
+      o << prefix << "Buffer in ms:      " << period() << "\n";
       o << prefix << "Callback:          " << (void*) s.callback << "\n";
       o << prefix << "Userdata:          " << (void*) s.userdata;
       return o;
@@ -182,6 +204,20 @@ class audio_spec {
 
 //! \brief Open/close the audio device; non-instancable base class.
 class device_base {
+  public:
+    /*!
+    \brief Change the pause state.  Silence is written when paused.
+
+    It should be called with pause_on=0 after opening the audio device to start playing sound.
+    This is so you can safely initialize data for your callback function after opening the audio
+    device. Silence will be written to the audio device during the pause.
+    */
+    //@{
+    void pause() { pause_state(1); }
+    void unpause() { pause_state(0); }
+    void pause_state(int on) { SDL_PauseAudio(on); }
+    //@}
+
   protected:
     device_base(sdl::audio &) {}
 
@@ -256,19 +292,6 @@ class device : public device_base {
     void reopen(audio_spec &desired) {
       checked_open(desired, obtained_);
     }
-
-    /*!
-    \brief Change the pause state.  Silence is written when paused.
-
-    It should be called with pause_on=0 after opening the audio device to start playing sound.
-    This is so you can safely initialize data for your callback function after opening the audio
-    device. Silence will be written to the audio device during the pause.
-    */
-    //@{
-    void pause() { pause_state(1); }
-    void unpause() { pause_state(0); }
-    void pause_state(int on) { SDL_PauseAudio(on); }
-    //@}
 
   private:
     audio_spec obtained_;

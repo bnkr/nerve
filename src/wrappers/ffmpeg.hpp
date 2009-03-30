@@ -149,26 +149,29 @@ class file {
       ::dump_format(format_, index, filename, is_output);
     }
 
-// TODO:
-//   it would be neater to wrap this in an object, then we can just pass that around.  Same
-//   strategy could be used for some of the sdl objects.
-
-    //! \brief Return the ffmpeg struct.
+    //! \brief Return the ffmpeg struct.  Prefer the format accessor members.
     const AVFormatContext &format_context() const { return *format_; };
     AVFormatContext &format_context() { return *format_; }
 
-    // Note: some of these are deduced from the stream context - never set them.
+    //! \name Format accesors.
+    //@{
+
+    // Note: some of these are deduced from the stream context - never set them here.
 
     //! \brief How many streams in the file (some of which might be audio streams).
     std::size_t num_streams() const { return format_context().nb_streams; }
     //! \brief Or 0 if unknown.
     int64_t file_size() const { return format_context().file_size; }
-    //! \brief In units of AV_TIME_BASE.  Seconds = duration / AV_TIME_BASE.  us = duration % AV_TIME_BASE.
+    //! \brief In units of AV_TIME_BASE fractional seconds.  See \link calculate_duration() \endlink.
     int64_t duration() const { return format_context().duration; }
-    //! \brief In AV_TIME_BASE.  Seconds = duration / AV_TIME_BASE.  us = duration % AV_TIME_BASE.
+    //! \brief In AV_TIME_BASE fractional seconds.
     int64_t start_time() const { return format_context().start_time; }
     //! \brief Divide by 1000 to get kb/s of course.
     int bit_rate() const { return format_context().bit_rate; }
+    //! \brief First byte of actual data.
+    int data_offset() const { return format_context().data_offset; }
+
+    //@}
 
     //! \brief Calculate duration into the correct units.
     void calculate_duration(int &hours, int &mins, int &secs, int &ms) const {
@@ -242,6 +245,9 @@ ok:
 
     ~audio_stream() { avcodec_close(&codec_context()); }
 
+    //! \name ffmpeg structure accessors.
+    //@{
+
     //! \brief Contains codec data amongst other things.
     //! See:
     //! - http://www.dranger.com/ffmpeg/data.html#AVStream
@@ -251,7 +257,6 @@ ok:
 
     //! \brief Direct accessor to the codec informational data.  Enormous struct.
     //! Use \link codec_context \endlink unless giving this to an ffmpeg function.
-    //
     AVCodecContext &codec_context() { return *stream_->codec; }
     const AVCodecContext &codec_context() const { return *stream_->codec; }
 
@@ -263,9 +268,17 @@ ok:
     AVCodec &codec() { return *codec_; }
     const AVCodec &codec() const { return *codec_; }
 
-    //! \brief All timestamps of *this stream* are encoded in this way.
-    //! Use timestamp * av_q2d(time_base()) on packet timestamps etc.
+    //@}
+
+    //! \brief All timestamps of *this stream* (ie, frames) are encoded in this way.
+    //! Use timestamp * av_q2d(time_base()) on packet timestamps etc.  This is not
+    //! the same as the codec time base, or AV_TIME_BASE which is used for the file
+    //! context.
     const AVRational &time_base() const { return stream().time_base; }
+
+    //! \brief time_base() as a double.
+    const double time_base_double() const { return av_q2d(stream().time_base); }
+
 
   private:
     AVStream *stream_;
@@ -282,6 +295,17 @@ class codec_context {
 
     int sample_rate() const { return ctx().sample_rate; }
     int channels() const { return ctx().channels; }
+    int average_bit_rate() { return ctx().bit_rate; }
+    //! \brief Fractional seconds which all times are represented in.
+    //! For fixed-fps content, timebase should be 1/framerate and timestamp increments
+    //! should be identically 1.
+    //!
+    //! Note: this does not appear to be the same as audio_stream::time_base().
+    //TODO: what is this for if it is zero all the time?
+    const AVRational &time_base() const { return ctx().time_base; }
+    double time_base_double() const { return av_q2d(time_base()); }
+    //! \brief Which frame did we just decode?
+    int frame_number() const { return ctx().frame_number; }
 
   private:
     audio_stream &st_;
@@ -293,6 +317,16 @@ class codec_context {
 //! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
 //! See:
 //! - http://cekirdek.pardus.org.tr/~ismail/ffmpeg-docs/structAVPacket.html
+//
+//TODO:
+//  For informatuonal reasons it would be nice to take the an audio stream.
+//  It messes up the interface a bit, though.
+//
+//  Example:
+//
+//    print codec_context(fr.file()).frame_number());
+//
+//  Also time base.
 class frame {
   public:
     frame(ffmpeg::file &file) : file_(file) {
@@ -313,8 +347,21 @@ class frame {
     int size() const { return packet_.size; }
 
     //! \brief Timestamp of when to output this in units of time_base.
-    //TODO: how do I get the time_base from here - is it the AVstream one?
+    //! Note that sometiems the decode timestamp is different from the presentation one, but
+    //! this does not happen in audio streams.
+    //TODO:
+    //  could be better to wrap this time stuff in an object like frame_time and another
+    //  object file_time.
     int64_t presentation_time() const { return packet_.pts; }
+
+    //! \brief Presentation time in fractional seconds in the stream's time base.
+    double stream_time_double(const audio_stream &stream) const {
+      return presentation_time() * av_q2d(stream.time_base());
+    }
+
+    //! \brief Time in AV_TIME_BASE units.
+    //TODO: this does not seem to be right.  Test for frame number = 0 - maybe it's just an offset?
+    // int64_t presentation_time() const { return stream_time_sec() * AV_TIME_BASE; }
 
     //! \brief Byte position in stream.
     int64_t position() const { return packet_.pos; }
@@ -442,6 +489,8 @@ class packet_state : boost::noncopyable {
 
     //! \brief Like reset_packet(), but don't allocate a new one.
     void *clear() {
+      // this shouldn't be called if we didn't finish it off already.
+      assert(index() == size());
       void *p = packet_;
       packet_ = NULL;
       packet_index_ = 0;
@@ -455,6 +504,7 @@ class packet_state : boost::noncopyable {
     //! \brief Set the remainder of the buffer to silence
     void finalise() {
       std::memset(((uint8_t*)packet_ + packet_index_), silence_value_, packet_size_ - packet_index_);
+      packet_index_ = packet_size_;
     }
 
     void *packet_;
@@ -466,6 +516,7 @@ class packet_state : boost::noncopyable {
 //! \brief Reads frames into buffers of a given size in a packet_state.
 //! Loop on get_packet().  Remember to get any remaining data in packet_state when
 //! completely done.
+//TODO: should probably take the
 class audio_decoder {
   public:
     //! \brief Buffer size is what should be given to the audio output.
@@ -521,18 +572,12 @@ class audio_decoder {
         // don't set this unless we know it's unsigned.
         buffer_size_ = (std::size_t) used_buffer_size;
 
-        // TODO:
-        //   this will be a problem if we're not using signed 16bit I guess.
         //
         // TODO:
         //   Also I should only do it on the last frame of a file.
         //
         // TODO:
-        //   Truncating in the middle is not good enough.  I must only truncate
-        //   contiguous periods of silence.  Otherwise you get popping in he middle
-        //   of the song.  It doesn't appear to work anyway.  There is still a
-        //   slight pop; no real difference between this and the original prebuffering
-        //   only version.
+        //   Source data/research:
         //
         //   If wikipedia is to be believed:
         //     "Encoder/decoder overall delay is not defined, which means there is no
@@ -543,90 +588,258 @@ class audio_decoder {
         //   It later implies that you can use silence detection to get rid of
         //   silence.  http://en.wikipedia.org/wiki/Gapless_playback
         //
-
-        // TODO:
-        //   better to use a byte offset.  Or even a timestamp?  Well.. if we
-        //   do that then it also needs to be checked inside of truncate
-        //
-        //   Gah how the fuck... ideally I want to do this in unit of miliseconds
-        //   because bytes are going to be somethign differnet.  There just *must*
-        //   be a proper representation for this!
-        //
         //   This has stuff about timestamps:
         //   - http://www.dranger.com/ffmpeg/tutorial05.html
-
-        AVCodecContext &ct = stream_.codec_context();
-        // trc("frame number: " << ct.frame_number);
-        // trc("frame size: " << ct.frame_size);
-        // trc("fnum * fsize = " << ct.frame_number * ct.frame_size);
-        // trc("file size: " << fr.file().file_size());
-
-        // trc("file start_time: " << fr.file().start_time());
-        // trc("packet decode ts: " << fr.packet().dts);
-
-        // trc("frame number: " << ct.frame_number);
-        // trc("block align: " << ct.block_align);
-
-        // trc("stats out: " << ct.stats_out);
-        // trc("stats in: " << ct.stats_in);
-
-        // trc("data offset: " << fr.file().format_context().data_offset);
-
-        // trc("packet present ts: " << fr.packet().pts);
-        // trc("file duration: " << fr.file().duration() * av_q2d(stream_.time_base()));
-        // trc("dur * AV_TIME_BASE: " << ((double) fr.file().duration()) * AV_TIME_BASE);
-        trc("file duration * time_base: " << fr.file().duration() * av_q2d(stream_.time_base()));
-        trc("packet present ts * time_base: " << fr.packet().pts * av_q2d(stream_.time_base()));
-
-        // double duration =  (stream_.duration()/(double)mov->time_scale);
-        // double bit_rate = (stream_size * 8.0)/duration;
-
-        // trc("duration: " << duration);
-        // trc("bitrate: " << bit_rate);
-
-        // exit(0);
-
-        // this is pretty bizare- it doesnt' seem to make  the slightest bit
-        // of difference, and sometimes it just completely destroys the sound!
-        // TODO:
-        //   maybe there is a gap at the *begining* of the second file?  It
-        //   definitely *seems* to be at the end when I play it... yah even
-        //   mplayer puts the little spit in at the end of the first file.
-        //   Maybe it's a genuine artifact as opposed to silence... it
-        //   does it too for known good files...
         //
-        //   I notice mpd has the same problem, only to a lesser extent...
-        if (ct.frame_number >= 458) {
-          // Ehh... not only does it fail to remove the end gap, it also
-          // puts gaps in other places!
-          truncate_silence<int16_t>(30);
+        //   By looking at sweep we can see that there are gaps at the end *and* begining of
+        //   an mp3.
+
+        // TODO:
+        //   the ultimate task is to;
+        //   - determine where we are in the *stream*
+        //     - we must use a time value because bytes will be a different timespan
+        //       when at different bitrates.
+        //   - if we are past a certain limit or before a certain limit
+        //   - truncate the buffer where the end is lower than a certain threshhold
+        //
+        //   additionally:
+        //   - make it work over multiple frames, eg if the last frame is exteremly
+        //     small then we need to kill a longer gap.  Error case:
+        //     - the limit dictates that two frames from the end of the song are subject
+        //       to gap removal.
+        //     - the entire second to last frame is empty
+        //     - the last frame is not empty.
+
+
+        {
+          // this seems to be right.
+          // double fractional_seconds = fr.presentation_time() * av_q2d(stream_.time_base());
+          // int sec = (int) fractional_seconds;
+          // int us = (fractional_seconds - sec) * 1000;
+
+          // TODO:
+          //   ok this sort of works, but not really.  There's still a click and I can't
+          //   work out why.
+          //
+          //   When I use extreme values it messes the stream completely.  I have no idea
+          //   why that happens at all.  Maybe there is some other issue?  Gah, what  I
+          //   really need is a file output so I can analyse the waveform I generated.
+          //
+          //   Argh this is so weird.  If you drop a lot of frames  at the start, it kills
+          //   the entire stream!  Is my buffer handling wrong or something?  Does it become
+          //   the wrong number of bytes?
+          // if (fractional_seconds >= 2 || fractional_seconds <= 0.5 ) {
+          //   trc("drop this frame: " << fractional_seconds);
+          //   buffer_size_ = 0;
+          //   return;
+          // }
         }
 
 
         // TODO:
-        //   This dies horribly - loads of white noise is outputted.
-        // truncate_silence<uint8_t>();
+        //   What I need to do here as a proof-of-concept is to determine exactly
+        //   where I am in the stream and then drop everything from a place where
+        //   I know I should.  Then I can `work backwards' so to speak and see what
+        //   I need to remove.
+        //
+        //   For the primus pt1, sweep shows a clear period of silence somewhat
+        //   after 0m02s.192.  Unfortunately the resolution is not clear enough to
+        //   see precisely what time the cut is at.
+        //
+        //   The weird thing is that ffmpeg appears to put the track size at 02.195.
+        //   while sweep sees it at 02.220.  Perhaps ffmpeg is doing some work of
+        //   its own?
+
+        // TODO:
+        //   this will be a problem if we're not using signed 16bit I guess.
+        //
+        trc("frame: " << codec_context(stream_).frame_number() << " with " << fr.size() << " bytes (data offset = " << fr.file().data_offset() << ").");
+        static int trimmed = 0;
+
+        // Note: test properties.
+        //
+        // This ensures that pathalogical cases where a pure period of silence at the start or
+        // end is removed.
+        //
+        // - p1 nogap last sample               = -19870
+        // - p1 gap last sample                 = -19870
+        // - p2 nogap first sample should be    = -20313
+        // - p2 gap first sample should be      = -20313
+        // - bytes of silence at end of p1      = 14688 (b274 to ebd4 (past eof) = 45684 to 60372) = 60372 - 45684
+        //                                      = start on frame 28
+        // - bytes of silence at start of p2    = 14688 (02c to 398c = 44 to 14732) = 14732 - 44
+        //                                      = stop on frame 4
+        //
+        // Looks like it overlapped by one byte... really those last bytes should be
+        // different.  Well... it doesn't matter much, it just means we don't do the
+        // short crossfade strategy (or if we do it's the pathalogical case).
+        // Crossfade comes later anyway.  We can experiment.
+        //
+        // acording to the complete file:
+        // - the last bytes of the p1    = ???
+        // - the initial bytes of the p2 = ???
+        //
+        // ps: remember endianness, remember stereo files have double samples,
+        // remember .wav files have a variable length header.
+
+        // TODO:
+        //   need a dump of a mp3 which *does not* support the lame header, ie I
+        //   need a raw dump of two mp3s concatinated.  I think I can do this using
+        //   the file output.  I need it to see what the threshold should be for
+        //   silence in a real MP3.
+
+        // Note: keep this pathalogical case lying around.  Requirement is that
+        // frames are 4096 bytes big (unless they are the end) otherwise the frame
+        // counts won't match up.
+        if (codec_context(stream_).frame_number() >= 28 && trimmed == 0) {
+          truncate_silence<int16_t>(0);
+          if (codec_context(stream_).frame_number() == 31) {
+            trimmed = 1;
+          }
+        }
+        else if (trimmed == 1 && codec_context(stream_).frame_number() <= 4) {
+          // this one must work forward!
+          truncate_pre_silence<int16_t>(0);
+          if (codec_context(stream_).frame_number() == 4) {
+            trimmed = 2;
+          }
+        }
+
+        // note: optimal algorithm:
+        //
+        // This is really tricky because we have to hold up the pipeline.  This algorithm
+        // is very similar for a internal gap killer.
+        //
+        // Algorithm:
+        //
+        //   finished killing = false
+        //
+        //   every frame:
+        //
+        //   if near enoguh to the end
+        //     look for first non-silence from the end
+        //
+        //     if frame is partial
+        //       flush frame buffers (they are not part of the last period of silence)
+        //       flag partialnes (store the `real' dimensions of the frame)
+        //       delay frame
+        //     else if frame is empty
+        //       delay frame
+        //     end
+        //   // if there was no silence period at the end of the last frame, we assume
+        //   // that any silence at the start here is intended.
+        //   // This property might not be desireable, eg to gapkill a wav to mp3 transition.
+        //   else if near enough to the the start && frames are delayed
+        //     search for first non-silence from the start
+        //
+        //     // this bit is wrong. - we want to just drop empty frames.
+        //     if frame is partial
+        //       // we reached the definite end of the silence period
+        //       delete empty frames
+        //       flush previous partial frame with the correct dimensions
+        //       flush this partial frame with the correct dimensions
+        //     else frame is empty
+        //       // what happens to these frames?
+        //       delay frame
+        //     end
+        //   //
+        //   else if frames are delayed
+        //     flush
+        //   end
+        //
+
+        // note: methods of delaying frames
+        //
+        // - copy into a giant buffer
+        //   - memcpy is slow
+        //   - completely dropping frames is free
+        //   - might end up doing reallocs for the first few times.
+        //   - hard to mempool
+        // - allocate this frame buffer (the aligned_memory) and put it
+        //   on a queue.
+        //   - requires a queue which could be and is definitely using
+        //     allocs.
+        //   - easier to pool (except the aligned memory bit is rather
+        //     wastefull - better to align the base address and dispatch
+        //     in units of $alignment - would that be possible for frame
+        //     buffers?  They might not all be %16 anyway?
+        //   - frame buffers are bloody huge 192000 bytes.
+        //
+        // Gr... I might be better off trying both and profiling it.
+        //
+        //
       }
+    }
+
+
+    //! \brief Truncate the beginning of the bufgfer if it starts with silence
+    template <class UnitsOf>
+    void truncate_pre_silence(const int threshold) {
+      trc("started with a buffer of " << buffer_size_ << " bytes");
+      std::size_t elts = buffer_size_ / sizeof(UnitsOf);
+      // trc("there are " << elts <<  " of that unit in the array");
+      std::size_t num_trimmed = 0;
+      UnitsOf *samples = (UnitsOf*) buffer_.ptr();
+      for (int i = 0; i < elts; ++i) {
+        // trc(i);
+        // if (samples[i] >= (-threshold) && samples[i] <= threshold) {
+        if (samples[i] == 0) {
+          buffer_index_ += sizeof(UnitsOf);
+          num_trimmed++;
+        }
+        else {
+          trc("Found a byte " << samples[i]);
+          break;
+        }
+      }
+
+      if (! num_trimmed) {
+        trc("nothing truncated");
+        return;
+      }
+
+      int16_t first_byte = samples[buffer_index_ / sizeof(UnitsOf)];
+      trc("final byte is: " << first_byte);
+      trc("index has become " << buffer_index_ <<  " bytes.");
+      trc("truncated to " << buffer_size_ <<  " bytes.");
+      trc("trimmed      " << num_trimmed  << " times.");
     }
 
     //! \brief Truncate the buffer if it ends with silence.
     template <class UnitsOf>
     void truncate_silence(const int threshold) {
+
+      // TODO:
+      //   aaaarrgh!!!  I've just realised why this doesn't work.  It's *signed*
+      //   data so it should be
+      //
+      //     (samples[i] >= -threshold && samples[i] <= threshhold)
       trc("started with a buffer of " << buffer_size_ << " bytes");
       std::size_t elts = buffer_size_ / sizeof(UnitsOf);
-      trc("there are " << elts <<  " of that unit in the array");
+      // trc("there are " << elts <<  " of that unit in the array");
       std::size_t num_trimmed = 0;
       UnitsOf *samples = (UnitsOf*) buffer_.ptr();
       for (int i = elts - 1; i >= 0; --i) {
         // trc(i);
-        if (samples[i] <= threshold) {
+        // if (samples[i] >= (-threshold) && samples[i] <= threshold) {
+        if (samples[i] == 0) {
           buffer_size_ -= sizeof(UnitsOf);
           num_trimmed++;
         }
         else {
+          trc("Found a byte " << samples[i]);
           break;
         }
       }
+
+      if (! num_trimmed) {
+        trc("nothing truncated");
+        return;
+      }
+
+
+      int16_t final_byte = samples[buffer_size_ / sizeof(UnitsOf) - 1];
+      trc("final byte is: " << final_byte);
       trc("truncated to " << buffer_size_ <<  " bytes.");
       trc("trimmed      " << num_trimmed  << " times.");
     }
@@ -646,17 +859,22 @@ class audio_decoder {
 
         // We filled up a buffer
         if (packet_.index() == packet_.size()) {
+          // trc("packet complete");
           void *p = packet_.reset();
           // std::cout << "get_packet(): " << p << std::endl;
           return p;
         }
         else {
+          // trc("packet is incomplete");
           // we are not allowed to overrun the buffer.
           assert(packet_.index() < packet_.size());
           return NULL;
         }
       }
       else {
+        // we must have actually outputted all the data
+        assert(buffer_index_ == buffer_size_);
+        // trc("we have reached the end of the buffer: ind = "  << buffer_index_ << " vs. size = " << buffer_size_);
         return NULL;
       }
     }
@@ -693,9 +911,9 @@ class audio_decoder {
 
     buffer_type buffer_;
 
-    // the amount of the buffer which was written to by ffmpeg.
+    // the amount of the buffer which was written to by ffmpeg (in bytes);
     std::size_t buffer_size_;
-    // stateful data - where have we outputted this frame up to?
+    // stateful data - where have we outputted this frame up to? (In bytes)
     std::size_t buffer_index_;
 
     // working state

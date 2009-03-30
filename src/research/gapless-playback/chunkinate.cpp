@@ -49,6 +49,10 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
   ffmpeg::file file(file_name);
   file.dump_format(file_name);
   ffmpeg::audio_stream audio(file);
+  // TODO:
+  //   if the format is not right then we need to reconfigure the sound card (which is
+  //   not possible yet).  At least we need to check that the sound output has the right
+  //   characteristics to play the media.
 
   while (true) {
     ffmpeg::frame fr(file);
@@ -56,6 +60,9 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
       trc("frame is finished!");
       break;
     }
+
+    // TODO:
+    //   bug - if you drop all frames, then we wait for the exit signal forever.
 
     // TODO:
     //   Plugins, stream processors.
@@ -92,7 +99,10 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     //     frame fr(file);
     //     proc.process(frame);
     //
+    //
     //     // Or perhaps the chunker appears as part of the processor process?
+    //     // where do observer plugins go?  Post_chunks could do it?  Means it
+    //     // can't be a plugin of course.
     //     proc.make_chunks(post_chunks());
     //   }
     //
@@ -108,6 +118,18 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     //   Having to copy that buffer is really tricky.
     //
     // TODO:
+    //   Efficiancy note: if we're dropping frames all the time we're going to end up
+    //   calling get_packet() ==  NULL constantly.  It would be better to do the whole
+    //   iteration process in one function; we can drop the frame as needed.
+    //
+    // TODO:
+    //   Format conversion:
+    //   - libsamplerate - necessary because some sound cards won't support some rates
+    //     and also reconfigure request is very hard to manage.
+    //   - format (int, uint is really hard to do because we're not dynamic in our
+    //     output type at all.  Have to see about that one.
+    //
+    // TODO:
     //   Upmixer:
     //   - the processor needs to know how many channels to mix up to.
     //   - the sample buffer needs to be configured appropriately so packet_state needs
@@ -117,6 +139,19 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     //       it still does not need to know about SDL specifically).  Perhaps we can
     //       have a generic audio_spec type later on?  Again - we ignore this stuff for
     //       now because output plugins are not my focus.
+    //   - mixing needs to be done before chunking, because the chunks will be a different
+    //     size.  We are essentially jsut doing
+    //
+    //       sample = new int16_t[current_buffer * channels];
+    //       each sample as s
+    //         for i in 1 to channels
+    //           sample[i] = s
+    //         end
+    //       end
+    //   - This could be done in the chunking process easily enough.  No need to duplicate
+    //     the entire buffer.
+    //   - it does indicate that the decode buffer's size must be able to change sizes
+    //     arbitrarily depending on
     //
     // TODO:
     //   Gap killing:
@@ -126,21 +161,33 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     //     is still there (contradicted by .wav rips), reencode and it adds another one.
     //     - contradicted by .wav rips working 100% gapless.
     //
+    // TODO:
+    //   On track interrupts (also seeking applies here):
+    //   - asuming we are able to have a reasonable limit of prebuffering.
+    //   - stop buffering the current track (after we are up to our limit)
+    //   - start buffering the next
+    //   - either:
+    //     - make a brand new buffer for the new track and switch them over
+    //     - or delete everything remaining in the old buffer.
+    //   - buffer/replace is likely the fastest, but it requires a design
+    //     change because we need to alloc the buffer structure itself - easy
+    //     to have memory errors if stuff references the old buffer.
+    //   - we could have two prebuffers available = no allocs... not a total
+    //     solution, though.
+    //   - big buffer = lots of work to free prebuffered packets.
+    //     - mitigated by an async freeing queue?
+    //     - would be a lot mitigated by a memory pool.
+    //   - If we do free the packets it has implications for the packet pool - it
+    //     wouldn't be a simple stack any more - would need an extra list of ptrs
+    //     to give out/take back.
+    //   - small buffer = we risk packet queue underflow when loading the new
+    //     file/codec/stream.
+    //   - buffer should be in units of miliseconds, as should everything else.
     //
-    // TODO:
-    //   Seeking, interrupt.  Need to flush the buffers.  Tricky work because the buffer's
-    //   so bloody big :).  Not to mention later stream processor hassles.
 
-    // TODO:
-    //   the decoder should be declared here now I have detached the state.
     ffmpeg::audio_decoder decoder(state, audio);
     decoder.decode(fr);
 
-    // TODO:
-    //   would prolly be faster to have the loop inside the decoder and we go:
-    //
-    //     decoder.iterate_packets(packet_pusher());
-    //
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       // trc("got buf: " << sample_buffer);
@@ -162,6 +209,11 @@ void chunkinate_finish(ffmpeg::packet_state &state) {
   trc("after clear, it is " << state.ptr());
   trc("we got " << p);
   push_packet(p);
+
+  boost::unique_lock<boost::mutex> lk(synced_queue.mutex());
   finished = true;
+  // This is for the pathalogical case where we output no frames the output
+  // function will block forever unless we do this notify.
+  synced_queue.wait_condition().notify_all();
 }
 

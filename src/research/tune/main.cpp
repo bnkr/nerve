@@ -3,14 +3,19 @@
 \brief main()
 */
 
+// TODO:
+//   move this and the sdl wrapper to the main tune repos.  Hopefully I can keep
+//   the sdl wrapper synced in case of bugs...
+
 #include "../../wrappers/sdl.hpp"
-// #include "settings.hpp"
+#include "settings.hpp"
 // #include "data.hpp"
 
 #include <iostream>
 
 #include <cstdlib>
 #include <cmath>
+#include <cstdio>
 
 #include <boost/thread.hpp>
 
@@ -30,7 +35,9 @@ void sine_callback(void *, uint8_t *stream, int len) {
   const int channels = 1;
 
   // TODO:
-  //   should be a cmdline param.
+  //   should be dynamic to... what?  I gues this func
+  //   must access a global.  We could use an object which
+  //   also contains the audio_spec.
   const double note_frequency = 220.0;
   const double amp = 0.75;
 
@@ -50,16 +57,15 @@ void sine_callback(void *, uint8_t *stream, int len) {
     sine_pos += sine_speed;
   }
 
-  finished = true;
+  // finished = true;
   // finish_cond.notify_all();
-  boost::thread::yield();
+  // boost::thread::yield();
 }
 
 void make_sine(uint8_t *stream, int length) {
   sine_callback(NULL, stream, length);
 }
 
-#include <cstdio>
 
 void sine_file(const char *filename, std::size_t length) {
   // should be able to specify size etc.
@@ -72,43 +78,61 @@ void sine_file(const char *filename, std::size_t length) {
 }
 
 
-// http://code.google.com/p/freemat/wiki/TutorialMakeASinewave
-
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
   try {
-    // settings set(arc, argv);
-    // if (set.bad()) {
-      // return set.exit_code();
-    // }
+    settings set(argc, argv);
+    if (set.exit()) {
+      return set.exit_status();
+    }
 
-    // all this should be dynamic
+    // TODO: this should be dynamic - also we aren't looping the values asked for.
     std::size_t miliseconds = 5 * 10;
     std::size_t seconds = miliseconds / 10;
-    std::size_t frequency = 44100;
-    std::size_t channels = 1;
+
+    std::size_t frequency = set.sample_rate();
+    std::size_t channels = set.channels();
 
     std::size_t samples = frequency * seconds;
     std::size_t buffer_size = channels * samples * sizeof(int16_t);
 
-    // TODO:
-    //   allow stdout if !isatty so you can pipe it to
-    //
-    //     aplay -c 1 -f S16_LE -r 44100
-    sine_file("sinewave.raw", samples);
+    if (set.dump_to_file()) {
+    // sine_file("sinewave.raw", samples);
+    }
 
 
     return 0;
 
     sdl::audio aud;
+    // TODO:
+    //   put this in a global object along with some other stuff which
+    //   I guess has to come from settings...  we could make settings
+    //   global I suppose... the *obtained* value is what we need though.
+    //   I guess our global will be like:
+    //
+    //     wave_properties;
+    //     // ..
+    //     p.initialise(set, dev.obtained());
     sdl::audio_spec out_spec(sine_callback);
-    out_spec.channels(1);
+    out_spec.frequency(set.sample_rate());
+    out_spec.channels(set.channels());
     sdl::device dev(aud, out_spec);
-    // if (set.verbose()) {
-    std::cout << "Audio spec:" << std::endl;
-    dev.obtained().dump(std::cout, "  ") << std::endl;
-    // }
+    if (set.verbosity_level() >= set.verbosity_verbose) {
+      std::cout << "Audio spec:" << std::endl;
+      dev.obtained().dump(std::cout, "  ") << std::endl;
+    }
+
+    if (dev.obtained() != out_spec) {
+      // throw error ?  Better if we had an exact parameter to sdl::device.
+      std::cerr << "Error: could not get the requested audio spec - parameters not supported?" << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    if (set.duration_ms() == settings::forever && set.verbosity_level() >= settings::verbosity_normal) {
+      std::cout << "Press any key to move to the next note." << std::endl;
+    }
 
     dev.unpause();
+
     // TODO:
     //   somehow set up a list of notes to iterate
     //
@@ -129,6 +153,9 @@ int main(int argc, const char **argv) {
     }
 
     return EXIT_SUCCESS;
+  }
+  catch (sdl::error &e) {
+    std::cerr << "Error initialising sdl: " << e.what() << std::endl;
   }
   // TODO: be more specific
   catch (std::exception &e) {

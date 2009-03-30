@@ -4,9 +4,7 @@
 
 #include <bdbg/trace/short_macros.hpp>
 
-bool continue_predicate() {
-  return finished || ! synced_queue.data().empty();
-}
+
 
 void sdl_callback(void*,uint8_t *stream, int length) {
   typedef sync_traits_type::monitor_type monitor_type;
@@ -21,16 +19,14 @@ void sdl_callback(void*,uint8_t *stream, int length) {
     if (finished && q.empty()) {
       {
         // TODO:
-        //   it blocks forever if the decoding thread is slower than this
-        //   one.  The main thread needs to monitor a boolean which we set to
-        //   "I've quit".  This is another place where the writer_monitor would
-        //   be really useful (which notifies the condition when the lock is
-        //   released).
+        //   should use a proper monitor here, or at least a better way of
+        //   storing these sync primitives.
         trc("notifying exit");
         boost::unique_lock<boost::mutex> lk(finish_mut);
         finish_cond.notify_all();
-        boost::thread::yield();
+        output_closed = true;
       }
+      boost::thread::yield();
 
       // normally we would just return from the thread here, but SDL controls
       // it so we have to wait for the main thread to shut sdl down.  We DON'T

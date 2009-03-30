@@ -29,6 +29,9 @@ extern boost::condition_variable finish_cond;
 
 // again messy - should be part of the queue data (it is protected by that mutex)
 extern bool finished;
+extern bool output_closed;
 
-
+inline bool continue_predicate() {
+  return finished || ! synced_queue.data().empty();
+}
 #endif

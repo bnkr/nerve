@@ -8,5 +8,6 @@ boost::condition_variable finish_cond;
 
 // again messy - should be part of the queue data (it is protected by that mutex)
 bool finished = false;
+bool output_closed = false;
 
 

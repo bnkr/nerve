@@ -152,11 +152,12 @@ target_link_libraries(${BIN_NERVE} ${BOOST_PROGOPT_LIB})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
-  message("${SDL_LIBRARY}")
+
+  set(FFMPEG_LIBS "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}")
+
   set(ALL_IO_LIBS 
     ${SDL_LIBRARY} 
-    "${AVUTIL_LIB}" 
-    "${AVFORMAT_LIB}" "${AVCODEC_LIB}"
+    ${FFMPEG_LIBS}
   )
 
   set(UTILITY_LIBS
@@ -168,9 +169,10 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(bin_name  "tune")
   set(src 
     "${RES_DIR}/${bin_name}/main.cpp" 
+    "${RES_DIR}/${bin_name}/settings.cpp" 
   )
   add_executable(${bin_name} ${src})
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
+  target_link_libraries("${bin_name}" ${SDL_LIBRARY} ${BOOST_THREAD_LIB} ${BOOST_PROGOPT_LIB})
 
   # simple-media-player
   set(bin_name  "simple-media-player")
