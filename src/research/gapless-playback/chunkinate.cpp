@@ -148,18 +148,26 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
     //           sample[i] = s
     //         end
     //       end
+    //
+    //
     //   - This could be done in the chunking process easily enough.  No need to duplicate
     //     the entire buffer.
     //   - it does indicate that the decode buffer's size must be able to change sizes
     //     arbitrarily depending on
     //
     // TODO:
-    //   Gap killing:
-    //   - crossfade will help.
-    //   - I need to *detect* the artifact above all else.  Then I can remove it.
-    //   - re-encoding stuff may be skewing my test data, eg rip to wav and the artifact
-    //     is still there (contradicted by .wav rips), reencode and it adds another one.
-    //     - contradicted by .wav rips working 100% gapless.
+    //   Plugin pipeline:
+    //
+    //   Some will drop, store, reorder frames if they want.  So I need some kind of
+    //   pipe processing.  It must be multi-threaded, but we might just have a pool.
+    //   Delaying frames is really tricky because you need a fast buffer.
+    //
+    //   The problem is we are always assuming that each stage will give you something
+    //   and we *pull* from every stage.  We need to *push*.  That way there's no
+    //   constantly looping around checking that we got given something.
+    //
+    // TODO:
+    //   Gap killing: see ffmpeg.
     //
     // TODO:
     //   On track interrupts (also seeking applies here):

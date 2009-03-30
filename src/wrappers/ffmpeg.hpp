@@ -261,14 +261,13 @@ ok:
     const AVCodecContext &codec_context() const { return *stream_->codec; }
 
     //! \brief Mostly to with the actual en/de-coding process.
-    //TODO:
-    //  *Might* be better to init a codec object based on an audio_stream; depends
-    //  how/where the codec is used and how much stuff I have to wrap.  I think it's
-    //  only used in
     AVCodec &codec() { return *codec_; }
     const AVCodec &codec() const { return *codec_; }
-
     //@}
+
+
+    //! \name AVStream and AVCodec (not codec_context) accessors.
+    //@{
 
     //! \brief All timestamps of *this stream* (ie, frames) are encoded in this way.
     //! Use timestamp * av_q2d(time_base()) on packet timestamps etc.  This is not
@@ -278,6 +277,8 @@ ok:
 
     //! \brief time_base() as a double.
     const double time_base_double() const { return av_q2d(stream().time_base); }
+
+    //@}
 
 
   private:
@@ -432,7 +433,8 @@ namespace ffmpeg {
 //TODO:
 //  given that the state is seperate, I could now cause the audio_decoder
 //  to immediately read the frame in ctor instead of doing it seperately.
-//  This would make things safer to use.
+//  This would make things safer to use.  Note: this changes rather a lot
+//  wrt frame delaying.
 class packet_state : boost::noncopyable {
   public:
     //! \brief The packet size is the size of the buffer to pass to the output queue.
@@ -708,45 +710,108 @@ class audio_decoder {
         // note: optimal algorithm:
         //
         // This is really tricky because we have to hold up the pipeline.  This algorithm
-        // is very similar for a internal gap killer.
+        // is very similar for a internal gap killer.  It migh be better to form this as
+        // a special case of the internal gapkiller, but the .
         //
         // Algorithm:
         //
-        //   finished killing = false
-        //
         //   every frame:
         //
-        //   if near enoguh to the end
+        //   if gapkill state = ignore
+        //   // -1 so we can have the entire time period availale to us.
+        //   else if near enoguh to the end - 1
         //     look for first non-silence from the end
         //
         //     if frame is partial
         //       flush frame buffers (they are not part of the last period of silence)
         //       flag partialnes (store the `real' dimensions of the frame)
         //       delay frame
+        //     else if frame is empty && it's the first one we touched
+        //       // don't gapkill any more - assume that there was more silence before this.
+        //       gapkill state = ignore
         //     else if frame is empty
         //       delay frame
         //     end
         //   // if there was no silence period at the end of the last frame, we assume
-        //   // that any silence at the start here is intended.
-        //   // This property might not be desireable, eg to gapkill a wav to mp3 transition.
-        //   else if near enough to the the start && frames are delayed
+        //   // that any silence at the start here is intended.  The always gapkill starts
+        //   // option allows us deal with a nogap end -> gap start transition (eg, .wav->mp3)
+        //   else if near enough to the the start && (frames are delayed || always gapkill starts )
         //     search for first non-silence from the start
         //
-        //     // this bit is wrong. - we want to just drop empty frames.
         //     if frame is partial
         //       // we reached the definite end of the silence period
         //       delete empty frames
         //       flush previous partial frame with the correct dimensions
         //       flush this partial frame with the correct dimensions
         //     else frame is empty
-        //       // what happens to these frames?
+        //       // we still delay frames in case the silence period is too long which implies
+        //       // that this frame had an intentional gap.
         //       delay frame
         //     end
-        //   //
-        //   else if frames are delayed
-        //     flush
+        //   // We reached the end of the period where silence can be so assume that
+        //   // the silence was intentional.
+        //   else
+        //     if frames are delayed
+        //       flush
+        //     end
+        //     gapkill state = normal
         //   end
         //
+        // Implications:
+        // - we must be able to delay
+        // - we must have a store for one partial frame (could be the same as a
+        //   standard frame, not terribly important)
+        // - the total pre-buffer time becomes exteremy important.  It must be
+        //   enough to account for us delaying the entire near_enough_to_end +
+        //   near_enough_to_start time.  This is problematic because of variable
+        //   bitrates - we can't be sure exactly how much buffering that buffer
+        //   will be...
+        //
+        // To implement:
+        // - we should be checking over global timestamps, not on frame boundaries
+        //   We detect silence from the first sample elligable for trimming.
+        //
+        // To decide:
+        // - can this/should this be implemented as a case of the internal gap killer.
+        //   Need to design that algorighm.
+        //
+        // Observations:
+        // - flush could do the short crossfade if necesasry.
+
+
+        // note: algorithm design for generic gapkiller
+        //
+        // frame:
+        //
+        // // we are killing a gap
+        // if partial frame queued
+        //   find first silence from start
+        //   if frame is silent
+        //     delay frame
+        //   else if frame is partial && total duration of silence is long enough
+        //     delete delayed silent frames
+        //     merge the original partial with this one
+        //   else
+        //     flush
+        //   end
+        // else
+        //   // we must do the full analysis if a single frame can contain
+        //   // a valid silence period.  Otherwise, we can optimise and just
+        //   // search for the first silence from the end.
+        //   loop frame:
+        //     s1 = find next silence
+        //     s2 = find next silence or eof
+        //     if time between s1 to s2 is long enough
+        //       remove chunk - eep how
+        //     end
+        //   end
+        //
+        //   if s1 = found && s2 == eof
+        //     queue this partial frame
+        //   end
+        // end
+        //
+        // Wow that's a whole lot easier than the other one!
 
         // note: methods of delaying frames
         //
