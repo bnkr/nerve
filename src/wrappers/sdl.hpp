@@ -6,13 +6,13 @@
 #ifndef SDL_HPP_uyqa3zsm
 #define SDL_HPP_uyqa3zsm
 
-#include <nerved_config.hpp>
-
-#ifdef HAVE_SDL_SDL_H
-#  include <SDL/SDL.h>
-#else
+// this must be defined before this is included
+#ifdef HAVE_SDL_H
 // Only on really old versions?
 #  include <SDL.h>
+#else
+// assume this because it's the normal way
+#  include <SDL/SDL.h>
 #endif
 
 #include <cassert>

@@ -63,14 +63,14 @@ find_file(HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H   "ffmpeg/libavcodec/avcodec.h")
 find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
 find_file(HAVE_FFMPEG_AVCODEC_H  "ffmpeg/avcodec.h")
 find_file(HAVE_FFMPEG_AVFORMAT_H "ffmpeg/avformat.h")
-find_file(HAVE_SDL_SDL_H "SDL/SDL.h")
+find_file(HAVE_SDL_H "SDL.h")
 
 mark_as_advanced(
   HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H
   HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
   HAVE_FFMPEG_AVCODEC_H
   HAVE_FFMPEG_AVFORMAT_H
-  HAVE_SDL_SDL_H
+  HAVE_SDL_H
 )
 
 set(NERVED_CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")

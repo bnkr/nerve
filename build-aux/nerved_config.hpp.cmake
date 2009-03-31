@@ -11,6 +11,6 @@
 #cmakedefine HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
 #cmakedefine HAVE_FFMPEG_AVFORMAT_H
 
-#cmakedefine HAVE_SDL_SDL_H
+#cmakedefine HAVE_SDL_H
 
 #endif
