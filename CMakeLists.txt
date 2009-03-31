@@ -164,16 +164,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     "${BOOST_FS_LIB}" "${BOOST_THREAD_LIB}"
   )
 
-  
-  # tuner prog
-  set(bin_name  "tune")
-  set(src 
-    "${RES_DIR}/${bin_name}/main.cpp" 
-    "${RES_DIR}/${bin_name}/settings.cpp" 
-  )
-  add_executable(${bin_name} ${src})
-  target_link_libraries("${bin_name}" ${SDL_LIBRARY} ${BOOST_THREAD_LIB} ${BOOST_PROGOPT_LIB})
-
   # simple-media-player
   set(bin_name  "simple-media-player")
   set(src 
