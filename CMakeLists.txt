@@ -107,13 +107,23 @@ endif()
 find_library(AVUTIL_LIB   "avutil")
 find_library(AVFORMAT_LIB "avformat")
 find_library(AVCODEC_LIB  "avcodec")
-# defines SDL_LIBRARY and all the stuff from sdl-config bin.
-find_package(SDL REQUIRED)
 
 mark_as_advanced(
   BOOST_FS_LIB BOOST_PROGOPT_LIB BOOST_THREAD_LIB
   AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB 
 )
+
+# FindSDL doesn't work properly with crosscomp due to the use of sdl-config
+# binary.
+if (NOT CMAKE_CROSS_COMPILING)
+  # defines SDL_LIBRARY and all the stuff from sdl-config bin.
+  find_package(SDL REQUIRED)
+else()
+  message("Warning: SDL library can't be auto-detected when cross-compiling.  You may need")
+  message("         to add additional cflags and include directories.")
+  find_library(SDL_LIBRARY "SDL")
+endif()
+
 
 ###########################
 ## Building normal stuff ##
