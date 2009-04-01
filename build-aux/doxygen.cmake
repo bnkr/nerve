@@ -607,13 +607,9 @@ function(doxygen_install_targets doxygen_target wants install_to install_docs_fr
     if (iter MATCHES "pdf")
       set(file "${install_from}/${DOXYGEN_REL_PDF_FILE}")
       set(inst "${install_to}/${DOXYGEN_REL_LATEX_DIR}") 
-      if (DOXYGEN_CMAKE_VERBOSE)
-        message("pdf:\n  from: ${file}\n  to: ${inst}")
-      endif()
 
       if (rebuild)
         add_custom_target(depend_${doxygen_target}_pdf ALL DEPENDS "${DOXYGEN_PDF_FILE}")
-        endif()
       endif()
 
       install(
