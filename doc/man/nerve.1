@@ -15,7 +15,8 @@ a way to start, stop, and restart the daemon.
 \fBNerve\fR is playlist based, so all the commands relate to manipulating the 
 playlist state in some way.  The file being played has a special state which is 
 seperate to the playlist, so modifications to the playlist never affect the 
-running file.
+running file.  For example if you clear the playlist the current song will play
+until the end.
 .LP
 The manpage \fBnerved(1)\fR has some more details on the internal implementation 
 and configuration and, if you are really interested, then you might like to read
@@ -49,7 +50,7 @@ Affect or get information on the playlist.
 Print the current playlist.
 
 .SS \fIadd\fR \fB[OPTION]\fR... \fIFILE\fR...
-Replace the playlist with \fIFILE\fR.  If \fIFILE\fR is a directory, then its contents
+Append the playlist with \fIFILE\fR.  If \fIFILE\fR is a directory, then its contents
 are loaded.
 
 .TP
@@ -70,6 +71,16 @@ files are present, this acts like the \fBclear\fR command.
 .TP
 \fB-C\fR, \fB--clear-all\fR
 Clear the playlist and also clear the current song.
+.TP
+\fB-B\fR, \fB--before-current\fR
+Insert before the currently playing song; that song is switched out automatically.
+TODO: might get rid of this.
+.TP
+\fB-a\fR, \fB--after\fR=\fIREGEXP\fR
+Add the files after the track represented by \fIREGEXP\fR.
+.TP
+\fB--index\fR=\fINUM\fR
+Add the files at index \fINUM\fR of the playlist.
 
 .SS \fIclear\fR [\fIOPTION\fR]...
 Clear the playlist, but don't stop the running file.  Same as '\fBnerve add\fR \fI--clear\fR' 
