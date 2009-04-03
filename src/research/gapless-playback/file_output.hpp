@@ -94,7 +94,9 @@ void dump_to_file(std::size_t buffer_len) {
     std::size_t w = fwrite(buffer, 1, buffer_len, outfile);
     assert(w == buffer_len);
     fflush(outfile);
+#ifndef WIN32
     fsync(fileno(outfile));
+#endif
   }
 }
 

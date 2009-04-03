@@ -1,3 +1,5 @@
+#include <nerved_config.hpp>
+
 #include "play.hpp"
 #include "chunkinate.hpp"
 #include "../../wrappers/ffmpeg.hpp"

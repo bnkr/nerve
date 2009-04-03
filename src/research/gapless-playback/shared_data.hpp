@@ -18,6 +18,19 @@
 //   packet queue should have the finished boolean in it, and perhaps also the
 //   condition that we wait on for being finished...
 
+
+// since we seem to be adding conditions all over the place, I propose a new design:
+// use a sync_type, then a monitor_bind.
+//
+//   typedef sync_type<T, mutex> s_type;
+//   typedef monitor_bind<s_type> mb_type;
+//   s_type data;
+//   mb_type mb1(data);
+//
+// Monitor binds follow the .wait_condition thing, so no changes needed to any
+// other part of the lib.
+//
+
 typedef para::sync_traits<std::queue<void *>, boost::mutex, boost::unique_lock<boost::mutex>, boost::condition_variable> sync_traits_type;
 typedef sync_traits_type::monitor_tuple_type synced_type;
 extern synced_type synced_queue;

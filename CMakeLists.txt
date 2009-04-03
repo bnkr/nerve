@@ -222,6 +222,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     "${RES_DIR}/${bin_name}/output.cpp" 
     "${RES_DIR}/${bin_name}/chunkinate.cpp" 
     "${RES_DIR}/${bin_name}/shared_data.cpp" 
+    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp" 
   )
   add_executable("${bin_name}" ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
