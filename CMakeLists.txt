@@ -156,6 +156,11 @@ configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerve_config.hpp.cmake" "${NERVE_C
 # set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES VERSION "${PROJECT_VERSION}")
 # target_link_libraries(${LIB_BDBG_TRACE_S} "-lboost_thread")
 
+# This is used to run tests in a special wine environment.
+if (WIN32)
+  set(SETENVPATH_BIN "setenvpath")
+  add_executable(${SETENVPATH_BIN} "build-aux/setenvpath.c")
+endif()
 
 set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
@@ -166,7 +171,17 @@ set(NERVE_SRCS  "src/nerve/main.cpp" "src/nerve/settings.cpp")
 add_executable(${BIN_NERVED} ${NERVED_SRCS})
 add_executable(${BIN_NERVE}  ${NERVE_SRCS})
 target_link_libraries(${BIN_NERVE} ${BOOST_PROGOPT_LIB})
-target_link_libraries(${BIN_NERVE} ${BOOST_PROGOPT_LIB})
+target_link_libraries(${BIN_NERVED} ${BOOST_PROGOPT_LIB})
+# Wine fails to load dlls if this isn't set.  Don't ask why :)
+if (MINGW)
+  set_property(
+    TARGET ${BIN_NERVED}
+           ${BIN_NERVE}
+    APPEND
+    PROPERTY LINK_FLAGS
+             "-Wl,--enable-auto-import"
+  )
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
   set(RES_DIR "src/research")
