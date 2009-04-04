@@ -38,7 +38,7 @@ void push_packet(void *sample_buffer) {
 // TODO:
 //   clearly the chunkinate functions should be part of an object.
 
-void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) {
+void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, bool dump_to_file) {
   // this would be replaced by some way of waiting until the playlist has members again.
   finished = false;
 
@@ -69,6 +69,9 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
 
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
+      if (dump_to_file) {
+        fwrite(sample_buffer, sizeof(uint8_t), state.size(), dump_output_file);
+      }
       // trc("got buf: " << sample_buffer);
       push_packet(sample_buffer);
       sample_buffer = decoder.get_packet();
@@ -80,15 +83,28 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name) 
   trc("index is " << state.index());
 }
 
-void chunkinate_finish(ffmpeg::packet_state &state) {
+void chunkinate_finish(ffmpeg::packet_state &state, bool dump_to_file) {
   trc("final packet");
+
+  // partial dump.
+
+  size_t buffer_size = state.size() - state.index();
+
+
   // quite messy here... obv chunkinate should be a struct with the packet_state member.
-  trc("packet is currently " << state.ptr());
+  // trc("packet is currently " << state.ptr());
   void *p = state.get_final();
-  trc("after clear, it is " << state.ptr());
-  trc("we got " << p);
+  // trc("after clear, it is " << state.ptr());
+  // trc("we got " << p);
+
+  if (dump_to_file) {
+    fwrite(p, sizeof(uint8_t), buffer_size, dump_output_file);
+  }
+
+  fsync(fileno(dump_output_file));
   push_packet(p);
 
+  // we didn't bother iwht the thread if file dumping.
   boost::unique_lock<boost::mutex> lk(synced_queue.mutex());
   finished = true;
   // This is for the pathalogical case where we output no frames the output

@@ -12,8 +12,15 @@
 
 #include <cstdlib>
 
+
 int play_from_list(playlist_type &list) {
   trc("Begin.");
+  // blah blah should be an observer plugin
+  if (make_file_output) {
+    dump_output_file = fopen("sample-dump.raw", "w");
+    assert(dump_output_file);
+  }
+
   try {
     // TODO:
     //   what happens to this stuff when I do output plugins?  I don't really want to
@@ -34,25 +41,12 @@ int play_from_list(playlist_type &list) {
 
     ffmpeg::packet_state state(dev.obtained().buffer_size(), dev.obtained().silence());
 
-    // TODO:
-    //   really horrible way of doing it!  First of all file output needs to be
-    //   an observer plugin.  Seconds, we need to init the file output *or* the
-    //   sdl output if we're doing it this way.
-    bool make_file_output = false;
-    if (make_file_output) {
-      output::file("./dump.pcm", dev.obtained().buffer_size());
-    }
-    else {
-      dev.unpause();
-    }
-
-
     trc("Chunking files.");
     typedef playlist_type::const_iterator iter_type;
     for (iter_type i = list.begin(); i != list.end(); ++i) {
-      chunkinate_file(state, *i);
+      chunkinate_file(state, *i, make_file_output);
     }
-    chunkinate_finish(state);
+    chunkinate_finish(state, make_file_output);
 
     trc("wait for exit signal");
 
@@ -76,6 +70,13 @@ int play_from_list(playlist_type &list) {
   catch (sdl::error &e) {
     std::cerr << "Error: sdl init failed: " << e.what() << std::endl;
     return EXIT_FAILURE;
+  }
+
+  if (make_file_output) {
+#ifndef WIN32
+    fsync(fileno(dump_output_file));
+#endif
+    fclose(dump_output_file);
   }
 
   trc("Terminate.");

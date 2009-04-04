@@ -1,6 +1,14 @@
 # Bunker's unit test functions.  See prototypes for help.  This file also sets 
 # up some variables (see end).  This design is based on boost's cmake test 
 # functions.
+#
+# These functions use wine to run tests on unix when cross-compiling for
+# windows.
+#
+# Define the list variable BTEST_WINE_DLLPATHS to say where the dlls are for
+# wine to searh for.  Otherwise you need to copy them to the test directories
+# or configure wine to search for them using the PATH *from within wine*.
+
 
 # Sets any marked variable to that of the varname.  Everything which is not 
 # marked by a name (like VARNAME val1 ...) goes in a var called OTHER.  Only
@@ -17,6 +25,11 @@
 #   btest_parse_args("ARGS;SRCS" "" "blah1;blah2;ARGS;x;y;SRCS;x;y;sdsdsd")
 #   ARGS = x;y, SRCS = x;y;sdsdsd, OTHER = blah1;blah2
 #
+# The ignore parameter will cause markers to put stuff in he PA_OTHER into
+# PA_IGNORED.
+#
+# TODO: write examples of the ignore list thing.  
+# TODO: a simple unit test for this would be useful.
 macro(btest_parse_args allowed ignore arglist)
   set(pa_var)
   set(pa_add "TRUE")
@@ -194,7 +207,7 @@ function(btest_add_ruby name ruby_input)
     VERBATIM
   )
 
-  btest_add("${name}" "${script_out}" ${PA_OTHER})
+  btest_add("${name}" "${script_out}" ${PA_OTHER} ${PA_IGNORED})
 endfunction()
 
 # Compile a test which is expected to fail to compile.

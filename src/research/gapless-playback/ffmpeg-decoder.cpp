@@ -183,10 +183,9 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
 #define WAV_MP3 1
 #define WAV 2
 #define WAV_MP3_WAV 3
+#define TRIM_NONE 4
 
-#ifndef PATHALOGICAL_GAPLESS
-#  define PATHALOGICAL_GAPLESS WAV_MP3_WAV
-#endif
+#define PATHALOGICAL_GAPLESS WAV_MP3_WAV
 
 #if PATHALOGICAL_GAPLESS == WAV
 #error no
@@ -213,16 +212,44 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
 #elif PATHALOGICAL_GAPLESS == WAV_MP3_WAV
     // gapless wav -> mp3 -> wav again.
     // for 220hz-sine-wave-pt*-nogap.wav.mp3.wav
+
+
+    // Note: properties of gap:
+    //
+    // Method: copy/paste the gap from sweep.  Could be one or two bytes off.
+    //
+    // the gap at the end of p1      = 4260 bytes
+    // start of gap                  = (size - 44) - 4206 = ???
+    // the gap at the start of p2    = 9048
+    // end of gap                    = 9048 - 44 = ???
+    //
+    // TODO: tasks
+    //   finish those properties
+    //   Write them in the readme.
+    //   test the gapkiller using the file dump mode.
     static int trimmed = 0;
     int64_t start = fr.position();
     int64_t end = start + fr.size();
-    int64_t start_killing = 0;
-    int16_t threshold = 127;
+    int64_t start_killing = 0x1d5d0; // start of trailing gap
+    int64_t stop_killing  = 331660; // at end of leading gap.
+    int16_t threshold = 128;
     // trc("end >= start_killing == " << end << " >= " << start_killing);
-    if (end >= start_killing) {
-      truncate_silence(threshold);
-      if (codec_context(stream_).frame_number() == 31) {
-        trimmed = 1;
+    if (trimmed == 0) {
+      if (end >= start_killing) {
+        truncate_silence(threshold);
+        if (fr.position() + fr.size() + fr.file().data_offset() >= fr.file().file_size()) {
+          trc("last frame of p1");
+          trimmed = 1;
+        }
+      }
+    }
+    else if (trimmed == 1) {
+      if (start <= stop_killing) {
+        truncate_pre_silence(threshold);
+        if (fr.position() + fr.size() + fr.file().data_offset() >= fr.file().file_size()) {
+          trc("last frame of p2");
+          trimmed = 0;
+        }
       }
     }
 
@@ -231,6 +258,7 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
     // for 220hz-sine-wave-pt*-nogap.wav.mp3
 
 #error not done yet.
+#elif PATHALOGICAL_GAPLESS == TRIM_NONE
 
 #else
 #error Wrong value wtf.

@@ -44,7 +44,15 @@ extern boost::condition_variable finish_cond;
 extern bool finished;
 extern bool output_closed;
 
+
 inline bool continue_predicate() {
   return finished || ! synced_queue.data().empty();
 }
+
+
+// the dump "plugin" har har uses this.
+extern FILE *dump_output_file;
+// variable that controls all dumping or not.
+extern bool make_file_output;
+
 #endif
