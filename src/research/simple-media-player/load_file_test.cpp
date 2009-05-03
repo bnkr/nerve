@@ -1,10 +1,15 @@
+/*!
+\file
+\brief Simple test of ffmpeg which dumps all the packets on a stream.
+*/
+
 #include "../../wrappers/ffmpeg.hpp"
 
 #include <iostream>
 
 typedef void (*log_callback_type)(void*, int, const char*, va_list);
 void test_loading_log_cb(void *ptr, int level, const char *fmt, va_list args) {
-  AVClass *avc = ptr ? *(AVClass**) ptr : NULL;
+  // AVClass *avc = ptr ? *(AVClass**) ptr : NULL;
   // need to sprintf into a string... can I use fprintf of an iostream?  Or do my
   // own parse?
   // ptr is used to get the name of the decode module.
@@ -88,10 +93,6 @@ void load_file_test(const char *filename) {
 
       // Reset this every time because decode writes back to it.
       int output_buf_size = buffer_byte_size;
-      // It looks like this is always 16 bit aligned, so we don't need to mess
-      // with it.  Docs say it should be at least 4 byte alligned.
-      uint8_t *input_buf = packet.data;
-      int input_buf_size = packet.size;
 
       std::cout << "Buffer properties:" << std::endl;
 
@@ -106,7 +107,7 @@ void load_file_test(const char *filename) {
       // because optimised readers will read in longer bitlengths.  We never
       // actually read the full data.
 
-      int size = avcodec_decode_audio2(&audio.codec_context(), output_buf, &output_buf_size, input_buf, input_buf_size);
+      int size = avcodec_decode_audio3(&audio.codec_context(), output_buf, &output_buf_size, &packet);
 
       std::cout << "Decode data:" << std::endl;
       std::cout << "  number of bytes used: " << size << std::endl;

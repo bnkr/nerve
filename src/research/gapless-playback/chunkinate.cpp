@@ -75,17 +75,38 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
     //   Problem is I made the decoder stateful and I shouldn't have.  We need:
     //
     //     frame fr(file);
-    //     fr.decode_entire_thing(stream, push_function);
+    //     decoder dec(fr, audio_stream);
+    //     dec.decode(push_function);
+    //
+    //   The problem is I must keep the packet state somehow; otherwise I end up
+    //   with gaps when the song byte boundaries don't align properly.
+    //
+    //   The best course is to move the loop code below into the dec.decode()
+    //   part.
+    //
+    //   It's a bit of a WTF to do this stuff with objects, really.  It would be
+    //   eauqlly OK to just have a function:
+    //
+    //     decode(state, audio, frame, push_function);
+    //
+    //   Perhaps therefore it makes most sense:
+    //   - decode() does all the decoding into its own static buffer (as now)
+    //     and calls a pushing function on that buffer.
+    //   - the pushing function may as well do the chunking in that case.
+    //   - the push function can be a functor which has the entire state in it;
+    //     we do not need the packet_state to be part of the ffmpeg library.
+    //     - this is OK even for C plugins.  They do not see the functor.
+    //
+    //   So, a rationale for chunking:
+    //   - ffmpeg buffers are very big.
+    //   - ffmpeg buffers must be aligned.
+    //   - ffmpeg buffers are hardly ever full.
+    //   - we have to chunk it at some point for the sound card.
+    //   - huge buffers mean the response time is much lower.
+    //   - huge buffers mean the granularity of the buffer size is very low.
     ffmpeg::audio_decoder decoder(state, audio);
     decoder.decode(fr);
 
-    // TODO:
-    //   Crappy way of doing it.  Better:
-    //
-    //     decoder.each_packet(push_function);
-    //
-    //   Or really, when we get plugins, this mode should not be necessary at
-    //   all.  There will be a plugin pipeline stage which does the chunking.
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       if (dump_to_file) {

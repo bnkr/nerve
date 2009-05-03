@@ -20,15 +20,17 @@ void push_packet(void *sample_buffer) {
   //   wait on the same conditoon. I can actually wait on the existing ones.
 }
 
-void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s, const sdl::audio_spec &audio_spec) {
+void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &audio_stream, const sdl::audio_spec &audio_spec) {
 
   // so messy...
   finished = false;
   std::size_t sdl_buffer_size = audio_spec.buffer_size();
   assert(sdl_buffer_size > 0);
 
+  ffmpeg::packet_state state(audio_spec.buffer_size(), audio_spec.silence());
+
   // x because it's fixed and I can't be bothered to rename the vars :)
-  ffmpeg::audio_decoder xdecoder(s, sdl_buffer_size);
+  ffmpeg::audio_decoder decoder(state, audio_stream);
 
   do {
     ffmpeg::frame fr(file);
@@ -40,15 +42,15 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &s, const sdl::audio_
       break;
     }
 
-    xdecoder.decode_frame(fr);
-    void *sample_buffer = xdecoder.get_packet();
+    decoder.decode_frame(fr);
+    void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       push_packet(sample_buffer);
-      sample_buffer = xdecoder.get_packet();
+      sample_buffer = decoder.get_packet();
     }
   } while (true);
 
-  void *p = xdecoder.get_final_packet();
+  void *p = decoder.get_final_packet();
   push_packet(p);
 
   // put the remainder of the working buffer on the stream.

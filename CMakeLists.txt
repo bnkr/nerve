@@ -153,6 +153,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     "${RES_DIR}/${bin_name}/main.cpp"
     "${RES_DIR}/${bin_name}/play.cpp"
     "${RES_DIR}/${bin_name}/load_file_test.cpp"
+    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
     "${RES_DIR}/${bin_name}/read_packets.cpp"
     "${RES_DIR}/${bin_name}/shared_data.cpp"
   )
