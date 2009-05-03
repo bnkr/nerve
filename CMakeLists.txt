@@ -14,13 +14,11 @@ include("build-aux/butil.cmake")
 
 butil_standard_setup()
 
-enable_testing()
-
 #######################
 ## Check for headers ##
 #######################
 
-include(CheckFunctionExists) 
+include(CheckFunctionExists)
 
 find_file(HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H   "ffmpeg/libavcodec/avcodec.h")
 find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
@@ -69,7 +67,7 @@ find_library(AVCODEC_LIB  "avcodec")
 
 mark_as_advanced(
   BOOST_FS_LIB BOOST_PROGOPT_LIB BOOST_THREAD_LIB BOOST_SYSTEM_LIB
-  AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB 
+  AVUTIL_LIB AVFORMAT_LIB AVCODEC_LIB
 )
 
 # FindSDL doesn't work properly with crosscomp due to the use of sdl-config
@@ -87,8 +85,8 @@ endif()
 ## Configure things based on what we found ##
 #############################################
 
-# Guess ffmpeg's include path which is normally includeroot/ffmpeg. 
-if (HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H) 
+# Guess ffmpeg's include path which is normally includeroot/ffmpeg.
+if (HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H)
   get_filename_component(p ${HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H} PATH)
   get_filename_component(ff_inc_path ${p} PATH)
 else()
@@ -151,24 +149,24 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
 
   set(FFMPEG_LIBS "${AVUTIL_LIB}" "${AVFORMAT_LIB}" "${AVCODEC_LIB}")
 
-  set(ALL_IO_LIBS 
-    ${SDL_LIBRARY} 
+  set(ALL_IO_LIBS
+    ${SDL_LIBRARY}
     ${FFMPEG_LIBS}
   )
 
   set(UTILITY_LIBS
-    "${BOOST_FS_LIB}" "${BOOST_THREAD_LIB}" 
+    "${BOOST_FS_LIB}" "${BOOST_THREAD_LIB}"
   )
 
-  if (WIN32) 
+  if (WIN32)
     list(APPEND UTILITY_LIBS "${BOOST_SYSTEM_LIB}")
   endif()
 
   # simple-media-player
   set(bin_name  "simple-media-player")
-  set(src 
-    "${RES_DIR}/${bin_name}/main.cpp" 
-    "${RES_DIR}/${bin_name}/play.cpp" 
+  set(src
+    "${RES_DIR}/${bin_name}/main.cpp"
+    "${RES_DIR}/${bin_name}/play.cpp"
     "${RES_DIR}/${bin_name}/load_file_test.cpp"
     "${RES_DIR}/${bin_name}/read_packets.cpp"
     "${RES_DIR}/${bin_name}/shared_data.cpp"
@@ -179,13 +177,13 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
 
   # gapless-playback
   set(bin_name "gapless-playback")
-  set(src 
+  set(src
     "${RES_DIR}/${bin_name}/main.cpp"
-    "${RES_DIR}/${bin_name}/play.cpp" 
-    "${RES_DIR}/${bin_name}/output.cpp" 
-    "${RES_DIR}/${bin_name}/chunkinate.cpp" 
-    "${RES_DIR}/${bin_name}/shared_data.cpp" 
-    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp" 
+    "${RES_DIR}/${bin_name}/play.cpp"
+    "${RES_DIR}/${bin_name}/output.cpp"
+    "${RES_DIR}/${bin_name}/chunkinate.cpp"
+    "${RES_DIR}/${bin_name}/shared_data.cpp"
+    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
   )
   add_executable("${bin_name}" ${src})
   target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
@@ -220,63 +218,32 @@ add_doxygen_directives(
 )
 add_doxygen(${ad_args})
 
-
 ##################
 ## Installation ##
 ##################
 
-message(STATUS "Adding install targets.")
-
-set(INCLUDEDIR "include")
-set(BINDIR "bin")
-set(DATADIR "share")
-set(LIBDIR "lib")
-set(DOCDIR "${DATADIR}/doc/${PROJECT_NAME}")
-set(MANDIR "${DATADIR}/man")
-set(HTMLDIR "${DATADIR}/doc/${PROJECT_NAME}")
-set(PDFDIR "${DATADIR}/doc/${PROJECT_NAME}")
-set(DVIDIR "${DATADIR}/doc/${PROJECT_NAME}")
-set(PSDIR "${DATADIR}/doc/${PROJECT_NAME}")
-
-
-if (WANT_DOCS) 
-  # Documentation
-  install(
-    FILES README COPYING 
-    DESTINATION ${DOCDIR}
-  )
-
-  if (WANT_DOCS_MAN)
-    set(SRCMAN "${CMAKE_SOURCE_DIR}/doc/man")
-    add_and_install_manpages("${MANDIR}" "${SRCMAN}/nerve.1" "${SRCMAN}/nerved.1")
-  endif()
-endif(WANT_DOCS)
-
-# Header files
-# install(
-#   DIRECTORY "include/"
-#   DESTINATION "${INCLUDEDIR}/"
-#   FILES_MATCHING
-#   PATTERN "detail/config.hpp" EXCLUDE
-#   PATTERN "*.hpp"
-# )
-
-# install(
-#   FILES ${CONFIG_HPP_OUTPUT}
-#   DESTINATION "${INCLUDEDIR}/para/detail/"
-# )
-
-# Binaries
-install(
-  TARGETS ${BIN_NERVE} ${BIN_NERVED}
-  RUNTIME DESTINATION ${BINDIR}
-  ARCHIVE DESTINATION ${LIBDIR}
-  LIBRARY DESTINATION ${LIBDIR}
+butil_auto_install(
+  RUNNABLES_VAR runnables
+  RUNNABLES ${BIN_NERVED} "Nerve Daemon"
+            ${BIN_NERVE}  "Nerve CLI Client"
+  BINARIES_VAR stuff_to_strip
+  TARGETS ${BIN_NERVED} ${BIN_NERVE}
+  # INCLUDE_DIRS dir...
+  # [HEADER_EXCLUDE pattern... | NO_HEADERS]
+  # WINDOWS_LIBS library...]
+  # AUX_DLLS
 )
 
 #################
 ## CPack Stuff ##
 #################
 
-butil_cpack_setup()
+butil_cpack_setup(
+  DESCRIPTION "Nerve music daemon."
+  VENDOR      "bunker"
+  EMAIL       "bunker@bunkerprivate.com"
+  URL         "http://www.bunkerprivate.com/"
+  BINARIES    ${stuff_to_strip}
+  RUNNABLES   ${runnables}
+)
 
