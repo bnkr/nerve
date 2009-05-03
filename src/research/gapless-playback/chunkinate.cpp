@@ -64,9 +64,28 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
     // TODO:
     //   bug - if you drop all frames, then we wait for the exit signal forever.  Fixed now?
 
+    // TODO:
+    //   A deprecated function made this very tricky.  Now, the decoder must be
+    //   passed the packet directly - we lost some nice abstraction.  A solution
+    //   might be:
+    //
+    //     decoder dec(state, audio);
+    //     fr.decode(dec);
+    //
+    //   Problem is I made the decoder stateful and I shouldn't have.  We need:
+    //
+    //     frame fr(file);
+    //     fr.decode_entire_thing(stream, push_function);
     ffmpeg::audio_decoder decoder(state, audio);
     decoder.decode(fr);
 
+    // TODO:
+    //   Crappy way of doing it.  Better:
+    //
+    //     decoder.each_packet(push_function);
+    //
+    //   Or really, when we get plugins, this mode should not be necessary at
+    //   all.  There will be a plugin pipeline stage which does the chunking.
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       if (dump_to_file) {
@@ -99,9 +118,9 @@ void chunkinate_finish(ffmpeg::packet_state &state, bool dump_to_file) {
 
   if (dump_to_file) {
     fwrite(p, sizeof(uint8_t), buffer_size, dump_output_file);
+    fsync(fileno(dump_output_file));
   }
 
-  fsync(fileno(dump_output_file));
   push_packet(p);
 
   // we didn't bother iwht the thread if file dumping.

@@ -108,21 +108,6 @@ configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerve_config.hpp.cmake" "${NERVE_C
 ## Building normal stuff ##
 ###########################
 
-# Example follows:
-# add_library(${LIB_BDBG_TRACE_A} STATIC "src/lib_bdbg_trace.cpp")
-# set_target_properties(${LIB_BDBG_TRACE_A} PROPERTIES OUTPUT_NAME "bdbg_trace")
-# add_library(${LIB_BDBG_TRACE_S} SHARED "src/lib_bdbg_trace.cpp")
-# set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES OUTPUT_NAME "bdbg_trace")
-# set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES SOVERSION "${PROJECT_MAJOR}")
-# set_target_properties(${LIB_BDBG_TRACE_S} PROPERTIES VERSION "${PROJECT_VERSION}")
-# target_link_libraries(${LIB_BDBG_TRACE_S} "-lboost_thread")
-
-# This is used to run tests in a special wine environment.
-if (WIN32)
-  set(SETENVPATH_BIN "setenvpath")
-  add_executable(${SETENVPATH_BIN} "build-aux/setenvpath.c")
-endif()
-
 set(BIN_NERVED "nerved")
 set(BIN_NERVE "nerve")
 
@@ -172,8 +157,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     "${RES_DIR}/${bin_name}/shared_data.cpp"
   )
   # I've broken this pretty spectacularly so far...
-  # add_executable(${bin_name} ${src})
-  # target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
+  add_executable(${bin_name} ${src})
+  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # gapless-playback
   set(bin_name "gapless-playback")
@@ -210,7 +195,8 @@ add_subdirectory("test")
 
 add_doxygen_directives(
   TARGET doxygen
-  INPUTS "include/"
+  # Note: later I will need to document the interface lib.
+  INPUTS "src/"
   ARGS_VAR ad_args
   DOCS_MIRROR "${CMAKE_SOURCE_DIR}/doc"
   DEFAULT_DOXYFILE "${CMAKE_SOURCE_DIR}/Doxyfile.default"

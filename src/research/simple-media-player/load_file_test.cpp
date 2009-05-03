@@ -1,4 +1,4 @@
-#include "ffmpeg.hpp"
+#include "../../wrappers/ffmpeg.hpp"
 
 #include <iostream>
 
@@ -49,7 +49,7 @@ void dump_packet(AVPacket &packet) {
   std::cout << "  byte offset:      " << packet.pos << std::endl;
 }
 
-#include "aligned_memory.hpp"
+#include "../../include/aligned_memory.hpp"
 
 
 // loop through all frames and print out data about them.

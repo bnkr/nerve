@@ -2,8 +2,8 @@
 #include <bdbg/trace/short_macros.hpp>
 #include <bdbg/trace/static_definitions.hpp>
 
-#include "ffmpeg.hpp"
-#include "sdl.hpp"
+#include "../../wrappers/ffmpeg.hpp"
+#include "../../wrappers/sdl.hpp"
 
 #include "play.hpp"
 #include "load_file_test.hpp"

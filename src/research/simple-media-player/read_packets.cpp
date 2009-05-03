@@ -2,7 +2,7 @@
 #include <bdbg/trace/short_macros.hpp>
 
 #include "read_packets.hpp"
-#include "aligned_memory.hpp"
+#include "../../include/aligned_memory.hpp"
 #include "shared_data.hpp"
 
 void push_packet(void *sample_buffer) {

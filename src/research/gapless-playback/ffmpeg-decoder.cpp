@@ -101,7 +101,7 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
   reset_buffer();
 
   int used_buffer_size = buffer_type::byte_size;
-  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, fr.data(), fr.size());
+  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, &(fr.packet()));
 
   if (used_bytes < fr.size())  {
     // We can keep going, but there will be output errors.
