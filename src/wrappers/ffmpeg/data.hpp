@@ -312,6 +312,7 @@ class frame {
     bool finished() const { return finished_; }
 
     //! \brief Data buffer in the frame packet.
+    //TODO: since audio2 doesn't exist any more, these aren't necessary.
     const uint8_t *data() const { return packet_.data; }
     int size() const { return packet_.size; }
 
@@ -378,11 +379,15 @@ class frame {
     }
 
     //! \brief Use accessor member functions if possible.
-    const AVPacket &packet() const { return packet_; }
+    AVPacket &packet() const { return packet_; }
 
   private:
     ffmpeg::file &file_;
-    AVPacket packet_;
+    // TODO:
+    //   this is here as a hack because an ffmpeg function became deprecated.
+    //   Since decode_audio3 now takes this packet directly, it could make sense
+    //   to have the decoder function in here.
+    mutable AVPacket packet_;
     bool finished_;
 };
 }

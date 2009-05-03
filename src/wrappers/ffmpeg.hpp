@@ -200,21 +200,18 @@ class audio_decoder {
       }
     }
 
-    //! \brief Get a packet with unfilled bytes set nul.  A new state is NOT allocated.
-    // void *get_final_packet() {
-    //   void *p = get_packet();
-    //   if (p != NULL) {
-    //     std::cerr << "get_final_packet(): error: something has gone horribly wrong -- there are packets left to output!" << std::endl;
-    //   }
-
-    //   packet_.finalise();
-    //   return packet_.clear();
-    // }
+    //! \deprected Use packet_state::get_final() directly.
+    void *get_final_packet() {
+      return packet_.get_final();
+    }
 
 
   private:
-    int decode(int16_t *output, int *output_size, const uint8_t *input, int input_size) {
-      return avcodec_decode_audio2(&stream_.codec_context(), output, output_size, input, input_size);
+    //! Decode a packet into output.  Returns also output_size.  Returns number
+    //! of bytes of the output buffer which are used up.  Buffer must be larget
+    //! than ACVOCED_MAX_AUDIO_FRAME_SIZE.
+    int decode(int16_t *output, int *output_size, AVPacket *packet) {
+      return avcodec_decode_audio3(&stream_.codec_context(), output, output_size, packet);
     }
 
     void reset_buffer() {
