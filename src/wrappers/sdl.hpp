@@ -15,6 +15,10 @@
 #  include <SDL/SDL.h>
 #endif
 
+#ifdef __MINGW32__
+#undef main /* Prevents SDL from overriding main() - this might be a hack */
+#endif
+
 #include <cassert>
 #include <stdexcept>
 #include <ostream>
@@ -91,10 +95,6 @@ class audio {
 class audio_spec {
   friend class device_base;
 
-// TODO:
-//   if we refuse nonconst access to bytes and the other silence then
-//   we can pass this struct around const (given a mutable sdl struct)
-
   public:
     typedef void(*callback_type)(void *user_data, Uint8 *stream, int len);
 
@@ -103,9 +103,7 @@ class audio_spec {
     //! \brief Defer initialisation until later - intended for the obtained value output, but could be useful.
     explicit audio_spec(defer_init_type) {}
 
-    // TODO: what exactly is the data.
     explicit audio_spec(callback_type callback, int freq = 44100, int samples = 1024, int channels = 2, int format = AUDIO_S16SYS) {
-      // std::memset(spec(), 0, sizeof(SDL_AudioSpec));
       spec().freq = freq;
       spec().format = format;
       spec().callback = callback;
@@ -196,10 +194,10 @@ class audio_spec {
     }
 
   private:
-    SDL_AudioSpec spec_;
+    // because opening audio changes the spec by calculating bytes and silence.
+    mutable SDL_AudioSpec spec_;
 
-    SDL_AudioSpec &spec() { return spec_; }
-    const SDL_AudioSpec &spec() const { return spec_; }
+    SDL_AudioSpec &spec() const { return spec_; }
 };
 
 //! \brief Open/close the audio device; non-instancable base class.
@@ -225,8 +223,8 @@ class device_base {
     ~device_base() { SDL_CloseAudio(); }
 
     // TODO: what happens in case of a double open?
-    void checked_open(audio_spec &des, audio_spec &obt) {
-      checked_open(&des.spec(),  &obt.spec());
+    void checked_open(const audio_spec &des, audio_spec &obt) {
+      checked_open(&des.spec(), &obt.spec());
     }
 
     void checked_open(audio_spec &des) {
