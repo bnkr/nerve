@@ -1,0 +1,13 @@
+This source is organised a little differently than the standard:
+
+- include/  - private include files for all parts.  This is -I..
+- libnerve/ - the nerve client library; headers for this are in ../include.
+              This normally must be built before the plugins.
+- input/    - input specific plugins.
+- output/   - output specific plugins.
+- plug/     - normal plugins.
+- nerved/   - the nerve daemon.
+- nerve/    - the nerve cli client.
+- research/ - various experimental programs in their own directories.
+
+I build all packages from the main CMakeLists.txt except where noted.
