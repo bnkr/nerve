@@ -23,8 +23,8 @@ void sdl_callback(void*,uint8_t *stream, int length) {
         //   storing these sync primitives.
         trc("notifying exit");
         boost::unique_lock<boost::mutex> lk(finish_mut);
-        finish_cond.notify_all();
         output_closed = true;
+        finish_cond.notify_all();
       }
       boost::thread::yield();
 

@@ -17,6 +17,7 @@ int play_from_list(playlist_type &list) {
   trc("Begin.");
   // blah blah should be an observer plugin
   if (make_file_output) {
+    trc("dumping to sample-dump.raw");
     dump_output_file = fopen("sample-dump.raw", "w");
     assert(dump_output_file);
   }
@@ -47,6 +48,9 @@ int play_from_list(playlist_type &list) {
       chunkinate_file(state, *i, make_file_output);
     }
     chunkinate_finish(state, make_file_output);
+
+    // it seems that the sdl callback is not called when this happens...
+    if (dump_output_file) output_closed = true;
 
     trc("wait for exit signal");
 

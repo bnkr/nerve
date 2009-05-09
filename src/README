@@ -5,7 +5,8 @@ This source is organised a little differently than the standard:
               This normally must be built before the plugins.
 - input/    - input specific plugins.
 - output/   - output specific plugins.
-- plug/     - normal plugins.
+- filter/   - stream filtering plugins.
+- event/    - event observer plugins.
 - nerved/   - the nerve daemon.
 - nerve/    - the nerve cli client.
 - research/ - various experimental programs in their own directories.

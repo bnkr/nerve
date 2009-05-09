@@ -11,6 +11,9 @@ manager so we can work out how interrupted songs will work and so on.
 #include "play.hpp"
 
 #include <bdbg/trace/static_definitions.hpp>
+#include <bdbg/trace/crash_detection.hpp>
+
+bdbg::trace::crash_detector cd;
 
 #include <boost/filesystem.hpp>
 
@@ -44,7 +47,7 @@ int main(int argc, char **argv) {
 
   {
     bool argh = false;
-    for (std::size_t i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i) {
       char *file = argv[i];
       if (! fs::exists(file)) {
         argh = true;

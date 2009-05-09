@@ -5,6 +5,8 @@
 
 #include "../../wrappers/ffmpeg.hpp"
 
+
+
 //! \brief Truncate the beginning of the bufgfer if it starts with silence
 //TODO:
 //  I guess this will be a problem if we ever support non-int16_t samples.
@@ -185,16 +187,25 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
 #define WAV_MP3_WAV 3
 #define TRIM_NONE 4
 
-#define PATHALOGICAL_GAPLESS WAV_MP3_WAV
+#ifndef PATHALOGICAL_GAPLESS
+#  define PATHALOGICAL_GAPLESS WAV_MP3_WAV
+#endif
 
-#if PATHALOGICAL_GAPLESS == WAV
-#error no
+#if GENERIC_GAPLESS
+    // TODO:
+    //   implement plan as written in the main thing
+
+
+
+#elif PATHALOGICAL_GAPLESS == WAV
     // This is the pathalogical test for 220hz-sine-wave-pt*-gap.wav and also
     // nogap.wav.
     //
     // Note: keep this pathalogical case lying around.  Requirement is that
     // frames are 4096 bytes big (unless they are the end) otherwise the frame
     // counts won't match up.
+    //
+    // This does work perfectly, btw :)
     static int trimmed = 0;
     if (codec_context(stream_).frame_number() >= 28 && trimmed == 0) {
       // TODO: this will be a problem if we're not using signed 16bit I guess.
@@ -222,11 +233,11 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
     // start of gap                  = (size - 44) - 4206 = ???
     // the gap at the start of p2    = 9048
     // end of gap                    = 9048 - 44 = ???
-    //
-    // TODO: tasks
-    //   finish those properties
-    //   Write them in the readme.
-    //   test the gapkiller using the file dump mode.
+
+    // TODO:
+    //   - finish those properties
+    //   - write them in the readme (like for the other sample).
+    //   - test the gapkiller using the file dump mode.
     static int trimmed = 0;
     int64_t start = fr.position();
     int64_t end = start + fr.size();

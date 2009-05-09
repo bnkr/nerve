@@ -13,14 +13,25 @@ bool queue_small_enough() {
 // TODO:
 //   I think the packet queue should be part of an object which wraps all
 //   of this thread sharing stuff.
+//
+// NOTE:
+//   Regarding pooling, the stl list is already pooled *but* I can't control
+//   locality for it, nor can I do a reduced allocate which just uses blocks
+//   from a stack.  The best solution might be a private inheriteed list, which
+//   gets rid of all the multiple-block allocating functions, but still uses an
+//   pool... only problem is we really want to tag each pool differently...
+//   meh this is all such low level stuff it's not clear exactly what is the
+//   cost of doing it.
 void push_packet(void *sample_buffer) {
   synced_type::value_type &q = synced_queue.data();
   {
-    // trc("push packet " << sample_buffer);
+    // trc("push packet " << sample_buffer << " to queue " << (void*) &q);
+    // trc("lock is: " << (void*) &synced_queue.mutex());
+
     boost::unique_lock<synced_type::lockable_type> lk(synced_queue.mutex());
-    // Problem is that the fucking queue isn't pooled either.  I'll have to
-    // make a better one.
+
     q.push(sample_buffer);
+
     synced_queue.wait_condition().notify_one();
   }
 
@@ -112,7 +123,7 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
       if (dump_to_file) {
         fwrite(sample_buffer, sizeof(uint8_t), state.size(), dump_output_file);
       }
-      // trc("got buf: " << sample_buffer);
+
       push_packet(sample_buffer);
       sample_buffer = decoder.get_packet();
     }
