@@ -227,6 +227,7 @@ butil_auto_install(
 
 butil_cpack_setup(
   DESCRIPTION "Nerve music daemon."
+  LONG_DESCRIPTION "A fast and simple client/server audio player."
   VENDOR      "bunker"
   EMAIL       "bunker@bunkerprivate.com"
   URL         "http://www.bunkerprivate.com/"

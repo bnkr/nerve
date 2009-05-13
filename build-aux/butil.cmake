@@ -11,6 +11,8 @@
 #
 # butil_add_library - wrapper of add_library() and  properties.
 # butil_add_executable - wrapper of add_exeutable() and properties.
+#
+# butil_find_lib - search for libraries given a list of possible names.
 
 # TODO: add butil_check_arg stuff.
 
@@ -19,6 +21,7 @@
 #
 # butil_standard_setup(
 #   [NO_TESTING | TESTING <true|false>]
+#   [DISABLE_CTAGS]
 # )
 #
 # Set up some variables used later by butil; also provide some standard options
@@ -29,6 +32,8 @@
 # - WANT_DOCS_MAN (default yes if unix)
 #
 # Also resets the cflags and adds some expected include dirs.
+#
+# It builds ctags if ctags is found and the build type is debug.
 #
 #############################
 # MACRO: butil_auto_install()
@@ -100,6 +105,7 @@
 #   [VENDOR name]
 #   [DESCRIPTION description]
 #   [LONG_DESCRIPTION descr]
+#   [DESCRIPTION_FILE file]
 #   [EMAIL address]
 #   [BINARIES binpath...]
 #   [ICON bmpfile]
@@ -121,10 +127,13 @@
 # for additional installation instructions, and may be empty.
 #
 # DESCRIPTION defaults to the project version and should be very short.  It's
-# used as the title of the installer, etc.
+# used as the title of the installer.
 #
 # LONG_DESCRIPTION - defaults to DESCRIPTION and is used for the short package
-# summary.  Note: longer stuff uses srcdir/README.
+# summary.  Intended to be about a line line (so 80 chrs ish).
+#
+# DESCRIPTION_FILE - used for things like a .deb description.  Indented to be a
+# paragraph or two long.  Uses build-aux/description.txt if not specified.
 #
 # ICON is the icon of the installer program.
 #
@@ -256,6 +265,20 @@
 #
 # Empty arguments cause an error - they should be specified as flags.
 #
+#########################
+# macro: butil_find_lib()
+#
+# Find a library given a list of possible names.
+#
+# butil_find_lib(
+#   VAR output
+#   NAMES name...
+#   [REQUIRED]
+# )
+#
+# Self-explanitory.
+#
+# NAMES is optional.
 
 
 # TODO: write examples of the ignore list thing.
@@ -373,7 +396,7 @@ macro(butil_standard_setup)
 
   butil_parse_args(
     "TESTING"
-    "NO_TESTING"
+    "NO_TESTING;DISABLE_CTAGS"
     ""
     "${ARGV}"
   )
@@ -411,6 +434,22 @@ macro(butil_standard_setup)
   if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Warning: 'Debug' build type is designed for maintainers.")
     set(DOXYGEN_CMAKE_VERBOSE "YES")
+  endif()
+
+  set(build_ctags TRUE)
+  if (NOT arg_DISABLE_CTAGS)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      find_program(CTAGS_EXE ctags)
+      mark_as_advanced(CTAGS_EXE)
+
+      if (CTAGS_EXE)
+        add_custom_target(
+          ctags ALL
+          COMMAND ctags -R src/ include/
+          WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+      endif()
+    endif()
   endif()
 
   include_directories("${CMAKE_SOURCE_DIR}/include/" "${CMAKE_BINARY_DIR}/include/")
@@ -489,20 +528,21 @@ macro(butil_cpack_setup_deb)
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${arg_EMAIL}")
   endif()
 
-  if (EXISTS "${CMAKE_SOURCE_DIR}/README")
-    file(READ "${CMAKE_SOURCE_DIR}/README" descr)
-    # Cpack adds unncessary whitespace anyway.
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${descr}")
+  if (EXISTS "${arg_DESCRIPTION_FILE}")
+    file(READ "${arg_DESCRIPTION_FILE}" descr)
+    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${arg_LONG_DESCRIPTION}\n${descr}")
   elseif(arg_LONG_DESCRIPTION)
     set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${arg_LONG_DESCRIPTION}")
   endif()
 
+  string(LENGTH "${arg_LONG_DESCRIPTION}" len)
+  if (len GREATER 60)
+    message("butil_cpack_setup(): warning: LONG_DESCRIPTION is ${len}; should be 60 max.")
+  endif()
+
   # Cpack doesn't do this automatically for some reason.  The package is not
   # installable unless you do.
-  # TODO:
-  #   This is wrong - the first line is a 60chr max `purpose' like description.
-  #   The rest is the readme.  Implies we should make a arg_PURPOSE, arg_HEADER.
-  #   or something...
+
   # TODO:
   #   also we need to wordwrap the description at 80ch - the indent.
   string(STRIP "${CPACK_DEBIAN_PACKAGE_DESCRIPTION}" temp)
@@ -686,7 +726,7 @@ endmacro()
 macro(butil_cpack_setup)
   message(STATUS "Setting up CPack stuff.")
   butil_parse_args(
-    "URL;VENDOR;DESCRIPTION;EMAIL;BINARIES;ICON;LONG_DESCRIPTION;RUNNABLES;DEB_ARCH;DEB_SECTION;DEB_DEPENDS;TARGETS"
+    "URL;VENDOR;DESCRIPTION;DESCRIPTION_FILE;EMAIL;BINARIES;ICON;LONG_DESCRIPTION;RUNNABLES;DEB_ARCH;DEB_SECTION;DEB_DEPENDS;TARGETS"
     "AUTO_DEPENDS"
     ""
     "${ARGV}"
@@ -694,6 +734,9 @@ macro(butil_cpack_setup)
 
   # TODO: validate arguments properly (butil_check_arg)
   if (NOT arg_LONG_DESCRIPTION)
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+      message("butil_cpack_setup(): warning: it is recommended to give LONG_DESCRIPTION.")
+    endif()
     set(arg_LONG_DESCRIPTION "${arg_DESCRIPTION}")
   endif()
 
@@ -790,7 +833,10 @@ macro(butil_cpack_setup)
 
   set(CPACK_STRIP_FILES "${arg_BINARIES}")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${arg_LONG_DESCRIPTION}")
-  set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/README")
+  if (NOT arg_DESCRIPTION_FILE)
+    set(arg_DESCRIPTION_FILE "${CMAKE_SOURCE_DIR}/build-aux/description.txt")
+  endif()
+  set(CPACK_PACKAGE_DESCRIPTION_FILE "${arg_DESCRIPTION_FILE}")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/COPYING")
   # This is for `additional installation instructions'.
   set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/build-aux/install-readme.txt")
@@ -1125,7 +1171,7 @@ macro(butil_auto_install)
         file(GLOB manpages "${src_man}/*.*")
 
         # TODO: this should be (INSTALL_ROOT ${mandir} PAGES page...).  (api is not finished yet)
-        if (UNIX)
+        if (UNIX AND manpages)
           add_and_install_manpages("${MANDIR}" ${manpages})
         endif()
       endif()
@@ -1216,25 +1262,51 @@ macro(butil_auto_install)
           message(FATAL_ERROR "butil_auto_install(): specified windows lib ${winlib} does not exist.")
         endif()
 
+        if (arg_HARDLINK_AUX_DLLS)
+          find_program(LN_EXE ln)
+          find_program(READLINK_EXE readlink)
+
+          mark_as_advanced(LN_EXE READLINK_EXE)
+
+          if (NOT READLINK_EXE)
+            set(arg_HARDLINK_AUX_DLLS FALSE)
+          endif()
+
+          if (NOT LN_EXE)
+            message("butil_auto_install(): warning: bin/ln not found.  Will copy windows dlls to bindir instead.")
+            set(arg_HARDLINK_AUX_DLLS FALSE)
+          endif()
+        endif()
+
+        # Always readlink if we can.  That way the names are right.
+        if (READLINK_EXE)
+          execute_process(
+            COMMAND "${READLINK_EXE}" "-f" "${winlib}"
+            OUTPUT_VARIABLE realpath
+            RESULT_VARIABLE res
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+          )
+
+          if (NOT res EQUAL 0)
+            message(FATAL_ERROR "butil_auto_install(): readlink failed with code: ${res}.")
+          endif()
+
+          set(winlib ${realpath})
+        else()
+          message("butil_auto_install(): warning: readlink is not found.  If DLLS are symlinks, then packages might contain the wrong DLLname!")
+        endif()
+
+        # Calculate this here so that we get the right dll name if the cross
+        # compile environment is full of symlinks :)
         get_filename_component(basename "${winlib}" NAME)
         set(output "${CMAKE_BINARY_DIR}/${basename}")
 
         if (arg_HARDLINK_AUX_DLLS)
-          find_program(LN_EXE ln)
-
-          if (NOT LN_EXE)
-            message("butil_auto_install(): warning: bin/ln not found.  Will copy windows dlls to bindir instead.")
-          endif()
-        endif()
-
-        if (arg_HARDLINK_AUX_DLLS AND LN_EXE)
-          # TODO:
-          #   dereferecnce ${winlib} if it's a symlink (then update the docs
-          #   to say we did it)
-          set(command "${LN_EXE}" "${winlib}" "${output}")
+          # Don't rename it, or the link will be wrong.
+          set(command "${LN_EXE}" "${winlib}")
           set(action "Hard link")
         else()
-          # This *does* dereference symlinks.
+          # This *does* dereference symlinks however the
           set(command "${CMAKE_COMMAND}" -E copy_if_different "${winlib}" "${CMAKE_BINARY_DIR}")
           set(action "Copy")
         endif()
@@ -1243,6 +1315,7 @@ macro(butil_auto_install)
           OUTPUT  "${output}"
           DEPENDS "${winlib}"
           COMMAND ${command}
+          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
           COMMENT "${action} ${basename} to the binary dir."
           VERBATIM
         )
@@ -1347,4 +1420,37 @@ macro(butil_auto_install)
     endforeach()
   endif()
 endmacro()
+
+# TODO: probably better in a module called bbuild
+macro(butil_find_lib)
+  butil_parse_args("VAR;NAMES" "REQUIRED" "" "${ARGV}")
+
+  if (NOT arg_VAR)
+    message(FATAL_ERROR "butil_find_lib(): VAR is required.")
+  endif()
+
+  if (NOT arg_NAMES)
+    set(arg_NAMES ${PA_OTHER})
+
+    if (NOT arg_NAMES)
+      message(FATAL_ERROR "butil_find_lib(): NAMES is required.")
+    endif()
+  endif()
+
+  foreach (butil_name ${arg_NAMES})
+    # TODO: implement arg_REQUIRED.
+    find_library(${arg_VAR} "${butil_name}")
+    mark_as_advanced(${arg_VAR})
+    if (${arg_VAR})
+      break()
+    endif()
+  endforeach()
+
+  if (arg_REQUIRED)
+    if (NOT ${arg_VAR})
+      message(FATAL_ERROR "butil_find_lib(): ${arg_NAMES} were not found.")
+    endif()
+  endif()
+endmacro()
+
 
