@@ -1,4 +1,6 @@
 #include "chunkinate.hpp"
+
+#include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 #include "shared_data.hpp"
 
@@ -67,6 +69,7 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
 
   while (true) {
     ffmpeg::frame fr(file);
+    // TODO: this is also a really crappy way of doing things.
     if (fr.finished()) {
       trc("frame is finished!");
       break;
@@ -115,6 +118,34 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
     //   - we have to chunk it at some point for the sound card.
     //   - huge buffers mean the response time is much lower.
     //   - huge buffers mean the granularity of the buffer size is very low.
+
+    //   Another idea:
+    //
+    //   Note: remember that chunking is necessary because of ffmpeg huge
+    //   buffers and alignment requirements.
+    //
+    //     // pooled allocated blocks which we fill up as we go
+    //     chunk_buff generic_state;
+    //     // has a chunk(frame); -- it must take the frame so it can get info
+    //     // about it
+    //     chunker chunk(generic_state, push_function);
+    //
+    //     ...
+    //
+    //     decoder(file, audio_stream);
+    //     decoder.each_packet(chunk);
+    //
+    //   - decoder doesn't need to know about the packet state at all (much
+    //     better genericness)
+    //   - chunker function is still tied to ffmpeg because it needs to know
+    //   - we can use a generic lib for actually chunking stuff
+    //   - we don't need to do lots of complicated chunking to make all the
+    //     packets an even size - later plugins can fuck with the plugins
+    //     anyway.
+    //
+    //   NOTE: I need to look to the sanalyser version of ffmpeg as it has more
+    //   or less implemented this design.
+    //
     ffmpeg::audio_decoder decoder(state, audio);
     decoder.decode(fr);
 

@@ -3,6 +3,7 @@
 \brief Simple test of ffmpeg which dumps all the packets on a stream.
 */
 
+#include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 
 #include <iostream>

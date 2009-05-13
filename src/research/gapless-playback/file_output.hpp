@@ -5,12 +5,14 @@
 I guess this serves as a prototype for generic output engines.
 */
 
+#include "shared_data.hpp"
+
 #include <fstream>
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
 
-#include "shared_data.hpp"
+#include <bdbg/trace/short_macros.hpp>
 
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>

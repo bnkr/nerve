@@ -3,6 +3,9 @@
 \brief Reduce compile time.
 */
 
+#include <nerved_config.hpp>
+#include <bdbg/trace/short_macros.hpp>
+
 #include "../../wrappers/ffmpeg.hpp"
 
 
@@ -191,11 +194,44 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
 #  define PATHALOGICAL_GAPLESS WAV_MP3_WAV
 #endif
 
-#if GENERIC_GAPLESS
+#define GENERIC_GAPLESS
+
+#ifdef GENERIC_GAPLESS
     // TODO:
     //   implement plan as written in the main thing
 
+    // Qucik note:
+    //
+    // - establish a running average.  It seems that the jump periods are more
+    //   or less white noise to they *average* to a low value *but* hey don't
+    //   change much.  When we do get a big change it should be measured on
+    //   average.  The trick is marking the start of the average change.
+    //
+    //   Basically I think I am saying that I need a tolerance when degapping
+    //   crappy streams.
 
+    static bool run_pregap = false;
+
+    // TODO:
+    //   doesn't work yet... we have to translate time into byte length.
+    //
+    //   bytes = t_ms * rate * channels
+    const int64_t active_time = 0;
+    const int16_t sample_difference = 0;
+
+    // Hack: turn it on on the 0th frame.
+    if (codec_context(stream_).frame_number() == 0) {
+      run_pregap = true;
+    }
+
+    if (run_pregap) {
+
+      // TODO: this is the pathalogical end - we must use the active time.
+      if ((fr.position() + fr.size()) > (9048-44)) {
+        trc("Ending after frame " << codec_context(stream_).frame_number());
+        run_pregap = false;
+      }
+    }
 
 #elif PATHALOGICAL_GAPLESS == WAV
     // This is the pathalogical test for 220hz-sine-wave-pt*-gap.wav and also

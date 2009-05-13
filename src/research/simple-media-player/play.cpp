@@ -2,6 +2,8 @@
 #include <bdbg/trace/short_macros.hpp>
 #include <bdbg/trace/static_definitions.hpp>
 
+#include <nerved_config.hpp>
+
 #include "../../wrappers/ffmpeg.hpp"
 #include "../../wrappers/sdl.hpp"
 

@@ -14,12 +14,6 @@ internal stuff.
 #ifndef FFMPEG_HPP_7awlau1z
 #define FFMPEG_HPP_7awlau1z
 
-// TODO:
-//   this implies that later on, the wrappers should be part of nerved instead
-//   of the client.  Perhaps the client should be a completely seperate package?
-#include <nerved_config.hpp>
-#include <bdbg/trace/short_macros.hpp>
-
 // FFmpeg developers hate C++, and not without good reason!  But then I have
 // always been a masochist...
 extern "C" {

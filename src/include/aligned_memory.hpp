@@ -1,7 +1,9 @@
 #ifndef ALIGNED_MEMORY_HPP_gidtjkws
 #define ALIGNED_MEMORY_HPP_gidtjkws
 
+#include <cassert>
 #include <cstdlib>
+
 #include <boost/utility.hpp>
 
 // How can I statically assert that Alignment is a power of two?
@@ -46,15 +48,15 @@ class dynamic_aligned_memory : public boost::noncopyable {
 
 //! \brief Aligned buffer container - size is the number of elements, not bytes.
 // TODO: unit test this
-template <std::size_t Alignment, std::size_t Size, class T = uint8_t>
+template <std::size_t Alignment, std::size_t Elements, class T = uint8_t>
 class aligned_memory : public boost::noncopyable {
   public:
     typedef T  value_type;
     typedef T* pointer_type;
 
     static const std::size_t alignment  = Alignment;
-    static const std::size_t size       = Size;
-    static const std::size_t byte_size  = Size * sizeof(T);
+    static const std::size_t size       = Elements;
+    static const std::size_t byte_size  = Elements * sizeof(T);
 
     aligned_memory() {
       // Faster:

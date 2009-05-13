@@ -3,6 +3,7 @@
 \brief Reduce compile time.
 */
 
+#include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 
 // hacked together backport from the gapless tests

@@ -1,6 +1,8 @@
 #ifndef READ_PACKETS_HPP_iu6o9luw
 #define READ_PACKETS_HPP_iu6o9luw
 
+#include <nerved_config.hpp>
+
 #include "../../wrappers/ffmpeg.hpp"
 #include "../../wrappers/sdl.hpp"
 
