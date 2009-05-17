@@ -10,5 +10,3 @@ boost::condition_variable finish_cond;
 bool finished = false;
 bool output_closed = false;
 
-FILE *dump_output_file = NULL;
-bool make_file_output = true;

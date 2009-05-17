@@ -3,6 +3,7 @@
 #include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 #include "shared_data.hpp"
+#include "dump_file.hpp"
 
 #include <boost/thread.hpp>
 

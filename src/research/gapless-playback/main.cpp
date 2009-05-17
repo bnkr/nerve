@@ -9,6 +9,7 @@ manager so we can work out how interrupted songs will work and so on.
 
 #include "playlist.hpp"
 #include "play.hpp"
+#include "dump_file.hpp"
 
 #include <bdbg/trace/static_definitions.hpp>
 #include <bdbg/trace/crash_detection.hpp>
@@ -45,20 +46,35 @@ int main(int argc, char **argv) {
     std::cerr << "Warning: can't test gaplessness with only one file." << std::endl;
   }
 
+  playlist_type playlist;
   {
     bool argh = false;
     for (int i = 1; i < argc; ++i) {
-      char *file = argv[i];
-      if (! fs::exists(file)) {
-        argh = true;
-        std::cerr << "error: file '" << file << "' does not exist." << std::endl;
+      if (argv[i][0] == '-') {
+        const char *const arg = &argv[i][1];
+        if (std::strcmp(arg, "dump") == 0) {
+          make_file_output = true;
+          std::cout << "-dump: will dump to a file." << std::endl;
+        }
+        else {
+          std::cerr << "error: unrecognised argument: " << arg << std::endl;
+          return EXIT_FAILURE;
+        }
+
+      }
+      else {
+        char *file = argv[i];
+        if (! fs::exists(file)) {
+          argh = true;
+          std::cerr << "error: file '" << file << "' does not exist." << std::endl;
+        }
+        playlist.push_back(file);
       }
     }
 
     if (argh) return EXIT_FAILURE;
   }
 
-  playlist_type playlist(&argv[1], &argv[argc]);
 
   std::cout << "Playlist:" << std::endl;
   list_printer pr;

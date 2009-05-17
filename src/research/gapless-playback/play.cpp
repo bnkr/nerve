@@ -6,12 +6,11 @@
 #include "../../wrappers/sdl.hpp"
 #include "output.hpp"
 #include "shared_data.hpp"
-#include "file_output.hpp"
+#include "dump_file.hpp"
 
 #include <bdbg/trace/short_macros.hpp>
 
 #include <cstdlib>
-
 
 int play_from_list(playlist_type &list) {
   trc("Begin.");
@@ -34,13 +33,15 @@ int play_from_list(playlist_type &list) {
       // std::cout << "Opening audio:" << std::endl;
       // desired.dump_spec(std::cout, "  ") << std::endl;
       dev.reopen(desired);
-      // std::cout << "Got:" << std::endl;
-      // dev.obtained().dump_spec(std::cout, "  ") << std::endl;
+      std::cout << "SDL Got:" << std::endl;
+      dev.obtained().dump_spec(std::cout, "  ") << std::endl;
     }
     ffmpeg::initialiser ff;
     trc("Finished initialising.");
 
     ffmpeg::packet_state state(dev.obtained().buffer_size(), dev.obtained().silence());
+
+    if (! make_file_output) dev.unpause();
 
     trc("Chunking files.");
     typedef playlist_type::const_iterator iter_type;
@@ -49,8 +50,8 @@ int play_from_list(playlist_type &list) {
     }
     chunkinate_finish(state, make_file_output);
 
-    // it seems that the sdl callback is not called when this happens...
-    if (dump_output_file) output_closed = true;
+    // because the sdl callback is not called when this happens.
+    if (make_file_output) output_closed = true;
 
     trc("wait for exit signal");
 

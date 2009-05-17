@@ -283,14 +283,16 @@ Just in case things go really badly :)
 - README.* - description of some specific documentation; usually related to
   installation or configuration.  I prefer manpages for runtime things.
 - INSTALL* - this file, and any other specific information.
-- CMakeLists.txt - main build system file.
+- CMakeLists.txt - main build system file.  Usually all installable targets are
+  built using this file.
 - Doxyfile.default - a partially configured doxygen configuration.  The build
   system overrides and/or adds variables to this to get the correct output.
 - examples/ - code used in documented examples.  Note that not all of these
   are directly buildable; they are intended to be used by doxygen.  If they
   are intended as independent examples, then they will have a comment with
-  how to compile them at the top and will be installed as part of the
-  documentation.
+  how to compile them at the top and will be installed separately as part of 
+  the documentation.
+- share/ - architecture independent data which will be installed.
 - doc/ - all documentation.
 - doc/man - usually uncompressed *roff text, but sometimes things to be
   processed to turn into *roff text.
@@ -300,8 +302,10 @@ Just in case things go really badly :)
   main.* for an executable, and lib*.cpp for a library.
 - build-aux/ - things strictly used for building and testing.
 - build-aux/description.txt - general description of the package.
-- include/ - mirror of the main include directory.
-- test/ - unit tests.
+- include/ - mirror of the main include directory which we will install.
+- external/ - bundled libraries.  Usually there are just some more include/ 
+  dirs in here.
+- test/ - unit tests.  There's usually a README to explain these.
 
 In the binary directory:
 

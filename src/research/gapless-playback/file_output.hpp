@@ -5,6 +5,8 @@
 I guess this serves as a prototype for generic output engines.
 */
 
+#error Doesn't work.  Don't include.  Use the hack.  Argh.
+
 #include "shared_data.hpp"
 
 #include <fstream>

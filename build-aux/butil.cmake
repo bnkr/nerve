@@ -74,7 +74,8 @@
 # directly to butil_setup_cpack()
 #
 # TARGETS - any *target* created by add_executable or add_library.  Required if
-# BINARIES_VAR is given.
+# BINARIES_VAR is given.  It is used for making packages and for finding things
+# to strip.
 #
 # INCLUDE_DIRS - directories to install into the include path.   Make sure they
 # it DOES have the trailing foreward slash.
