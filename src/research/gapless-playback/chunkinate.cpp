@@ -61,7 +61,7 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
   trc("index is " << state.index());
 
   ffmpeg::file file(file_name);
-  file.dump_format(file_name);
+  file.dump(); //file_name);
   ffmpeg::audio_stream audio(file);
   // TODO:
   //   if the format is not right then we need to reconfigure the sound card (which is

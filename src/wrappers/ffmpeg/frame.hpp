@@ -17,7 +17,7 @@ class frame {
   public:
     frame(ffmpeg::file &file) : file_(file) {
       // TODO: formatContext stores an AVPacket.  Does that mean I am doing a useless copy here?
-      int ret = av_read_frame(&file.format_context(), &packet_);
+      int ret = av_read_frame(&file.av_format_context(), &packet_);
       finished_ = (ret != 0);
     }
 

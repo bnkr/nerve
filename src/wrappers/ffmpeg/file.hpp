@@ -34,13 +34,12 @@ class file {
 
     //@}
 
-    //! \brief Print the format to stderr.  \c filename is merely informational.
-    void dump(const char *filename = NULL) const {
-      filename = (filename) ?: file_name();
+    //! \brief Print the format to stderr.
+    void dump() const {
       // TODO: what are those otehr parameters for?
       const int is_output = 0;
       const int index = 0; // I think this is the stream index...
-      ::dump_format(format_, index, filename, is_output);
+      ::dump_format(format_, index, file_name(), is_output);
     }
 
     //! \name FFmpeg Accessors
@@ -96,12 +95,17 @@ class file {
     }
 
     //! \name Deprecated functions.
-    //! \deprecated  Use size()
     //@{
+    //! \deprecated Use size()
     int64_t file_size() const FF_ATTRIBUTE_DEPRECATED { return size(); }
+    //! \deprected all AV* accessors start av_ now.
     const AVFormatContext &format_context() const FF_ATTRIBUTE_DEPRECATED { return av_format_context(); }
+    //! \deprected all AV* accessors start av_ now.
     AVFormatContext &format_context() FF_ATTRIBUTE_DEPRECATED { return av_format_context(); }
-    void dump_format(const char *file = NULL) const FF_ATTRIBUTE_DEPRECATED { return dump(file); }
+    //! \deprecated use dump()
+    void dump_format(const char *file = NULL) const FF_ATTRIBUTE_DEPRECATED { return dump(); }
+    //! \deprecated the filename is redundant - use dump().
+    void dump(const char *) const FF_ATTRIBUTE_DEPRECATED { dump(); }
     //@}
 
   private:

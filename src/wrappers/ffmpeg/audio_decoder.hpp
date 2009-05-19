@@ -79,7 +79,7 @@ class audio_decoder {
     //! of bytes of the output buffer which are used up.  Buffer must be larget
     //! than ACVOCED_MAX_AUDIO_FRAME_SIZE.
     int decode(int16_t *output, int *output_size, AVPacket *packet) {
-      return avcodec_decode_audio3(&stream_.codec_context(), output, output_size, packet);
+      return avcodec_decode_audio3(&stream_.av_codec_context(), output, output_size, packet);
     }
 
     void reset_buffer() {
