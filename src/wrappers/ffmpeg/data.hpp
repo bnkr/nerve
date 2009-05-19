@@ -1,16 +1,17 @@
 /*!
 \file
-\brief Data wrappers for ffmpeg
+\brief Basic data structures including exceptions.
 */
 #ifndef FFMPEG_DATA_HPP_41n0wqzg
 #define FFMPEG_DATA_HPP_41n0wqzg
 
 #include <stdexcept>
 #include <cassert>
-#include <string>
+#include <iostream>
 
 namespace ffmpeg {
 
+//! \ingroup grp_ffmpeg
 //! \brief Base class for errors.
 struct ffmpeg_error : public std::runtime_error {
   // TODO: possibility for a getLastError version?
@@ -30,6 +31,7 @@ BASIC_EXCEPTION(unsupported_codec_error);
 
 #undef BASIC_EXCEPTION
 
+//! \ingroup grp_ffmpeg
 //! \brief Initialise the library and interface to the static parts.
 class initialiser {
   public:
@@ -42,8 +44,6 @@ class initialiser {
     }
 };
 
-
+}
 
 #endif
-
-} // ns ffmpeg

@@ -43,7 +43,7 @@ class frame {
 
     //! \brief Presentation time in fractional seconds in the stream's time base.
     double stream_time_double(const ffmpeg::audio_stream &stream) const {
-      return presentation_time() * av_q2d(stream.time_base());
+      return presentation_time() * av_q2d(stream.time_base_q());
     }
 
     //! \brief Time in AV_TIME_BASE units.

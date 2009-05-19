@@ -46,14 +46,12 @@ extern "C" {
 #include "ffmpeg/data.hpp"
 #include "ffmpeg/file.hpp"
 #include "ffmpeg/audio_stream.hpp"
+
 #include "ffmpeg/frame.hpp"
 #include "ffmpeg/packet_state.hpp"
 #include "ffmpeg/audio_decoder.hpp"
 
-// #include "ffmpeg/porting.hpp"
-
-namespace ffmpeg {
-}
+namespace ffmpeg { }
 
 #endif
 
