@@ -149,14 +149,17 @@ ok:
 
     //@}
 
-    //! \name Seeking
-    //! Different from the file class's seek methods because these are in the
-    //! time units of the stream.
-    //@{
-
     // should be member of the file class.
     typedef enum {seek_forward} seek_forward_type;
     typedef enum {seek_backward} seek_backward_type;
+
+    //! \name Seeking
+    //! Note that the times must be in *this stream's* time_base.
+    //TODO:
+    //  See other todos regarding crapness of stream_time method for ensuring
+    //  times are right.  (Long story short, there can be multiple streams and
+    //  this would accept times from them all).
+    //@{
 
     //! Seek forward to a keyframe.
     void seek_keyframe(const stream_time &where, seek_forward_type) {
@@ -220,7 +223,27 @@ ok:
     AVCodec *codec_;
 };
 
+//! \ingroup grp_ffmpeg
+//!
 //! Generalised timestamp in the context of a time scale.
+//!
+//! In general it is better to use stream_time and file_time.
+//!
+//! Time needs some explaination.  The following rules hold:
+//!
+//! \verbatim
+//!       avcodec_timestamp =
+//! AV_TIME_BASE * time_in_seconds
+//!
+//!        time_in_seconds =
+//! AV_TIME_BASE_Q * avcodec_timestamp
+//! \endverbatim
+//!
+//! This is because AV_TIME_BASE_Q is 1/AV_TIME_BASE.
+//!
+//! File stuff is always in AV_TIME_BASE*, whereas streams are in the
+//! time_base*() given in their AVStream struct (which is wrapped by
+//! audio_stream in this library).
 class scaled_time {
   public:
     typedef int64_t stamp_type;
@@ -233,6 +256,9 @@ class scaled_time {
       timestamp_ = timestamp_rescaled(to_base);
       base_ = to_base;
     }
+
+    //! timestamp() * time_base(), which is basically just timestamp() * 1/frequency.
+    double seconds() const { return timestamp() * av_q2d(time_base()); }
 
     //! A conversion aid.
     stamp_type timestamp_rescaled(const AVRational &to_base) const {
@@ -251,6 +277,11 @@ class scaled_time {
 //! \ingroup grp_ffmpeg
 //!
 //! A timestamp in units of a particular stream.
+//TODO:
+//  This is problematic because the idea of stream_time was to forbid passing a
+//  dodgy time to one of the seek functions.  Since there can be multiple
+//  audio_stream objects, this is a rather brittle method.  It might be better
+//  to simply always call the rescaling function.
 class stream_time : public scaled_time {
   public:
     //! Where t *must be* in s.time_base()
@@ -279,6 +310,7 @@ class file_time : public scaled_time {
 
 inline void audio_stream::seek(const stream_time &st, int flags) {
   av_seek_frame(&(file().av_format_context()), av_stream().index, st.timestamp(), flags);
+  // TODO: errors?
 }
 
 //! \ingroup grp_ffmpeg

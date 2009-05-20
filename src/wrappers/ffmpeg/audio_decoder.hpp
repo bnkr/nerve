@@ -1,3 +1,8 @@
+/*!
+\file
+\deprecated Use the one from sanalyser.
+*/
+
 #ifndef FFMPEG_AUDIO_DECODER_HPP_vjeuxxli
 #define FFMPEG_AUDIO_DECODER_HPP_vjeuxxli
 
@@ -6,6 +11,8 @@ namespace ffmpeg {
 //! \brief Reads frames into buffers of a given size in a packet_state.
 //! Loop on get_packet().  Remember to get any remaining data in packet_state when
 //! completely done.
+//!
+//! \deprected Use the one from sanalyser.
 //TODO:
 //  this should be split up very much and changes when we have the plugin
 //  stage framework.  It should simply return the buffers; therefore the design
@@ -21,15 +28,9 @@ class audio_decoder {
       assert(total_buffer_bytes % sizeof(int16_t) == 0);
     }
 
-    //! \deprecated use decode(fr);
-    void decode_frame(const ffmpeg::frame &fr) FF_ATTRIBUTE_DEPRECATED {
-      decode(fr);
-    }
-
     //! \brief Set the internal state for this new frame.
-    void decode(const ffmpeg::frame &fr); // currently outline to reduce compiler time.
-    void truncate_pre_silence(const int);
-    void truncate_silence(const int);
+    // void decode(const ffmpeg::frame &fr); // currently outline to reduce compiler time.
+    void decode(ffmpeg::frame &fr); // currently outline to reduce compiler time.
 
     //! \brief Get the next packet_size sized buffer from the frame, or NULL if there isn't one.
     //TODO:

@@ -3,16 +3,6 @@ namespace ffmpeg {
 //! \brief Initialised by pulling a frame from a \link ffmpeg::file \endlink.
 //! See:
 //! - http://cekirdek.pardus.org.tr/~ismail/ffmpeg-docs/structAVPacket.html
-//
-//TODO:
-//  For informatuonal reasons it would be nice to take the an audio stream.
-//  It messes up the interface a bit, though.
-//
-//  Example:
-//
-//    print codec_context(fr.file()).frame_number());
-//
-//  Also time base.
 class frame {
   public:
     frame(ffmpeg::file &file) : file_(file) {

@@ -46,8 +46,12 @@ extern "C" {
 #include "ffmpeg/data.hpp"
 #include "ffmpeg/file.hpp"
 #include "ffmpeg/audio_stream.hpp"
+#include "ffmpeg/packet.hpp"
 
-#include "ffmpeg/frame.hpp"
+namespace ffmpeg {
+  typedef ffmpeg::packet frame;
+}
+
 #include "ffmpeg/packet_state.hpp"
 #include "ffmpeg/audio_decoder.hpp"
 

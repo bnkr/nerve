@@ -69,7 +69,8 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
   //   characteristics to play the media.
 
   while (true) {
-    ffmpeg::frame fr(file);
+    ffmpeg::frame fr;
+    fr.read_from(file);
     // TODO: this is also a really crappy way of doing things.
     if (fr.finished()) {
       trc("frame is finished!");
