@@ -8,18 +8,48 @@
 
 #include "../../wrappers/ffmpeg.hpp"
 
+#include <limits>
 #include <queue>
 #include <cassert>
+#include <cstdlib>
+#include <cmath>
 
 //! Calculate whether a time is in a range.
 class range_calculator {
   public:
-    static const HUH activation = HUH;
 
-    range_calculator(HUH &time);
+    // TODO:
+    //   We should rescale the activation time to be in the same units as the
+    //   stream; ditto to max_time.  How does the plugin deal with it - I guess
+    //   we need a lib call to the input plug to ask it to give us tine info.
+    //   Bleh... virtual function I guess?
 
-    bool end();
-    bool start();
+    double activation_seconds() const {
+      return 1;
+    }
+
+    range_calculator(const ffmpeg::stream_time &time) : time_(time) {}
+
+    bool end() const {
+      double remaining = max_time_as_seconds() - time_as_seconds();
+      return remaining > 0 && remaining < activation_seconds();
+    }
+
+    bool start() const {
+      return time_as_seconds() < activation_seconds();
+    }
+
+    double time_as_seconds() const {
+      return time_.seconds();
+    }
+
+    double max_time_as_seconds() const {
+      return HUH;
+    }
+
+  private:
+    const ffmpeg::stream_time &time_;
+    HUH max_stream_time_;
 };
 
 //! Calculate the average of a bunch of samples and determine if there was an
@@ -27,14 +57,48 @@ class range_calculator {
 class sample_calculator {
   public:
     static const std::size_t num_samples = HUH;
-    static const double tolerance = HUH;
 
-    void new_average(HUH &samples, ...);
+    //! \name Accessors
+    //@{
 
-    bool abrupt_quietness();
-    bool abrupt_loudness();
-    bool abrupt_change();
+    double tolerance() const {
+      // a 50% change is abrupt...
+      return std::numeric_limits<int16_t>::max() * 0.5;
+    }
 
+    double difference() const { return difference_; }
+
+    //@}
+
+    //! Calculation method.
+    void new_average(HUH &samples, ...) {
+      // hum... I could work out the best dropping position here
+      last_average_ = average_;
+      average_ = HUH(samples);
+      difference_ = average_ - last_average_;
+    }
+
+
+    //! \name Tests
+    //@{
+
+    bool abrupt_quietness() const {
+      return -difference() > tolerance();
+    }
+
+    bool abrupt_loudness() const {
+      return difference() > tolerance();
+    }
+
+    bool abrupt_change() const {
+      return std::abs(difference()) > tolerance();
+    }
+
+    //@}
+
+
+  private:
+    double difference_;
     double average_;
     double last_average_;
 };
@@ -60,26 +124,15 @@ struct algorithm_state {
   algorithm_state() : state(disable) {}
 };
 
-range_calculator in_range;
 sample_calculator calc;
 sample_buffer buffer;
 algorithm_state algo;
 
-class file_time {
-};
-
-
-class audio_stream {
-
-  public:
-
-};
-
-void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
+void ffmpeg::audio_decoder::decode(ffmpeg::frame &fr) {
   reset_buffer();
 
   int used_buffer_size = buffer_type::byte_size;
-  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, &(fr.packet()));
+  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, &(fr.av_packet()));
 
   if (used_bytes < 0) {
     std::cerr << "error frame" << std::endl;
@@ -96,14 +149,13 @@ void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
     buffer_size_ = (std::size_t) used_buffer_size;
   }
 
-  // TODO:
-  //   it shouldn't be *that* much different from this when we have generic
-  //   plugins... the difference is I can set the extents of the packet myself
-  //   rather than realocating a new packet.
-  //
-  //   Maybe I should just hack this into the real nerve binary?
 loop:
-  range_calculator in_range(fr.time());
+
+  // TODO:
+  //   what about if we have a really huge packet so only some of it is in
+  //   range?
+  ffmpeg::stream_time packet_time(stream_, fr.presentation_timestamp());
+  range_calculator in_range(packet_time);
 
   if (in_range.end()) {
     calc.new_average(samples);
@@ -158,6 +210,4 @@ loop:
 
   goto loop;
 }
-
-
 
