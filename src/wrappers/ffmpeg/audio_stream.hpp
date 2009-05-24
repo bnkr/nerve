@@ -130,10 +130,11 @@ ok:
     //@{
 
     //! All timestamps of *this stream* (ie, frames) are encoded in this way.
-    const AVRational &time_base_q() const {
-      assert(av_cmp_q(av_stream().time_base, av_codec_context().time_base) == 0);
-      return av_stream().time_base;
-    }
+    //! This is not the same as the one in av_codec_context.
+    //!
+    //! For fixed-fps content, timebase should be 1/framerate and timestamp
+    //! increments should be exactly 1.
+    const AVRational &time_base_q() const { return av_stream().time_base; }
 
     //! \brief time_base() as a double.
     const double time_base_double() const FF_ATTRIBUTE_DEPRECATED { return av_q2d(av_stream().time_base); }
@@ -248,6 +249,8 @@ class scaled_time {
   public:
     typedef int64_t stamp_type;
 
+    scaled_time(const AVRational &base, stamp_type ts) : base_(base), timestamp_(ts) {}
+
     stamp_type timestamp() const { return timestamp_; }
     const AVRational &time_base() const { return base_; }
 
@@ -267,7 +270,6 @@ class scaled_time {
 
   protected:
     scaled_time(const AVRational &base) : base_(base) {}
-    scaled_time(const AVRational &base, stamp_type ts) : base_(base), timestamp_(ts) {}
 
   private:
     AVRational base_;
@@ -329,15 +331,13 @@ class codec_context {
     int channels() const { return ctx().channels; }
     int average_bit_rate() { return ctx().bit_rate; }
 
-    //! Fractional seconds which all times are represented in.
+
     //!
-    //! For fixed-fps content, timebase should be 1/framerate and timestamp increments
-    //! should be identically 1.
-    //!
-    //! Note: this does not appear to be the same as audio_stream::time_base().
-    //TODO: what is this for if it is zero all the time?
-    const AVRational &time_base() const { return ctx().time_base; }
-    double time_base_double() const { return av_q2d(time_base()); }
+    //! I have no idea what this is for: it's always 0.  You probably want
+    //! audio_stream#time_base_q().
+    const AVRational &time_base_q() const { return ctx().time_base; }
+
+    double time_base_double() const { return av_q2d(time_base_q()); }
     //! \brief Which frame did we just decode?
     int frame_number() const { return ctx().frame_number; }
 
