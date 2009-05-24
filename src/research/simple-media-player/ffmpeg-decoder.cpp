@@ -7,11 +7,11 @@
 #include "../../wrappers/ffmpeg.hpp"
 
 // hacked together backport from the gapless tests
-void ffmpeg::audio_decoder::decode(const ffmpeg::frame &fr) {
+void ffmpeg::audio_decoder::decode(ffmpeg::frame &fr) {
   reset_buffer();
 
   int used_buffer_size = buffer_type::byte_size;
-  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, &(fr.packet()));
+  int used_bytes = decode(buffer_.ptr(), &used_buffer_size, &(fr.av_packet()));
 
   if (used_bytes < fr.size())  {
     // We can keep going, but there will be output errors.

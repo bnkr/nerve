@@ -33,7 +33,8 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &audio_stream, const 
   ffmpeg::audio_decoder decoder(state, audio_stream);
 
   do {
-    ffmpeg::frame fr(file);
+    ffmpeg::frame fr;
+    fr.read_from(file);
     if (fr.finished()) {
       trc("Finished!");
       // in the next version I need to swap over to the next file here and continue
@@ -42,7 +43,7 @@ void read_packets(ffmpeg::file &file, ffmpeg::audio_stream &audio_stream, const 
       break;
     }
 
-    decoder.decode_frame(fr);
+    decoder.decode(fr);
     void *sample_buffer = decoder.get_packet();
     while (sample_buffer != NULL) {
       push_packet(sample_buffer);
