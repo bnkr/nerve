@@ -1,79 +1,80 @@
 /*!
 \file
-\deprecated Use the one from sanalyser.
+\brief Audio decoding.
 */
 
-#ifndef FFMPEG_AUDIO_DECODER_HPP_vjeuxxli
-#define FFMPEG_AUDIO_DECODER_HPP_vjeuxxli
+#ifndef FFMPEG_AUDIO_DECODER_HPP_vbszml7j
+#define FFMPEG_AUDIO_DECODER_HPP_vbszml7j
+
+#include <cstring>
+#include <cstdlib>
 
 namespace ffmpeg {
 
-//! \brief Reads frames into buffers of a given size in a packet_state.
-//! Loop on get_packet().  Remember to get any remaining data in packet_state when
-//! completely done.
-//!
-//! \deprected Use the one from sanalyser.
-//TODO:
-//  this should be split up very much and changes when we have the plugin
-//  stage framework.  It should simply return the buffers; therefore the design
-//  will be very different.  Including packet_state would not be needed - that
-//  would be used in the output plugin.
+/*!
+\ingroup grp_ffmpeg
+Reads frames into buffers of a given size in a packet_state.
+
+See the function ffmpeg::decode_audio() for a good example of this class.
+
+Note that we deal with bytes, not samples, since the samples can vary in size.
+See codec_context for this data.
+*/
 class audio_decoder {
   public:
-    //! \brief Buffer size is what should be given to the audio output.
-    audio_decoder(packet_state &packet_state, ffmpeg::audio_stream &stream)
-    : stream_(stream), buffer_index_(0), packet_(packet_state) {
-      // my assumption is that it needs some N of 16 bit integers, even
-      // though we actually just write random stuff to it.
-      assert(total_buffer_bytes % sizeof(int16_t) == 0);
+    explicit audio_decoder(ffmpeg::audio_stream &stream)
+    : stream_(stream), buffer_size_(0) {
     }
 
-    //! \brief Set the internal state for this new frame.
-    // void decode(const ffmpeg::frame &fr); // currently outline to reduce compiler time.
-    void decode(ffmpeg::frame &fr); // currently outline to reduce compiler time.
 
-    //! \brief Get the next packet_size sized buffer from the frame, or NULL if there isn't one.
-    //TODO:
-    //  return something like an auto_ptr of course; really it should be done via.
-    //  an allocator or even some kind of visitor function?  That would be less
-    //  error prone, certainly.  Ideally I want to put it in a queue which is
-    //  a memory pool.
-    //
-    //  Later we will not need to chunk the files because the output plugin will do it.
-    void *get_packet() {
-      if (buffer_index_ < buffer_size_) {
-        const std::size_t stream_available = buffer_size_ - buffer_index_;
-        uint8_t *stream_buffer = ((uint8_t *) buffer_.ptr()) + buffer_index_;
+    //! Decode a frame into this object's buffer.
+    void decode(ffmpeg::packet &packet) {
+      // std::cout << "decode at offset " << packet.position() << std::endl;
+      buffer_size_ = 0;
+      int used_buffer_size = buffer_type::byte_size;
+      int bytes_read = decode(buffer_.ptr(), &used_buffer_size, &(packet.av_packet()));
+      // std::cout << "read " << bytes_read  << " and used " << used_buffer_size << " of the buffer." << std::endl;
 
-        buffer_index_ += packet_.append_max(stream_buffer, stream_available);
+      if (bytes_read < packet.size())  {
+        // TODO:
+        //   we can keep going, but there will be output errors.
+        throw std::runtime_error("less bytes read than were available");
+      }
 
-        // We filled up a buffer
-        if (packet_.index() == packet_.size()) {
-          // trc("packet complete");
-          void *p = packet_.reset();
-          // std::cout << "get_packet(): " << p << std::endl;
-          return p;
-        }
-        else {
-          // trc("packet is incomplete");
-          // we are not allowed to overrun the buffer.
-          assert(packet_.index() < packet_.size());
-          return NULL;
-        }
+      if (used_buffer_size <= 0) {
+        // TODO: more detail.
+        std::cerr << "warning: nothing to decode." << std::endl;
       }
       else {
-        // we must have actually outputted all the data
-        assert(buffer_index_ == buffer_size_);
-        // trc("we have reached the end of the buffer: ind = "  << buffer_index_ << " vs. size = " << buffer_size_);
-        return NULL;
+        // don't set this unless we know it's unsigned.
+        buffer_size_ = (std::size_t) used_buffer_size;
       }
     }
 
-    //! \deprected Use packet_state::get_final() directly.
-    void *get_final_packet() {
-      return packet_.get_final();
-    }
+    //! \name Accessors
+    //@{
 
+    //! See also codec_context - it has many useful properties.
+    const ffmpeg::audio_stream &audio_stream() const { return stream_; }
+    ffmpeg::audio_stream &audio_stream() { return stream_; }
+
+    //! Wrapper of audio_stream::file();
+    const ffmpeg::file &file() const { return stream_.file(); }
+    ffmpeg::file &file() { return stream_.file(); }
+
+    //! Pointer to decoded samples.
+    //!
+    //! Note that this is invalid until you decode something (hence why
+    //! decoded_audio is a nicer interface.
+    //TODO:
+    //  I am returning bytes here, but decode audio explicitly uses int16s.
+    //  Does that mean ffmpeg always decodes with 16bit samples?  It returns the
+    //  bytes read so it's very uncertain!
+    const void *samples() const { return buffer_.ptr(); }
+   //! \brief Size of the sample buffer in bytes.
+    std::size_t samples_size() const { return buffer_size_; }
+
+    //@}
 
   private:
     //! Decode a packet into output.  Returns also output_size.  Returns number
@@ -83,35 +84,98 @@ class audio_decoder {
       return avcodec_decode_audio3(&stream_.av_codec_context(), output, output_size, packet);
     }
 
-    void reset_buffer() {
-      buffer_index_ = 0;
-      buffer_size_ = 0;
-    }
-
     ffmpeg::audio_stream &stream_;
 
-    // work out the aligned buffer type
-    // Later we will alloc this from a pool and pass it down to the other plugs.
-    // It must be a special type which carries its own dimensions and properties
-    // about the audio it carries so we can automatically configure and so on.
-    static const std::size_t total_buffer_bytes = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-    static const std::size_t total_buffer_size = total_buffer_bytes / sizeof(int16_t);
+    // TODO:
+    //   There is a reasonable argument for making this dynamically allocated.
+    //   If we don't dynamically allocate then there is always an extra copy
+    //   when we take the data from this buffer.  On the other hand, this buffer
+    //   is rather big, mostly empty, and doesn't have any properties.  The
+    //   alternative would be to write directly into whatever the structure the
+    //   rest of the program wants, but that's not very generic.
     static const std::size_t alignment = 16;
-    typedef aligned_memory<alignment, total_buffer_size, int16_t> buffer_type;
-
+    typedef aligned_memory<alignment, AVCODEC_MAX_AUDIO_FRAME_SIZE / sizeof(int16_t), int16_t> buffer_type;
     buffer_type buffer_;
 
     // the amount of the buffer which was written to by ffmpeg (in bytes);
     std::size_t buffer_size_;
-    // stateful data - where have we outputted this frame up to? (In bytes)
-    std::size_t buffer_index_;
-
-    // working state
-    packet_state &packet_;
 };
 
+/*!
+\ingroup grp_ffmpeg
+An facade to the decoded data in a decoder.
 
+This decodes the data in a frame into the decoder, then provides an interface
+to access the decoded frames.
 
+Essentially, this is a stateless wrapper to the stateful data of the packet
+and the decoder.
+*/
+class decoded_audio {
+  public:
+    //! \name Constructors/Destructors
+    //@{
+    decoded_audio(ffmpeg::audio_decoder &dec, ffmpeg::packet &pkt)
+    : decoder_(dec), packet_(pkt) {
+      decoder_.decode(pkt);
+    }
+    //@}
+
+    //! \name Property accessors
+    //@{
+    const ffmpeg::audio_decoder &audio_decoder() const { return decoder_; }
+    ffmpeg::audio_decoder &audio_decoder() { return decoder_; }
+
+    const ffmpeg::packet &packet() const { return packet_; }
+    ffmpeg::packet &packet() { return packet_; }
+    //@}
+
+    //! \name Aliases into packet.
+    //@{
+
+    //! The time in the scale of the stream.
+    scaled_time presentation_time() const {
+      return scaled_time(audio_stream().time_base_q(), packet().presentation_timestamp());
+    }
+    //@}
+
+    //! \name Aliases into the decoder.
+    //@{
+    const uint8_t *samples() const { return (uint8_t *) decoder_.samples(); }
+    std::size_t samples_size() const { return decoder_.samples_size(); }
+    // TODO: accessor for sample size, signedness.
+
+    //! codec_context(stream()).property() is a useful pattern.
+    const ffmpeg::audio_stream &audio_stream() const { return decoder_.audio_stream(); }
+    ffmpeg::audio_stream &audio_stream() { return decoder_.audio_stream(); }
+
+    const ffmpeg::file &file() const { return decoder_.file(); }
+    ffmpeg::file &file() { return decoder_.file(); }
+    //@}
+
+  private:
+    ffmpeg::audio_decoder &decoder_;
+    ffmpeg::packet &packet_;
+};
+
+/*!
+\brief Calls visit() on all decoded packets read from the particular stream.
+
+Visit receives a decoded_audio object.
+*/
+template<class PacketVisitor>
+void decode_audio(ffmpeg::audio_stream &str, PacketVisitor visit) {
+  ffmpeg::packet pkt;
+  ffmpeg::packet_reader pr(pkt, str.file());
+  ffmpeg::audio_decoder dec(str);
+
+  while (pr.read()) {
+    ffmpeg::decoded_audio au(dec, pr.packet());
+    visit(au);
+  }
 }
+
+
+} // ns ffmpeg
 
 #endif

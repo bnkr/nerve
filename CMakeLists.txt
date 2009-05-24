@@ -163,17 +163,19 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
 
   # gapless-playback
   set(bin_name "gapless-playback")
-  set(src
-    "${RES_DIR}/${bin_name}/main.cpp"
-    "${RES_DIR}/${bin_name}/play.cpp"
-    "${RES_DIR}/${bin_name}/output.cpp"
-    "${RES_DIR}/${bin_name}/chunkinate.cpp"
-    "${RES_DIR}/${bin_name}/shared_data.cpp"
-    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
-    "${RES_DIR}/${bin_name}/dump_file.cpp"
+  butil_add_executable(
+    TARGET "${bin_name}"
+    SOURCES
+      "${RES_DIR}/${bin_name}/main.cpp"
+      "${RES_DIR}/${bin_name}/play.cpp"
+      "${RES_DIR}/${bin_name}/output.cpp"
+      "${RES_DIR}/${bin_name}/chunkinate.cpp"
+      "${RES_DIR}/${bin_name}/shared_data.cpp"
+      # "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
+      "${RES_DIR}/${bin_name}/dump_file.cpp"
+      "${RES_DIR}/${bin_name}/degapifier.cpp"
+    LIBS ${ALL_IO_LIBS} ${UTILITY_LIBS}
   )
-  add_executable("${bin_name}" ${src})
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
 
   # tripple-gapless-playback
   set(bin_name "tripple-gapless-playback")

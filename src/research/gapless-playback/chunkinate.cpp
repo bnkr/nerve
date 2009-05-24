@@ -4,6 +4,7 @@
 #include "../../wrappers/ffmpeg.hpp"
 #include "shared_data.hpp"
 #include "dump_file.hpp"
+#include "degapifier.hpp"
 
 #include <boost/thread.hpp>
 
@@ -60,6 +61,8 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
   trc("packetptr at " << state.ptr());
   trc("index is " << state.index());
 
+  ffmpeg::frame pkt;
+  degapifier degap(state);
   ffmpeg::file file(file_name);
   file.dump(); //file_name);
   ffmpeg::audio_stream audio(file);
@@ -68,97 +71,24 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
   //   not possible yet).  At least we need to check that the sound output has the right
   //   characteristics to play the media.
 
-  while (true) {
-    ffmpeg::frame fr;
-    fr.read_from(file);
-    // TODO: this is also a really crappy way of doing things.
-    if (fr.finished()) {
-      trc("frame is finished!");
-      break;
-    }
-
+  ffmpeg::packet_reader pr(pkt, file);
+  while (pr.read()) {
     // TODO:
     //   bug - if you drop all frames, then we wait for the exit signal forever.  Fixed now?
 
-    // TODO:
-    //   A deprecated function made this very tricky.  Now, the decoder must be
-    //   passed the packet directly - we lost some nice abstraction.  A solution
-    //   might be:
-    //
-    //     decoder dec(state, audio);
-    //     fr.decode(dec);
-    //
-    //   Problem is I made the decoder stateful and I shouldn't have.  We need:
-    //
-    //     frame fr(file);
-    //     decoder dec(fr, audio_stream);
-    //     dec.decode(push_function);
-    //
-    //   The problem is I must keep the packet state somehow; otherwise I end up
-    //   with gaps when the song byte boundaries don't align properly.
-    //
-    //   The best course is to move the loop code below into the dec.decode()
-    //   part.
-    //
-    //   It's a bit of a WTF to do this stuff with objects, really.  It would be
-    //   eauqlly OK to just have a function:
-    //
-    //     decode(state, audio, frame, push_function);
-    //
-    //   Perhaps therefore it makes most sense:
-    //   - decode() does all the decoding into its own static buffer (as now)
-    //     and calls a pushing function on that buffer.
-    //   - the pushing function may as well do the chunking in that case.
-    //   - the push function can be a functor which has the entire state in it;
-    //     we do not need the packet_state to be part of the ffmpeg library.
-    //     - this is OK even for C plugins.  They do not see the functor.
-    //
-    //   So, a rationale for chunking:
-    //   - ffmpeg buffers are very big.
-    //   - ffmpeg buffers must be aligned.
-    //   - ffmpeg buffers are hardly ever full.
-    //   - we have to chunk it at some point for the sound card.
-    //   - huge buffers mean the response time is much lower.
-    //   - huge buffers mean the granularity of the buffer size is very low.
+    ffmpeg::audio_decoder decoder(audio);
+    ffmpeg::decoded_audio decoded(decoder, pkt);
+    degap.degapify(decoded);
 
-    //   Another idea:
-    //
-    //   Note: remember that chunking is necessary because of ffmpeg huge
-    //   buffers and alignment requirements.
-    //
-    //     // pooled allocated blocks which we fill up as we go
-    //     chunk_buff generic_state;
-    //     // has a chunk(frame); -- it must take the frame so it can get info
-    //     // about it
-    //     chunker chunk(generic_state, push_function);
-    //
-    //     ...
-    //
-    //     decoder(file, audio_stream);
-    //     decoder.each_packet(chunk);
-    //
-    //   - decoder doesn't need to know about the packet state at all (much
-    //     better genericness)
-    //   - chunker function is still tied to ffmpeg because it needs to know
-    //   - we can use a generic lib for actually chunking stuff
-    //   - we don't need to do lots of complicated chunking to make all the
-    //     packets an even size - later plugins can fuck with the plugins
-    //     anyway.
-    //
-    //   NOTE: I need to look to the sanalyser version of ffmpeg as it has more
-    //   or less implemented this design.
-    //
-    ffmpeg::audio_decoder decoder(state, audio);
-    decoder.decode(fr);
-
-    void *sample_buffer = decoder.get_packet();
-    while (sample_buffer != NULL) {
+    // have to do this bollocks because of the packet state nonsense - really
+    // the output plugin should be doing this.
+    void *sample_buffer;
+    while ((sample_buffer = degap.get_packet()) != NULL) {
       if (dump_to_file) {
         fwrite(sample_buffer, sizeof(uint8_t), state.size(), dump_output_file);
       }
 
       push_packet(sample_buffer);
-      sample_buffer = decoder.get_packet();
     }
   }
 
@@ -177,6 +107,10 @@ void chunkinate_finish(ffmpeg::packet_state &state, bool dump_to_file) {
 
   // quite messy here... obv chunkinate should be a struct with the packet_state member.
   // trc("packet is currently " << state.ptr());
+
+  // TODO:
+  //   this is broken due to the degapifier.  We need to access that to get the
+  //   actual data back.
   void *p = state.get_final();
   // trc("after clear, it is " << state.ptr());
   // trc("we got " << p);
