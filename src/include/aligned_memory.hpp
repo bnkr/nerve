@@ -46,13 +46,13 @@ class dynamic_aligned_memory : public boost::noncopyable {
 
 #include <iostream>
 
-//! \brief Aligned buffer container - size is the number of elements, not bytes.
-// TODO: unit test this
+//! Aligned buffer container - size is the number of elements, not bytes.
 template <std::size_t Alignment, std::size_t Elements, class T = uint8_t>
 class aligned_memory : public boost::noncopyable {
   public:
-    typedef T  value_type;
-    typedef T* pointer_type;
+    typedef T        value_type;
+    typedef T*       pointer_type;
+    typedef const T* const_pointer_type;
 
     static const std::size_t alignment  = Alignment;
     static const std::size_t size       = Elements;
@@ -73,7 +73,13 @@ class aligned_memory : public boost::noncopyable {
     }
 
     pointer_type ptr() { return base_; }
-    const pointer_type ptr() const { return base_; }
+    const_pointer_type ptr() const { return base_; }
+
+    pointer_type begin() { return base_; }
+    const_pointer_type begin() const { return base_; }
+
+    pointer_type end() { return base_ + size; }
+    const_pointer_type end() const { return base_ + size; }
 
   private:
     uint8_t data_[byte_size + Alignment];

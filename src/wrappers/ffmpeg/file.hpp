@@ -103,7 +103,7 @@ class file {
     //! \deprected all AV* accessors start av_ now.
     AVFormatContext &format_context() FF_ATTRIBUTE_DEPRECATED { return av_format_context(); }
     //! \deprecated use dump()
-    void dump_format(const char *file = NULL) const FF_ATTRIBUTE_DEPRECATED { return dump(); }
+    void dump_format(const char *) const FF_ATTRIBUTE_DEPRECATED { return dump(); }
     //! \deprecated the filename is redundant - use dump().
     void dump(const char *) const FF_ATTRIBUTE_DEPRECATED { dump(); }
     //@}

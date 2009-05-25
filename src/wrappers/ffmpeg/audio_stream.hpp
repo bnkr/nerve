@@ -137,7 +137,7 @@ ok:
     const AVRational &time_base_q() const { return av_stream().time_base; }
 
     //! \brief time_base() as a double.
-    const double time_base_double() const FF_ATTRIBUTE_DEPRECATED { return av_q2d(av_stream().time_base); }
+    double time_base_double() const FF_ATTRIBUTE_DEPRECATED { return av_q2d(av_stream().time_base); }
 
     //! Number of frames in the stream, or 0 if not known.
     int16_t frames() const { return av_stream().nb_frames; }
@@ -279,12 +279,27 @@ class scaled_time {
 //! \ingroup grp_ffmpeg
 //!
 //! A timestamp in units of a particular stream.
+//!
+//! This is non-copyable because with multiple streams, there is no posibility
+//! for an automated conversion.
+//
 //TODO:
 //  This is problematic because the idea of stream_time was to forbid passing a
 //  dodgy time to one of the seek functions.  Since there can be multiple
 //  audio_stream objects, this is a rather brittle method.  It might be better
 //  to simply always call the rescaling function.
-class stream_time : public scaled_time {
+//
+//  The problem still exists that we can give a messed up timestamp.  We could
+//  use a tag class:
+//
+//    scaled_time st(scale, stamp);
+//    seek(st);
+//
+//    scaled_time<seeker::yes_its_really_ok> st(scale, stamp);
+//    seek(st);
+//
+//  But what difference does it make if you have the wrong scale anyway?
+class stream_time : public scaled_time, boost::noncopyable {
   public:
     //! Where t *must be* in s.time_base()
     stream_time(const ffmpeg::audio_stream &s, int64_t t)

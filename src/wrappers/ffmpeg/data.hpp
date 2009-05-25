@@ -36,7 +36,7 @@ BASIC_EXCEPTION(unsupported_codec_error);
 class initialiser {
   public:
     initialiser(int log_level = AV_LOG_WARNING) {
-      av_log_set_level(AV_LOG_DEBUG);
+      av_log_set_level(log_level);
       av_register_all();
       //typedef void(*callback_type)(void *, int, const char *, va_list);
       //av_log_set_callback(test_loading_log_cb);

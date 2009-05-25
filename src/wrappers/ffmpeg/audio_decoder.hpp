@@ -139,9 +139,22 @@ class decoded_audio {
     }
     //@}
 
+    //! \name Aliases into packet.
+    //@{
+
+    //! The file's duration time in the base of the file.
+    scaled_time file_duration() const {
+      return scaled_time(file().time_base_q(), file().duration());
+    }
+
+    //@}
+
     //! \name Aliases into the decoder.
     //@{
+
+    // TODO: make this iterator style.
     const uint8_t *samples() const { return (uint8_t *) decoder_.samples(); }
+    uint8_t *samples() { return (uint8_t *) decoder_.samples(); }
     std::size_t samples_size() const { return decoder_.samples_size(); }
     // TODO: accessor for sample size, signedness.
 
