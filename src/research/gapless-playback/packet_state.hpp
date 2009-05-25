@@ -1,18 +1,11 @@
-#ifndef FFMPEG_PACKET_STATE_HPP_31f8zdup
-#define FFMPEG_PACKET_STATE_HPP_31f8zdup
+#ifndef PACKET_STATE_HPP_31f8zdup
+#define PACKET_STATE_HPP_31f8zdup
 
-namespace ffmpeg {
-
-//! \brief Seperate stateful object which builds packets.
+//! Seperate stateful object which builds packets.
+//!
 //! It must be seperate so it can exist in a higher scope than a file
 //! and its audio stream.  This is to be used by the audio_decoder, and
 //! should never need to be touched by the other code.
-//
-//TODO:
-//  given that the state is seperate, I could now cause the audio_decoder
-//  to immediately read the frame in ctor instead of doing it seperately.
-//  This would make things safer to use.  Note: this changes rather a lot
-//  wrt frame delaying.
 class packet_state : boost::noncopyable {
   public:
     //! \brief The packet size is the size of the buffer to pass to the output queue.
@@ -92,8 +85,5 @@ class packet_state : boost::noncopyable {
     std::size_t packet_index_;
     const int silence_value_;
 };
-
-
-}
 
 #endif

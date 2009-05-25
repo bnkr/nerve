@@ -5,6 +5,7 @@
 #include "shared_data.hpp"
 #include "dump_file.hpp"
 #include "degapifier.hpp"
+#include "packet_state.hpp"
 
 #include <boost/thread.hpp>
 
@@ -53,7 +54,7 @@ void push_packet(void *sample_buffer) {
 // TODO:
 //   clearly the chunkinate functions should be part of an object.
 
-void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, bool dump_to_file) {
+void chunkinate_file(packet_state &state, const char * const file_name, bool dump_to_file) {
   // this would be replaced by some way of waiting until the playlist has members again.
   finished = false;
 
@@ -97,7 +98,7 @@ void chunkinate_file(ffmpeg::packet_state &state, const char * const file_name, 
   trc("index is " << state.index());
 }
 
-void chunkinate_finish(ffmpeg::packet_state &state, bool dump_to_file) {
+void chunkinate_finish(packet_state &state, bool dump_to_file) {
   trc("final packet");
 
   // partial dump.

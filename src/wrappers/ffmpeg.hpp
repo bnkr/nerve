@@ -48,13 +48,11 @@ extern "C" {
 #include "ffmpeg/audio_stream.hpp"
 #include "ffmpeg/packet.hpp"
 #include "ffmpeg/packet_reader.hpp"
+#include "ffmpeg/audio_decoder.hpp"
 
 namespace ffmpeg {
   typedef ffmpeg::packet frame;
 }
-
-#include "ffmpeg/packet_state.hpp"
-#include "ffmpeg/audio_decoder.hpp"
 
 namespace ffmpeg { }
 

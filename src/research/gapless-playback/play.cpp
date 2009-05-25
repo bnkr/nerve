@@ -4,6 +4,7 @@
 #include "chunkinate.hpp"
 #include "../../wrappers/ffmpeg.hpp"
 #include "../../wrappers/sdl.hpp"
+#include "packet_state.hpp"
 #include "output.hpp"
 #include "shared_data.hpp"
 #include "dump_file.hpp"
@@ -39,7 +40,7 @@ int play_from_list(playlist_type &list) {
     ffmpeg::initialiser ff;
     trc("Finished initialising.");
 
-    ffmpeg::packet_state state(dev.obtained().buffer_size(), dev.obtained().silence());
+    packet_state state(dev.obtained().buffer_size(), dev.obtained().silence());
 
     if (! make_file_output) dev.unpause();
 

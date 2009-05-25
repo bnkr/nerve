@@ -3,11 +3,9 @@
 
 #include <cstdio>
 
-namespace ffmpeg {
-  class packet_state;
-}
+class packet_state;
 
-void chunkinate_file(ffmpeg::packet_state &, const char *, bool);
-void chunkinate_finish(ffmpeg::packet_state &, bool);
+void chunkinate_file(packet_state &, const char *, bool);
+void chunkinate_finish(packet_state &, bool);
 
 #endif
