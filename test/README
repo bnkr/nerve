@@ -1,0 +1,24 @@
+The unit tests are organised thusly:
+
+Each directory has its own CMakeLists.txt which causes the tests to be 
+compiled and adds them to the ctest runner.
+
+- test/src/
+  Any header or library files specific to running tests but are not actually
+  tests themselves.
+- test/scripts/
+  Helper scripts for meta-generating tests.  The test framework causes these
+  to run; they are run with the working directory as the one they are in.
+- test/data/
+  Data loaded by tests.
+- test/examples/
+  Tests of documentation examples.
+- test/$component...
+  Root directory for a particular component's tests.
+- test/$component.../mod/
+  Synthetic tests of each module, where a module is a class or a function.  
+  Modules with multiple/complicated tests might have their own subdirectory.
+- test/$component.../case/
+  Tests of a specific case which involves many classes or in some way doesn't 
+  fit with a particular module.  Subdirectories categorise the test cases.
+
