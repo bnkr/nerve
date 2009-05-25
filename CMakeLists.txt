@@ -147,20 +147,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
     list(APPEND UTILITY_LIBS "${BOOST_SYSTEM_LIB}")
   endif()
 
-  # simple-media-player
-  set(bin_name  "simple-media-player")
-  set(src
-    "${RES_DIR}/${bin_name}/main.cpp"
-    "${RES_DIR}/${bin_name}/play.cpp"
-    "${RES_DIR}/${bin_name}/load_file_test.cpp"
-    "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
-    "${RES_DIR}/${bin_name}/read_packets.cpp"
-    "${RES_DIR}/${bin_name}/shared_data.cpp"
-  )
-  # I've broken this pretty spectacularly so far...
-  add_executable(${bin_name} ${src})
-  target_link_libraries("${bin_name}" ${ALL_IO_LIBS} ${UTILITY_LIBS})
-
   # gapless-playback
   set(bin_name "gapless-playback")
   butil_add_executable(
@@ -171,7 +157,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "")
       "${RES_DIR}/${bin_name}/output.cpp"
       "${RES_DIR}/${bin_name}/chunkinate.cpp"
       "${RES_DIR}/${bin_name}/shared_data.cpp"
-      # "${RES_DIR}/${bin_name}/ffmpeg-decoder.cpp"
       "${RES_DIR}/${bin_name}/dump_file.cpp"
       "${RES_DIR}/${bin_name}/degapifier.cpp"
     LIBS ${ALL_IO_LIBS} ${UTILITY_LIBS}
