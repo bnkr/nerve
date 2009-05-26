@@ -62,7 +62,7 @@ void chunkinate_file(packet_state &state, const char * const file_name, bool dum
   trc("packetptr at " << state.ptr());
   trc("index is " << state.index());
 
-  ffmpeg::frame pkt;
+  ffmpeg::packet pkt;
   degapifier degap(state);
   ffmpeg::file file(file_name);
   file.dump(); //file_name);
