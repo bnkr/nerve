@@ -70,7 +70,7 @@ class range_calculator {
     : time_(time), max_stream_time_(max_time) {}
 
     double activation_seconds() const {
-      return 0.5;
+      return 0.1;
     }
 
     bool end() const {
@@ -108,7 +108,7 @@ class sample_calculator {
 
     double tolerance() const {
       // a 50% change is abrupt...
-      return std::numeric_limits<int16_t>::max() * 0.5;
+      return std::numeric_limits<int16_t>::max() * 0.3;
     }
 
     double difference() const { return difference_; }
@@ -173,7 +173,13 @@ class sample_calculator {
     //@{
 
     bool abrupt_quietness() const { return -difference() > tolerance(); }
-    bool abrupt_loudness() const  { return  difference() > tolerance(); }
+    bool abrupt_loudness() const  {
+      bool yes = difference() > tolerance();
+      if (yes) {
+        trc("abrupt loudness detected: " << last_average_ << " vs. " << average_);
+      }
+      return yes;
+    }
     bool abrupt_change() const    { return std::abs(difference()) > tolerance(); }
 
     //@}
@@ -203,12 +209,6 @@ class delay_buffer {
     typedef std::vector<int16_t> buffer_type;
 
     typedef buffer_type::iterator buf_iterator;
-    buffer_type::iterator output_begin_;
-    buffer_type::iterator output_end_;
-
-    //! Persistant state over multiple packets.
-    buffer_type buffer_;
-    bool ranged_output_;
 
     delay_buffer() : ranged_output_(false) {}
 
@@ -227,6 +227,7 @@ class delay_buffer {
     //! Set the range as outputable.  This is for the hack of flushing only part
     //! of the buffer.
     void output_range(buf_iterator start, buf_iterator end) {
+      trc("delay: output range " << &(*start)  << " - " << &(*end));
       output_begin_ = start;
       output_end_ = end;
       ranged_output_ = true;
@@ -242,8 +243,20 @@ class delay_buffer {
     buf_iterator begin() { return buffer().begin(); }
     buf_iterator end() { return buffer().end(); }
 
+    //! get_packet needs these.  Without get_packet, they are redundant because
+    //! we can immediately flush the delay buffer at flush_*() rather than at
+    //! the buffer_state#commit().
     buf_iterator output_begin() { return (ranged_output_) ? output_begin_ : begin(); }
     buf_iterator output_end() { return (ranged_output_) ? output_end_ : end(); }
+
+  private:
+    buffer_type::iterator output_begin_;
+    buffer_type::iterator output_end_;
+
+    //! Persistant state over multiple packets.
+    buffer_type buffer_;
+    bool ranged_output_;
+
 };
 
 //! This class is a hack to allow get_packet to be able to access the sample
@@ -280,6 +293,7 @@ class sample_buffer {
 
     //! Set the range to be outputted.
     void output_range(sample_type *begin, sample_type *end) {
+      trc("samples: output range " << (void*) begin  << " - " << (void*) end);
       output_begin_ = begin;
       output_end_ = end;
     }
@@ -365,18 +379,23 @@ class buffer_state {
           //   samples.begin()..samples.begin()+partiion )
           // - copy the remainder of the flushed packet into a newly allocated
           //   one.
+
+          trc("flushing before " << partition_ << "; delaying after");
           delay_.output_range(delay_.begin(), delay_.end());
           delay_.append(samples_.begin() + partition_, samples_.end());
           samples_.output_range(samples_.begin(), samples_.begin() + partition_);
           break;
         case op_flush:
+          trc("flush the entire buffer");
           samples_.output_range(samples_.begin(), samples_.begin() + partition_);
           break;
         case op_delay:
+          trc("delay entire buffer");
           delay_.append(samples_.begin(),  samples_.end());
           samples_.output_range(samples_.end(), samples_.end());
           break;
         case op_drop:
+          trc("drop everything before " << partition_ << "; flushing after");
           delay_.drop();
           samples_.output_range(samples_.begin() + partition_, samples_.end());
           break;
@@ -438,8 +457,17 @@ delay_buffer delays;
 sample_buffer samples;
 algorithm_state algo;
 
+// NOTE:
+//   Expected drop point at start should be 4514.
+
+// for debugging, keep track of our position in the original stream.
+std::size_t audio_offset = 0;
+
 void degapifier::degapify(ffmpeg::decoded_audio &aud) {
-  samples.reset((int16_t*) aud.samples(), aud.samples_size() / sizeof(int16_t));
+  // isn't there a way to get this?  I'm sure there is...
+  trc(" * degapify from audio offset: " << audio_offset);
+  aud.dump(std::cout);
+  samples.reset((int16_t*) aud.samples_begin(), aud.samples_size() / sizeof(int16_t));
 
   iteration_state iteration(samples, num_samples);
 
@@ -451,6 +479,15 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
 
   buffer_state buffer(delays, samples, num_samples);
 
+  wmassert(in_range.end() xor in_range.start(), "start range and end range should not overlap");
+
+  if (in_range.end()) {
+    trc("Packet is in the end range.");
+  }
+  else if (in_range.start()) {
+    trc("Packet is in the start range.");
+  }
+
   while (iteration.period_begin() != iteration.period_end()) {
     // TODO:
     //   I think this would be more simple if the case statement was the top level,
@@ -458,11 +495,16 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
     //
     //   This needs to be checked now we changed the whole buffer handling stuff.
 
+
+    // TODO:
+    //   What do we do if we get here and we haven't finished doing
+    //   inrange.start() ?
     if (in_range.end()) {
       calc.new_average(iteration.period_begin(), iteration.period_end());
       switch (algo.state) {
         // First go is a noop because we must have two averages.
         case finished:
+          // fallthrough
         case disable:
           algo.state = first;
           break;
@@ -503,6 +545,7 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
             // TODO: we should use the calculator to find the optimal drop point.
             buffer.drop_before(iteration.index());
             algo.state = finished;
+            goto finish;
           }
           else {
             // Noop.  Samples are expected to be delayed unless we say otherwise.
@@ -523,14 +566,19 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
       }
 
       // don't iterate - head for the commit.
-      break;
+      goto finish;
     }
 
     iteration.next();
   }
 
+finish:
+  audio_offset += aud.samples_size();
   // Set stuff up for get_packet.
   buffer.commit();
+
+  assert((delays.output_end() - delays.output_begin()) % sizeof(int16_t) == 0);
+  assert((samples.output_end() - samples.output_begin()) % sizeof(int16_t) == 0);
 }
 
 typedef enum {part_none, part_delays, part_samples} part_type;
@@ -553,6 +601,7 @@ struct get_packet_state {
 get_packet_state gps;
 
 void *degapifier::get_packet() {
+  trc("get packets");
   // We always either delay the entire buffer, drop some stuff, or flush the
   // output_* range.  In the first case, the output_* range is zero so we
   // never get here; in the second, the delays output range is always zero;
@@ -564,14 +613,25 @@ void *degapifier::get_packet() {
   // Note also: these invariants may change over time, and that's why the
   // get_packet() method is shite compared to the packet-push method :)
 
+  assert(samples.output_begin() <= samples.output_end());
+  assert(delays.output_begin() <= delays.output_end());
+
+  assert(state_.size() % sizeof(int16_t) == 0);
+  assert(state_.index() % sizeof(int16_t) == 0);
+
   if (samples.output_begin() == samples.output_end()) {
+    trc("no packets to get");
     gps.part = part_none;
     return NULL;
   }
   else {
-    std::size_t max_bytes, appended_bytes;
+    std::ptrdiff_t max_bytes;
+    std::size_t appended_bytes;
     switch (gps.part) {
       case part_none:
+        trc("begin getting:");
+        trc("  delays = " << (void*) &(*delays.output_begin()) << ".." << (void*) &(*delays.output_end()));
+        trc("  samples = " << (void*) &(*samples.output_begin()) << ".." << (void*) &(*samples.output_end()));
         gps.dptr = delays.output_begin();
         gps.part = part_delays;
         gps.sptr = samples.output_begin();
@@ -581,7 +641,10 @@ void *degapifier::get_packet() {
         // gps.dptr = state_.fill(gps.dptr, delays.output_end());
         max_bytes = delays.output_end() - gps.dptr;
         appended_bytes = state_.append_max(&(*gps.dptr), max_bytes);
-        assert(appended_bytes % sizeof(int16_t) == 0);
+        trc("packet index: " << state_.index() << " / " << state_.size());
+        trc("from delays append " << appended_bytes << " / " << max_bytes);
+        assert(max_bytes % sizeof(int16_t) == 0);
+        wmassert_eq(appended_bytes % sizeof(int16_t), 0, "samples should not be cut into bits");
         gps.dptr += appended_bytes / sizeof(int16_t);
 
         if (gps.dptr == delays.output_end()) {
@@ -598,7 +661,9 @@ void *degapifier::get_packet() {
       case part_samples:
         max_bytes = samples.output_end() - gps.sptr;
         appended_bytes = state_.append_max(gps.sptr, max_bytes);
-        assert(appended_bytes % sizeof(int16_t) == 0);
+        wmassert_eq(appended_bytes % sizeof(int16_t), 0, "samples should not be cut into bits");
+        trc("from samples append " << appended_bytes << " / " << max_bytes);
+        assert(max_bytes % sizeof(int16_t) == 0);
         gps.sptr += appended_bytes / sizeof(int16_t);
 
         if (gps.sptr == samples.output_end()) {
@@ -614,6 +679,7 @@ void *degapifier::get_packet() {
         throw std::logic_error("what the fuck");
     }
   }
+  gps.part = part_none;
   return NULL;
 }
 

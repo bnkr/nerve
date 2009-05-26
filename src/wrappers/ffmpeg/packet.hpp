@@ -29,6 +29,8 @@ class packet {
 
     //! \name Constructors/destructors
     //@{
+
+    //! Free the packet.
     ~packet() { av_free_packet(&packet_); }
     //@}
 

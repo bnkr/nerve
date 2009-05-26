@@ -8,11 +8,14 @@
 
 namespace ffmpeg {
 
-//! \ingroup grp_ffmpeg
-//! Wrapper for AVFormatContext, involving all the opening/closing etc..
-//!
-//! See:
-//! - http://cekirdek.pardus.org.tr/~ismail/ffmpeg-docs/structAVFormatContext.html
+/*!
+\ingroup grp_ffmpeg
+
+Wrapper for AVFormatContext, involving all the opening/closing etc..
+
+See:
+- http://cekirdek.pardus.org.tr/~ismail/ffmpeg-docs/structAVFormatContext.html
+*/
 class file {
   public:
     //! \name Constructors/Destructors
@@ -98,9 +101,9 @@ class file {
     //@{
     //! \deprecated Use size()
     int64_t file_size() const FF_ATTRIBUTE_DEPRECATED { return size(); }
-    //! \deprected all AV* accessors start av_ now.
+    //! \deprecated all AV* accessors start av_ now.
     const AVFormatContext &format_context() const FF_ATTRIBUTE_DEPRECATED { return av_format_context(); }
-    //! \deprected all AV* accessors start av_ now.
+    //! \deprecated all AV* accessors start av_ now.
     AVFormatContext &format_context() FF_ATTRIBUTE_DEPRECATED { return av_format_context(); }
     //! \deprecated use dump()
     void dump_format(const char *) const FF_ATTRIBUTE_DEPRECATED { return dump(); }
