@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <cstdlib>
+#include <iostream>
 
 namespace ffmpeg {
 
@@ -25,7 +26,6 @@ class audio_decoder {
     explicit audio_decoder(ffmpeg::audio_stream &stream)
     : stream_(stream), buffer_size_(0) {
     }
-
 
     //! Decode a frame into this object's buffer.
     void decode(ffmpeg::packet &packet) {
@@ -149,14 +149,29 @@ class decoded_audio {
 
     //@}
 
+
+    //! \name Decoded samples
+    //@{
+    const uint8_t *samples_begin() const { return (uint8_t *) decoder_.samples(); }
+    const uint8_t *samples_end() const { return (uint8_t *) decoder_.samples() + samples_size(); }
+    uint8_t *samples_begin() { return (uint8_t *) decoder_.samples(); }
+    uint8_t *samples_end() { return (uint8_t *) decoder_.samples() + samples_size(); }
+    std::size_t samples_size() const { return decoder_.samples_size(); }
+
+    //@}
+
     //! \name Aliases into the decoder.
     //@{
 
-    // TODO: make this iterator style.
-    const uint8_t *samples() const { return (uint8_t *) decoder_.samples(); }
-    uint8_t *samples() { return (uint8_t *) decoder_.samples(); }
-    std::size_t samples_size() const { return decoder_.samples_size(); }
-    // TODO: accessor for sample size, signedness.
+    // TODO:
+    //   There are problems with the byte type.  We should make it void* if the
+    //   samples can be of a different size, otherwise int16_t.  The problem is
+    //   it't not quite clear whether there are allowed to be different sample
+    //   sizes in ffmpeg.
+    //
+    //   When I find out of course I should document it, probably on the main
+    //   page as a convention.  And have a global sample_type.  Otherwise, I
+    //   need an accessor here for the bytesize of each sample.
 
     //! codec_context(stream()).property() is a useful pattern.
     const ffmpeg::audio_stream &audio_stream() const { return decoder_.audio_stream(); }
@@ -165,6 +180,25 @@ class decoded_audio {
     const ffmpeg::file &file() const { return decoder_.file(); }
     ffmpeg::file &file() { return decoder_.file(); }
     //@}
+
+    const uint8_t *samples() const FF_ATTRIBUTE_DEPRECATED { return (uint8_t *) decoder_.samples(); }
+    uint8_t *samples() FF_ATTRIBUTE_DEPRECATED { return (uint8_t *) decoder_.samples(); }
+
+    //! Debugging function.  Prefix goes at the start of every line.
+    std::ostream &dump(std::ostream &out = std::cout, const char *prefix = "") {
+      const char *const p = prefix;
+      std::string indent(p);
+      indent += "  ";
+
+      out << p << "Packet:" << std::endl;
+      packet().dump(out, indent.c_str());
+      out << p << "Times:" << std::endl;
+      out << indent << presentation_time().seconds() << " / " << file_duration().seconds() << std::endl;
+      out << p << "Decode:" << std::endl;
+      out << indent << (void*) samples_begin() << " - " << (void*) samples_end()
+        << " (" << samples_size() << " bytes)" << std::endl;
+      return out;
+    }
 
   private:
     ffmpeg::audio_decoder &decoder_;
