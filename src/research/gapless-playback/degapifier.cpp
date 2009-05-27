@@ -67,7 +67,10 @@ Style and general enhancments.
 class range_calculator {
   public:
     range_calculator(const ffmpeg::scaled_time &max_time, const ffmpeg::scaled_time &time)
-    : time_(time), max_stream_time_(max_time) {}
+    : time_(time), max_stream_time_(max_time) {
+      uint32_t samps = (uint32_t) (44100 * activation_seconds());
+      trc("period is " << activation_seconds() << "s which is " << samps << " samples (for 44.1khz rate).");
+    }
 
     double activation_seconds() const {
       return 0.1;
@@ -108,7 +111,7 @@ class sample_calculator {
 
     double tolerance() const {
       // a 50% change is abrupt...
-      return std::numeric_limits<int16_t>::max() * 0.3;
+      return std::numeric_limits<int16_t>::max() * 0.5;
     }
 
     double difference() const { return difference_; }
@@ -121,14 +124,26 @@ class sample_calculator {
     typedef sample_type* drop_point_type;
 
     //! Calculation method.
+    //TODO:
+    //  When we cross a packet boundary, this should not compute the average.
+    //  We should delay the packet and recompute starting on that delayed
+    //  packet.  This is a really hard thing to do, but it has to be done anyway
+    //  because the drop point could well be in a previous packet.
     void new_average(sample_type *samples, sample_type *max) {
       last_average_ = average_;
       sample_type *samples_end = std::max(max, samples + num_samples());
-      average_ = compute_average(samples, samples_end);
-      // this is wrong: it should be the data point in the last_average_
+      // abs() because we only care about *amplitude*, not frequency.  -n is
+      // equivilent to n.
+      average_ = std::abs(compute_average(samples, samples_end));
+      assert(average_ <= (double) std::numeric_limits<int16_t>::max());
+      assert(average_ >= (double) 0); //-std::numeric_limits<int16_t>::max());
+
       last_drop_point_ = drop_point_;
       drop_point_ = calculate_drop_point(samples, samples_end);
-      difference_ = average_ - last_average_;
+
+      difference_ = last_average_ - average_;
+
+      assert((last_average_ > average_ && difference_ > 0) || (last_average_ <= average_ && difference_ <= 0));
     }
 
     double compute_average(sample_type *begin, sample_type *end) const {
@@ -167,6 +182,8 @@ class sample_calculator {
     }
 
     //! Best point in the group of averages to drop at.
+    //TODO:
+    //  What if the last_average is in another packet?
     drop_point_type drop_point() const { return last_drop_point_; }
 
     //! \name Tests
@@ -176,7 +193,10 @@ class sample_calculator {
     bool abrupt_loudness() const  {
       bool yes = difference() > tolerance();
       if (yes) {
-        trc("abrupt loudness detected: " << last_average_ << " vs. " << average_);
+        uint16_t la = ((int16_t) last_average_) & 0xFFFF,
+                 a = ((int16_t) average_) & 0xFFFF;
+        trc("abrupt loudness detected: " << last_average_ << " vs. " << average_ << " => "
+            << std::hex << la << " vs. " << a << std::dec);
       }
       return yes;
     }
@@ -488,6 +508,7 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
     trc("Packet is in the start range.");
   }
 
+  std::size_t num_iterations = 0;
   while (iteration.period_begin() != iteration.period_end()) {
     // TODO:
     //   I think this would be more simple if the case statement was the top level,
@@ -538,11 +559,21 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
           algo.state = main;
           break;
         case finished:
-          break;
+          // keep flushing everything until teh range expires
+          // TODO:
+          //   there must be a quicker way to do this?  Perhaps not if we ever
+          //   get round to calculating the range based on bytes, not entire
+          //   packets.
+          trc("we already reached the drop point: flush everything and end the algorithm");
+          buffer.flush_all();
+          goto finish;
         default:
           // If there is never any abrupt loudness, we time out eventually.
           if (calc.abrupt_loudness()) {
-            // TODO: we should use the calculator to find the optimal drop point.
+            trc("found the start of the real audio: drop and finish the algorithm");
+            // TODO:
+            //   we *must* use the calculator to find the optimal drop point.
+            //   Otherwise the cut is in some totally random place.
             buffer.drop_before(iteration.index());
             algo.state = finished;
             goto finish;
@@ -555,24 +586,20 @@ void degapifier::degapify(ffmpeg::decoded_audio &aud) {
     else {
       // range expired.
       if (algo.state != disable) {
-        buffer.flush_all();
         algo.state = disable;
       }
-      else {
-        // TODO:
-        //   needs a better name.  This causes a verbatim output of the
-        //   entire samples buffer.
-        buffer.noop();
-      }
+      buffer.flush_all();
 
       // don't iterate - head for the commit.
       goto finish;
     }
 
     iteration.next();
+    ++num_iterations;
   }
 
 finish:
+  trc("Finish algorithm: did " << num_iterations << " complete iterations.");
   audio_offset += aud.samples_size();
   // Set stuff up for get_packet.
   buffer.commit();
