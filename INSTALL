@@ -1,42 +1,53 @@
-=== CMake Build Tutorial ===
+CMake Build Tutorial
+====================
 
-This file is a simple tutorial for building with cmake, and also an indicator of
-the conventions used in my cmake projects.  It is aimed as a quick way to get
-you familiar with cmake and provide some of the requisite knowledge to fix any
-problems which might arise.  I mention autotools as a comparison, but knowledge
+Introduction
+------------
+
+This file is a simple tutorial for building with CMake, and also an indicator of
+the conventions used in my CMake projects.  It is aimed as a quick way to get
+you familiar with CMake and provide some of the requisite knowledge to fix any
+problems which might arise.  I mention Autotools as a comparison, but knowledge
 of it is not expected.
 
-== Contents ==
+This file is written in asciidoc markup.  You can find a generator to write
+various flavours of output at http://www.methods.co.nz/asciidoc/.
 
- 1. Pre-Build
+Summary
+-------
+
+1.  *Introduction*
+2.  *Summary*
+3.  *Pre-Build*:
     Prerequisites and requirements information.
- 2. Initialisation
+4.  *Initialisation*:
     Initialising the environment.
- 3. Configuration
+5.  *Configuration*:
     General information on compile-time configuration.
- 4. Configuring Features
+6.  *Configuring Features*:
     Configuring what is built and what is not.
- 5. Configuring Dependencies
+7.  *Configuring Dependencies*:
     Setting library and program locations.
- 6. Fixing Configuration Problems
+8.  *Fixing Configuration Problems*:
     What to do when it breaks.
- 7. Building
+9.  *Building*:
     Building executables and anything else which the build system does.
- 8. Installing
+10. *Installing*:
     Standard installation targets and some CPack information (for .deb etc.)
- 9. Changing the Toolchain
+11. *Changing the Toolchain*:
     Build with a different compiler, linker etc., in particular for cross-
     compiling.
-11. Package Layout
+12. *Package Layout*:
     Specific information about the layout conventions used in my packages.
-12. Distributors
+13. *Distributors*:
     Hints for distributors.
-13. Generic Help
+14. *Generic Help*:
     Generic CMake help resources and information.
 
-== Pre-Build ==
+Pre-Build
+---------
 
-Unlike autotools, CMake is principally designed for out-of-source builds.  In
+Unlike Autotools, CMake is principally designed for out-of-source builds.  In
 fact you will often find that in-source builds will not work as expected.
 Therefore: pick a directory anywhere outside the source directory or in a new
 subdirectory of the source directory.  We will call this the binary directory.
@@ -49,11 +60,12 @@ You will need to know:
 - what compile toolchain you are using if it is different from what can be
   found in your path.
 
-== Initialisation ==
+Initialisation
+--------------
 
 Now you are ready to generate the build system.
 
-CMake is a `lazy' build system.  It outputs files which are used by some other
+CMake is a ``lazy'' build system.  It outputs files which are used by some other
 program to actually build the program.  The generator is the program which will
 be used, for example "Unix Makefiles".  The available generators vary depending
 on the installed build of CMake.
@@ -62,109 +74,141 @@ In your binary directory, run the following command:
 
   cmake -G "Your generator" $OPTIONS path/to/src
 
-The $OPTIONS should be replaced with CMake cache variable definitions which
-shall be explained in "Configuration".
+The +$OPTIONS+ should be replaced with CMake cache variable definitions which
+shall be explained in ``Configuration''.
 
 IMPORTANT: you *must* set your compiler toolchain cache variables in this step
 because CMake will ignore any changes you make later.  See the section
-"Changing the Toolchain".  If you do not set the toolchain then CMake will
+``Changing the Toolchain''.  If you do not set the toolchain then CMake will
 detect one.  This is normally what you want unless you are cross-compiling.
+
+Note that a separate binary directory is assumed by my builds.  In-source builds
+might not work at all; in particular you should be aware that the build system
+will delete certain directories on a `make clean` and it is not ensured that the
+build system is the one that actually created them.
 
 You can also use the CMake GUI to perform this step; just fill in the boxes as
 labelled.
 
-Be aware that cmake doesn't stop immediately if there are errors, so make sure
+Be aware that CMake doesn't stop immediately if there are errors, so make sure
 to scroll up to see any errors.
 
-== Configuration ==
+Configuration
+-------------
 
-Again unlike autotools, there is no ./configure script.  Instead either the
-cmake with -D options is used, ccmake curses GUI, or CMakeSetup.exe on win32.
-Usage should be obvious, and descriptions of the variables are available in
-the status bar.  Of course if you know exactly what variables you need  to
+Again unlike Autotools, there is no ./configure script.  Instead either the
+`cmake` with +-D+ options is used, `ccmake` curses GUI, or CMakeSetup.exe on
+win32.  Usage should be obvious, and descriptions of the variables are available
+in the status bar.  Of course if you know exactly what variables you need  to
 define, then you can define them all in the initialisation step:
 
   cmake -G"Your generator" -DVAR=value path/to/src
 
-Note that the cmake binary can simply be used as a non-interactive variable
+Note that the `cmake` binary can simply be used as a non-interactive variable
 setter in an already-initialised binary directory:
 
   cmake -DVAR=VAL path/to/binary_dir_or_source_dir
 
-In the GUI programs, there is an `advanced mode' which is used for more
+In the GUI programs, there is an ``advanced mode'' which is used for more
 detailed customisation and/or fixing dependencies.  If all goes well, you
 should not need to use this feature.
 
-The only variable you *should* set is CMAKE_BUILD_TYPE.  This controls which
+The only variable you *should* set is +CMAKE_BUILD_TYPE+.  This controls which
 compile flags and configurations are built.  You almost certainly want
-'Release' or 'RelWithDebInfo' unless you are hacking on the project, in which
-case choose 'Debug'.  Note that there is currently no way to build binaries
++Release+ or +RelWithDebInfo+ unless you are hacking on the project, in which
+case choose +Debug+.  Note that there is currently no way to build binaries
 with and without debug flags at the same time since output names for both
 configurations are the same.
 
+Another important variable is +CMAKE_INSTALL_PREFIX+, which defaults to
++/usr/local+.
+
 If you wish to customise compile flags --- for example to add a new directory
-to the include path --- then set the variables CMAKE_<thing>_FLAGS_<config>
-where <thing> is one of:
+to the include path --- then set the variables +CMAKE_$thing_FLAGS_$config+
+where '$thing' is one of:
 
-- "C" - flags for C compiles.
-- "CXX" - flags for C++ compiles.
-- "EXE_LINKER" - flags for linking executables.
-- "SHARED_LINKER" - flags for generating .so, .dll etc.
-- "MODULE_LINKER" - for building mac os modules.
+- +C+ - flags for C compiles.
+- +CXX+ - flags for C++ compiles.
+- +EXE_LINKER+ - flags for linking executables.
+- +SHARED_LINKER+ - flags for generating .so, .dll etc.
+- +MODULE_LINKER+ - for building Mac OS modules.
 
-<config> is the upper case version of the CMAKE_BUILD_TYPE you selected, for
-example use CMAKE_CXX_FLAGS_RELEASE for C++ flags when the CMAKE_BUILD_TYPE is
-'Release'.
+'$config' is the upper case version of the +CMAKE_BUILD_TYPE+ you selected, for
+example use +CMAKE_CXX_FLAGS_RELEASE+ for C++ flags when the +CMAKE_BUILD_TYPE+
+is +Release+.
 
-Note: when you have finished configuring with ccmake, remember to press `c' to
-commit those changes!
+The final caveat is that only one configuration can be built at a time.
+Therefore, if you need +RelWithDebInfo+ libraries and Release libraries, then
+you must generate two bindirs.  (This is actually not such a big deal - if there
+are different FLAGS then the targets must be built twice anyway).
 
-== Configuring Features ==
+Note: when you have finished configuring with `ccmake`, remember to press ``c''
+to commit those changes!
 
-In my projects, I always use WANT_x variables for boolean variables which
-take the role of autotools' --enable-x and some of --with-x.  Expanded
-configuration variables which affect the behaviour of the WANT are usually
-prefixed by the name of the want.  For example, for WANT_DOCS, there may be a
-DOCS_GENERATOR string.
+Configuring Features
+--------------------
 
-On rare occasions, enabling a WANT might cause further dependencies to be
-activated.  It is therefore advisable to configure the WANTs before setting
+In my projects, I always use 'WANT_x' variables for boolean variables which take
+the role of Autotools' --enable-x and some of --with-x.  Expanded configuration
+variables which affect the behaviour of the 'WANT' are usually prefixed by the
+name of the want.  For example, for +WANT_DOCS+, there may be a +DOCS_GENERATOR+
+string.
+
+Note: in the future I will replace the 'WANT_' prefix with the uppercase name of
+the project.  This means that non-boolean variables can share a namespace which
+the CMake GUI will helpfully give you a tree for (e.g. +PROJ_DOCS+, and
++PROJ_DOCS_GENERATOR+.)  It is likely that some 'WANT_s' will remain for some
+time, however
+
+Documentation options usually have '*_INSTALL' and '*_REBUILD' variants, for
+example +WANT_API_DOCBOOK_INSTALL+.  The presence of the +REBUILD+ option
+indicates that there are pre-build docs.  This will always reside somewhere in
+the +doc/+ tree.  For documentation targets without +REBUILD+ options, and
++INSTALL+ implies a rebuild.
+
+On rare occasions, enabling a 'WANT' might cause further dependencies to be
+activated.  It is therefore advisable to configure the 'WANTs' before setting
 the location of dependencies.
 
-There are usually some WANT variables in the `advanced' mode.  Obviously these
-are not worth touching unless you really need advanced customisation.
+There are usually some 'WANT' variables in the ``advanced'' mode.  Obviously
+these are not worth touching unless you really need advanced customisation.
 
-== Configuring Dependencies ==
+Configuring Dependencies
+------------------------
 
 During configuration, the build system will search for headers, programs,
 libraries and compiler features.  This is all automated in CMake but can be
 overridden by the user defining variables.  These are nearly always advanced
 variables.
 
-In general I do not disable features by detecting dependencies however
-sometimes I might use a fall-back case for something internal to the build
-system.  For example, when building doxygen I will use the standard latex
-compiler if pdflatex is not found.  In such cases, there should be a status
-message.  When overriding something which was selected by the user, there
-will be an error message but the build will continue.
+In general I do not disable features by detecting dependencies however sometimes
+I might use a fall-back case for something internal to the build system.  For
+example, when building doxygen I will use the standard latex compiler if
+`pdflatex` is not found.  In such cases, there should be a status message.  When
+overriding something which was selected by the user there will be an message on
+stderr, but the build will continue.  I avoid the second case.
 
 For libraries and programs CMake will attempt to generate a target with the
-missing dependency and will fail to configure.  For headers, there will be
-a compile error.
+missing dependency and will fail to configure.  For headers, there will be a
+compile error.
 
-I always use cache variables *_EXE for programs, *_LIB for libraries and HAVE_*
-for headers however CMake itself sometimes uses other naming schemes.
+I always use cache variables suffixed +EXE+ for programs, +LIB+ for libraries
+and prefixed +HAVE+ for headers.  I do not often check for headers.  CMake
+itself sometimes adds dependencies and will use its own conventions.  Typically
+CMake's convention is to use +LIBRARY+ and +EXECUTABLE+ suffixes.  This varies
+with older CMake modules.
 
-== Fixing Configuration Problems ==
+Fixing Configuration Problems
+-----------------------------
 
 For a simple form of introspection, run the following commands:
 
   cmake -LH path/to/bindir
   cmake -LAH path/to/bindir
 
-These will list the existing variables.  -H means print the help text for each
-variable, and -A means also print `advanced' variables.  Note that some
-variables are automatically set up by cmake so they only have a generic
+These will list the existing variables.  +-H+ means print the help text for each
+variable, and +-A+ means also print advanced variables.  Note that some
+variables are automatically set up by CMake so they only have a generic
 description.
 
 If some things are missing, in the build (headers, binaries, libraries...) then
@@ -174,23 +218,26 @@ try this command:
     | grep -B 1 "\(=$\|NOTFOUND\)"
 
 The second grep restricts the output to only missing variables.  Note that the
-first grep relies on my own conventions.  All my dependencies are in x_LIB or
-x_EXE or HAVE_x (for headers).
+first grep relies on my own conventions.
 
-In the case of HAVE_x values, it will either require an addition to the *FLAGS
-variables to add an include directory, or to patch the source file which looks
-for the missing header.
+In the case of +HAVE_x+ values, it will either require an addition to the
+'*FLAGS' variables to add an include directory, or to patch the source file
+which looks for the missing header.
 
-If you would like to see what is going on internally, grep the build scripts 
-for 'option(' for the boolean WANTs and 'CACHE' for the string-like variables.
+If you would like to see what is going on internally, grep the build scripts for
++option(+ for the boolean 'WANTs' and +CACHE+ for the string-like variables.
 
 CMake simply initialises a cache when you first run it; the variables are set
-and then are never changed unless the user says so.  Therefore, if you upgrade
-a library after making the cache, the old library will still be used.  CMake
-provides a `rebuild_cache' target to check everything again, or of course the
-brute force way is simply to delete the binary directory and start again.
+and then are never changed unless the user says so.  Therefore, if you upgrade a
+library after making the cache, the old library will still be used.  The same is
+true of some methods of dependency checking, so if some files have moved around
+the cache may be invalid (sorry, this is just how the glob function works in
+CMake).  CMake provides a +rebuild_cache+ target to check everything again, or
+of course the brute force way is simply to delete the binary directory and start
+again.
 
-== Building ==
+Building
+--------
 
 As mentioned before, use the generator you selected to build the project.  The
 makefile generator provides the standard targets:
@@ -198,24 +245,33 @@ makefile generator provides the standard targets:
   make all
   make install
 
-Note that sometimes install targets do not recognise build dependencies
-correctly so it is usually necessary to run make all before make install.
+Note that sometimes +install+ targets do not recognise build dependencies
+correctly so it is usually necessary to run `make all` before `make install`,
+however `make all` will always make enough targets to ensure a successful
+install except in the case of my old-style doxygen generation library where it
+is possible to configure it to install and not rebuild while there are no
+pre-build docs.  In this case, a nice big warning message is printed in the
+configuration step.  I will remove this library in future builds.
 
 Also note that there can be other targets added, and information about these
-is typically printed during the initial configure step.
+is typically printed during the initial configure step, especially when the
+build type is +Debug+.
 
-== Installing ==
+If there are special instructions, then they will be in the README.
 
-There are two methods of installation: cpack and the generator.  The generator
-uses the standard way of installing, for example `make install'.  CPack is more
+Installing
+----------
+
+There are two methods of installation: CPack and the generator.  The generator
+uses the standard way of installing, for example `make install`.  CPack is more
 advanced and can produce binary packages (also via the generator).  The packages
-are built using the generator target `package' and are activated based on the
-variables CPACK_<BINARY|SOURCE>_<type>.
+are built using the generator target +package+ and are activated based on the
+variables +CPACK_<BINARY|SOURCE>_<type>+.
 
-Using `make package_source' for a source tarball is also available, but this is
-a poor substitute for autotools' make distcheck and is not recommended unless
+Using `make package_source` for a source tarball is also available, but this is
+a poor substitute for Autotools' make distcheck and is not recommended unless
 you heavily script it; for example, it will simply tar the entire source
-directory, which necessitates that you somehow create a `clean' source tree to
+directory, which necessitates that you somehow create a clean source tree to
 make the package.
 
 See here for more:
@@ -226,42 +282,57 @@ Note that while generating .deb is supported by the build system (including
 automatically finding dependencies), the package is usually not suitable for
 general distribution.
 
-You might also want to look into using the program `checkinstall', which will
-turn an install script like `make install' into a deb or rpm.
+Also, note that while there is good +DESTDIR+ support from the makefile, this is
+for debugging and the program is expected to use the +INSTALL_PREFIX+ CMake var.
 
-== Changing the Toolchain ==
+You might also want to look into using the program `checkinstall`, which will
+turn an install script like `make install` into a deb or rpm.
 
-The preferred method of changing the toolchain is to use cmake's cross-compiling
+I only write trivial installs of built material.  If there is some special
+post-install step, then there will be details in the README.
+
+CMake does not supply an uninstall target, however for my builds the following
+command will suffice:
+
+  xargs install_manifest.txt rm
+
++install_manifest.txt+ is produced by the `make install` target and is part of
+CMake.
+
+Changing the Toolchain
+----------------------
+
+The preferred method of changing the toolchain is to use CMake's cross-compiling
 features.  All my projects which run on multiple platforms are designed to be
-cross-compiled and cmake makes this pretty easy.  You must define a toolchain
+cross-compiled and CMake makes this pretty easy.  You must define a toolchain
 file which explicitly sets the compiler and linker variables.  This is
-documented on the cmake wiki, here:
+documented on the CMake wiki, here:
 
   http://www.cmake.org/Wiki/CMake_Cross_Compiling
 
-You must *initialise* the cmake cache with:
+You must *initialise* the CMake cache with:
 
   cmake -DCMAKE_TOOLCHAIN_FILE=whatever path/to/srcdir/
 
-CMake's implementation prevents the compiler from being changed retroactively 
-at this time.
+CMake's implementation prevents the compiler from being changed retroactively at
+this time.
 
 Note that the toolchain file is just a collection of set() commands which
 overwrite the various variables.  Therefore you may also define locations of
-libraries and programs in this file, though it is not explicitly documented 
-that this is OK.  Some library parts of cmake which do not anticipate this 
-pattern might overwrite some variables, however it seems to be very rare.
-The toolchain file can be used as a persistent set of defaults for all your
-cmake builds in this way.
+libraries and programs in this file, though it is not explicitly documented that
+this is OK.  Some library parts of CMake which do not anticipate this pattern
+might overwrite some variables, however it seems to be very rare.  The toolchain
+file can be used as a persistent set of defaults for all your CMake builds in
+this way, but be aware that CMake can include the file multiple times.
 
 The following are relevant variables to set:
 
-- CMAKE_SYSTEM_NAME - must be what CMake would have selected on the target
+- +CMAKE_SYSTEM_NAME+ - must be what CMake would have selected on the target
   system.
-- CMAKE_C_COMPILER, CMAKE_CXX_COMPILER
-- CMAKE_FIND_ROOT_PATH - list of paths to search in.  This path acts as a
-  prefix to the standard paths to it *must* have the standard layout of bin/,
-  include/, lib/, etc. if anything is to be found.
+- +CMAKE_C_COMPILER+, +CMAKE_CXX_COMPILER+
+- +CMAKE_FIND_ROOT_PATH+ - list of paths to search in.  This path acts as a prefix
+  to the standard paths to it *must* have the standard layout of bin/, include/,
+  lib/, etc. if anything is to be found.
 
   Example:
 
@@ -270,11 +341,13 @@ The following are relevant variables to set:
       "/home/me/cross/win"
     )
 
-- CMAKE_FIND_ROOT_PATH_MODE_<thing> where <thing> is one of PROGRAM, LIBRARY,
-  or INCLUDE.  Set to ONLY, NEVER, or BOTH to search for <thing> using the
-  CMAKE_FIND_ROOT_PATH list, the host environment, or both respectively.
+- +CMAKE_FIND_ROOT_PATH_MODE_<thing>+ where '<thing>' is one of +PROGRAM+,
+  +LIBRARY+, or +INCLUDE+.  Set to +ONLY+, +NEVER+, or +BOTH+ to search for
+  '<thing>' using the +CMAKE_FIND_ROOT_PATH+ list, the host environment, or both
+  respectively.
 
-== Package Layout ==
+Package Layout
+--------------
 
 Just in case things go really badly :)
 
@@ -303,8 +376,8 @@ Just in case things go really badly :)
 - build-aux/ - things strictly used for building and testing.
 - build-aux/description.txt - general description of the package.
 - include/ - mirror of the main include directory which we will install.
-- external/ - bundled libraries.  Usually there are just some more include/ 
-  dirs in here.
+- dist/ - bundled libraries.  Usually there are just some more include/ dirs in
+  here.
 - test/ - unit tests.  There's usually a README to explain these.
 
 In the binary directory:
@@ -316,7 +389,8 @@ In the binary directory:
 - doxygen/ - usually the name I give for generated documentation when making a
   source package, this output is used directly for srcdir/doc/.
 
-== Distributing ==
+Distributing
+------------
 
 My build system is weighted towards making it easy to compile rather than easy 
 to distribute, so here are some hints to help:
@@ -324,28 +398,33 @@ to distribute, so here are some hints to help:
 - the main license is always in COPYING, but some files have additional info.
 - I pre-process man pages quite often.
 - setting build type to Debug will spew lots of status messages from my build
-  scripts.
+  scripts.  There are also variables which you can define in the CMakeLists.txt
+  files to get a vast amount of output.  grep for *_DEBUG_OUTPUT, or look for a
+  call to bsetup_init() and add the EXTRA_DEBUGGING argument.
 - you do not need to clean the build system when building multiple
-  configurations (except when changing the compiler) so you can save some time 
+  configurations (except when changing the compiler) so you can save some time
   if you are making a split package.
 - doxygen is built with virtually everything turned on (I am a glutton for
   pretty pictures ^^) . You might want to make a different doxyfile.  HAVE_DOT
   is a good one to turn off.
-- using `make package' will be hard work, sorry :)
+- using `make package` will be hard work, sorry :)
 
 == Generic Help ==
 
 The following links provide a more general view of CMake.
 
-  http://www.cmake.org/cmake/help/runningcmake.html - simple intro.
-  http://www.cmake.org/cmake/help/cmake2.6docs.html - cmake language docs;
-    mostly for developers but it could help if something breaks.
-  http://www.cmake.org/Wiki/CMake - cmake wiki.
-  http://www.cmake.org/ - official site.
+* http://www.cmake.org/cmake/help/runningcmake.html -
+  Simple intro.
+* http://www.cmake.org/cmake/help/cmake2.6docs.html -
+  CMake language docs; mostly for developers but it could help if something breaks.
+* http://www.cmake.org/Wiki/CMake -
+  CMake wiki.
+* http://www.cmake.org/ - 
+  official site.
 
 For implementation details, check:
 
   cmake --help-<thing> <arg>
 
-Where <thing> is one of command, property, module, policy, or variable.  This
+Where '<thing>' is one of command, property, module, policy, or variable.  This
 is purely for CMake, not the project.

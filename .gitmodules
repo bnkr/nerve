@@ -1,0 +1,3 @@
+[submodule "build-aux/bcmake"]
+	path = build-aux/bcmake
+	url = /home/bunker/src/_git-submodules/bcmake-src.git/

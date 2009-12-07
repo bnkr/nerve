@@ -4,15 +4,16 @@
 cmake_minimum_required(VERSION 2.6)
 # For ease of use later
 set(PROJECT_NAME nerve)
-set(PROJECT_VERSION "0.0")
+set(PROJECT_VERSION "0.0.0")
 project(${PROJECT_NAME})
 
-include("build-aux/doxygen.cmake")
-include("build-aux/manpage.cmake")
-include("build-aux/btest.cmake")
-include("build-aux/butil.cmake")
+set(BCMAKE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/build-aux/bcmake/include")
+set(BCMAKE_SCRIPT_DIR "${CMAKE_SOURCE_DIR}/build-aux/bcmake/aux")
+include("${BCMAKE_INCLUDE_DIR}/bcmake.cmake")
+include("${BCMAKE_INCLUDE_DIR}/bdoc.cmake")
+include("${BCMAKE_INCLUDE_DIR}/doxygen.cmake")
 
-butil_standard_setup()
+bsetup_init(NO_OBSOLETE_OPTIONS)
 
 #######################
 ## Check for headers ##
@@ -197,7 +198,7 @@ add_doxygen(${ad_args})
 ## Installation ##
 ##################
 
-butil_auto_install(
+bsetup_auto_install(
   RUNNABLES_VAR runnables
   RUNNABLES ${BIN_NERVED} "Nerve Daemon"
             ${BIN_NERVE}  "Nerve CLI Client"
@@ -213,11 +214,11 @@ butil_auto_install(
 ## CPack Stuff ##
 #################
 
-butil_cpack_setup(
-  DESCRIPTION "Nerve music daemon."
+bsetup_cpack(
+  TITLE       "Nerve"
   LONG_DESCRIPTION "A fast and simple client/server audio player."
   VENDOR      "bunker"
-  EMAIL       "bunker@bunkerprivate.com"
+  EMAIL       "bunkerprivate@googlemail.com"
   URL         "http://www.bunkerprivate.com/"
   BINARIES    ${stuff_to_strip}
   RUNNABLES   ${runnables}
