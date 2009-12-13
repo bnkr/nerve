@@ -57,21 +57,11 @@ lower than that by manually reading the packets from an ffmpeg::file.
 #ifndef FFMPEG_HPP_7awlau1z
 #define FFMPEG_HPP_7awlau1z
 
-// FFmpeg developers hate C++, and not without good reason!  But then I have
-// always been a masochist...
 extern "C" {
-#ifdef HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H
-#  include <ffmpeg/libavcodec/avcodec.h>
-// Assume this to get a easier to diagnose error message.
-#else /*if defined(HAVE_FFMPEG_AVCODEC_H)*/
-#  include <ffmpeg/avcodec.h>
-#endif
-
-#ifdef HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
-#  include <ffmpeg/libavformat/avformat.h>
-#else /*if defined(HAVE_FFMPEG_AVFORMAT_H)*/
-#  include <ffmpeg/avformat.h>
-#endif
+// These will probably be wrong, but they move around so much between versions
+// that it's better to organise it with -I flags (or at worse symlinks).
+#include <avcodec.h>
+#include <avformat.h>
 }
 
 #ifdef __GNUC__

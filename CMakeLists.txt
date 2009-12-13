@@ -19,21 +19,21 @@ bsetup_init(NO_OBSOLETE_OPTIONS)
 ## Check for headers ##
 #######################
 
-include(CheckFunctionExists)
-
-find_file(HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H   "ffmpeg/libavcodec/avcodec.h")
-find_file(HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H "ffmpeg/libavformat/avformat.h")
-find_file(HAVE_FFMPEG_AVCODEC_H  "ffmpeg/avcodec.h")
-find_file(HAVE_FFMPEG_AVFORMAT_H "ffmpeg/avformat.h")
-find_file(HAVE_SDL_H "SDL.h")
-
-mark_as_advanced(
-  HAVE_FFMPEG_LIBAVCODEC_AVCODEC_H
-  HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H
-  HAVE_FFMPEG_AVCODEC_H
-  HAVE_FFMPEG_AVFORMAT_H
-  HAVE_SDL_H
+# TODO:
+#   Pathetic way of searching for it -- where can I find a list of default
+#   include paths?
+find_path(
+  AVCODEC_PATH
+  NAMES "avcodec.h"
+  PATHS "/usr/include/ffmpeg/libavcodec" "/usr/include/ffmpeg" "/usr/include/libavcodec"
 )
+find_path(
+  AVFORMAT_PATH
+  NAMES "avformat.h"
+  PATHS "/usr/include/ffmpeg/libavformat" "/usr/include/ffmpeg" "/usr/include/libavformat"
+)
+
+include_directories(${AVCODEC_PATH} ${AVFORMAT_PATH})
 
 ####################
 ## Check for libs ##
@@ -85,15 +85,6 @@ endif()
 #############################################
 ## Configure things based on what we found ##
 #############################################
-
-# Guess ffmpeg's include path which is normally includeroot/ffmpeg.
-if (HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H)
-  get_filename_component(p ${HAVE_FFMPEG_LIBAVFORMAT_AVFORMAT_H} PATH)
-  get_filename_component(ff_inc_path ${p} PATH)
-else()
-  get_filename_component(ff_inc_path ${HAVE_FFMPEG_AVFORMAT_H} PATH)
-endif()
-include_directories("${ff_inc_path}")
 
 # config.hpps
 set(NERVED_CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
