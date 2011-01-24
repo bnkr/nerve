@@ -58,6 +58,14 @@ lower than that by manually reading the packets from an ffmpeg::file.
 #define FFMPEG_HPP_7awlau1z
 
 extern "C" {
+
+// ffnpeg can actually be configured to avoid using this, but the particular
+// headers I have don't.
+#ifndef INT64_C
+#define INT64_C(c) (c ## LL)
+#define UINT64_C(c) (c ## ULL)
+#endif
+
 // These will probably be wrong, but they move around so much between versions
 // that it's better to organise it with -I flags (or at worse symlinks).
 #include <avcodec.h>
