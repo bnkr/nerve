@@ -88,6 +88,20 @@ class server {
     : io_service_(io_service),
       acceptor_(io_service, stream_protocol::endpoint(file))
     {
+      async_accept();
+    }
+
+    void handle_accept(session_ptr new_session, const boost::system::error_code &error) {
+      if (! error) {
+        new_session->start();
+        async_accept();
+      }
+    }
+
+  protected:
+    //! Binds a session to its socket.  When the socket is connected to, the
+    //! session will be started by +handle_accept+.
+    void async_accept() {
       session_ptr new_session(new session(io_service_));
       acceptor_.async_accept(
         new_session->socket(),
@@ -96,16 +110,6 @@ class server {
           boost::asio::placeholders::error
         )
       );
-    }
-
-    void handle_accept(session_ptr new_session, const boost::system::error_code &error) {
-      if (! error) {
-        new_session->start();
-        new_session.reset(new session(io_service_));
-        acceptor_.async_accept(new_session->socket(),
-          boost::bind(&server::handle_accept, this, new_session,
-            boost::asio::placeholders::error));
-      }
     }
 
   private:
