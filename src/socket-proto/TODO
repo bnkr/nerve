@@ -1,0 +1,9 @@
+* timeouts
+* multicast (i.e send to all connections)
+  - how is the packet made atomic?
+  - how do we get the list of endpoints?  Or do we even need it?
+  - if we need to store a list of sesions, then how do we iterate the sessions
+    properly.  Perhaps we need to use an intrusive list and we remoev ourself
+    from the list of sessions on deletion.
+* actual protocol reading
+  - use ragel -- should work...
