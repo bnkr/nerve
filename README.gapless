@@ -1,0 +1,100 @@
+Gapless Playback
+================
+
+Introduction
+------------
+
+Gapless playback is something which is often asked for but not often understood.
+This small documentation should explain what is happening and hopefully offer
+some solutions to gappy play lists.
+
+What are the Gaps?
+------------------
+
+There are three types of gaps:
+
+1. reinitialising things (sound card, input library...).
+2. latency loading files.
+3. encoding artifacts.
+4. dramatic slience :)
+
+Re-initialising makes a gap simply due to the fact that it is often not possible
+to play output while loading the sound card.
+
+The second type is an issue of concurrency: a naive implementation would block
+on the file, meaning that no output can be written while reading the input.
+
+Encoding artifacts are gaps caused by the encoding process itself.  As far as I
+am aware *all* audio compressions will produce extraneous data like this but
+some formats have a way of telling a player how to get rid of it.  MP3 is the
+main culprit here because the official format does not have header data to say
+where these gaps are.  Additionally, ahem "obtained" MP3s -- and even some badly
+made ones from legal sources -- have been re-coded from other formats, and the
+error is compounded.
+
+The fourth kind is a gap which has been intentionally inserted into the music.
+This readme covers this kind because users often desire to remove it, however I
+consider the main goal to be to remove the erroneous gaps while preserving these
+intentional ones; this is the hard part!
+
+Basic Gap Removal
+-----------------
+
+Sound card initialisation is handled by nerve automatically because it buffers
+everything; in effect it concatenates the entire play list to a single stream so
+there is never a need to load a different sound card configuration so long as we
+can convert the input format into the output format (sample rate mostly
+relevant).  Sound cards with hardware mixing or sound drivers with software
+mixing and sample rate conversion make it possible to have multiple streams open
+with different formats  and then switch between them, but this is rather
+unreliable (especially on Linux) so, at the time of writing, I don't plan to
+implement it.
+
+File latency and blocking is handled by reading files asynchronous to the output
+(waiting for input data doesn't block writing output), buffering (if there is a
+spike in read time we still have plenty of data to use) and simply being quick
+about the file reading (although it can't be helped if the computer/disk is too
+slow).  Music decoding is generally I/O bound these days, but in fact nerve is
+mostly waiting for the buffer to be empty enough to read more data.
+
+These two "basic" kinds of gaps are dealt with by the majority of music players.
+
+Removing Encoding Artifacts
+---------------------------
+
+The best thing to do is set the extents field in your music files, but this is
+time-consuming and manual, and, at the time of writing, there isn't any program
+which implements the features necessary to do it.
+
+There is currently no general method for accurately removing error gaps while
+preserving intentional ones.  The main problem is that the gap is not just
+"silence", it is actually a kind of distorted copy of the actual output.  It is
+very difficult to detect what is gap and what isn't without accidentally
+removing things which are actually not gaps at all; in fact, intentionally added
+silence is usually just that -- silence -- so it can happen that gaps actually
+make it difficult to remove silence!
+
+The only usable method for degapifying is to have an amplitude and gap length
+threshold.  This basically just ignores everything before the first sample above
+the amplitude threshold but leaves the gap intact if there is no such sample.
+This can be enhanced by using other songs as context.
+
+In order to implement this as a plugin to an audio player, you need the ability
+to alter, delay, delete, and buffer each frame of the sound data as it is
+produced.  Further, it also will probably not be successful unless there is some
+minor per-song configuration.  Since nerved does not have these features --
+again at the time of writing -- I have not implemented automatic gap removal.
+
+Testing Nerve (or Other Players)
+--------------------------------
+
+A simple test of gapless handling can be performed:
+
+* convert any file to an uncompressed sample format (e.g .wav)
+* split it in half
+* play the two halfs in neve
+* there should be no gap whatsoever
+* convert both files to mp3 and play them
+* a gap magically appears!
+* try the same thing using lame mp3 encoding
+* no gap!
