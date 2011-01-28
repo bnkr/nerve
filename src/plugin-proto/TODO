@@ -1,0 +1,9 @@
+Arbitrary Threads
+-----------------
+
+We have been forced to solve the ability to put a plugin in any old thread.
+
+* write the create_plumbing thing
+* port the process_driver to be the stage_group_runner or whatever
+* implement the plugin wrappers as subclasses to +stage+
+* next design iteration :)
