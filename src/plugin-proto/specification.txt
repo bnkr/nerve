@@ -1,0 +1,138 @@
+Organisation
+------------
+
+The player is an ordered list of 'stages' which form a 'pipeline'.
+
+The 'pipeline' is also the order of inter-stage communication of 'packets'.
+'packets' are the data which is being processed.  'Events' are types of 'packet'
+on the 'pipeline'.
+
+Stages are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
+several 'stages' in order of processing into one monothreaded group.
+
+A 'stage sequence' performs blocking reads and writes of data using a 'pipes'.
+Each 'stage sequence' has two 'pipes' -- one for input and one for output --
+which form a 'junction'.
+
+A 'pipe' can either be a 'local pipe' which is not thread-safe and can only
+communicate within the 'stage sequence' or a 'thread pipe', which is thread
+safe and passes 'packets' on to a 'stage sequence' in another thread.
+
+[*note:* Beacuse 'stage sequences' are ordered, it is always the case that a
+'stage sequences's' output 'pipe' will always point to another thread (i.e be a
+'thread pipe').  That said, some 'stages' might need to alter 'local pipes'
+anyway for inter-stage communication outside of the 'pipeline' sequence.]
+
+A 'stage sequence' iterates its list of 'stages' and calls the processing method
+of the 'stage'.  The 'stage' itself will write its output to an 'outputter'.
+The 'outputter' abstracts the difference between a 'thread pipe' and a 'local
+pipe'.
+
+'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
+thread.  A 'job' can contain multiple 'stage sequences' [*note:* thus, a job can
+block multiple times].
+
+Input Stage
+-----------
+
+An 'input' is a kind of 'stage'.  The 'input' creates 'packets' from some kind
+of I/O.  There is only ever one 'input' stage, and it must start the 'pipeline'.
+
+The 'input' must handle several special 'events':
+
+* +pause+ means stop reading
+* +skip+ means move to a timestamp
+* +load+ means load a new file
+* +data+ means read more data
+
+[*note:* This does not necessarily mean that the stage itself will query the
+'packet' for event data.  It could be handled by the 'stage sequence' or the
+'terminators'.]
+
+The 'input stage' will translate these 'events' into ones needed for the
+'process stage' and dispatch them on the 'pipeline'.
+
+Process Stage
+-------------
+
+A 'process' is a kind of 'stage'.  A 'process' can delay, drop, create, or
+modify 'packets'.  'Processes' always come after the 'input'.
+
+The 'process stage' deals with the following 'events':
+
+* +abandon+ means that the current work must be discarded because the context is
+  changing (eg. song change).
+* +flush+ means that no further work will appear (for now).  Any partially
+  completed computation must be stopped and outputted (e.g playlist empty).
+* +data+ is normal data to be processed.
+
+The 'process' must propogate events to the next 'stage' in the 'stage sequence'
+(i.e pass it down the 'pipeline').  [*note:* this would not necessarily be
+done by a concrete stage object.]
+
+Output Stage
+------------
+
+An 'output' is a kind of 'stage'.  The 'output' writes its 'packets' to some
+sound hardware (or similar).  There is only ever one 'output' stage it is always
+after the 'processes'.  The 'output' deals with the same 'events' as a
+'process' including passing its data along to the next 'stage'.
+
+[*note:* outputs often involve their own asynchronus queue (i.e the SDL thread)
+which means the data would be shared with an observer.  This is OK because a)
+observers don't modify and b), output data would need to be chunked anyway.]
+
+The 'output' writes data to the 'input' to post 'events' which request more
+data.  [*note:* this communication could involve a 'pipe' of 'local' or 'thread'
+scope; therefore, it has the same constraints as a normal outputting of a
+'packet', but it does not necessarily need to use an identical method.]
+
+Observer Stage
+--------------
+
+An 'observer' is a kind of 'stage'.  It always comes after the 'output' stage.
+An 'observer' works like a 'process' and deals with the same 'events'.  An
+'observer' always propogates its 'packets' [*note*: this would not necessarily
+be done by a concrete implementation of an 'observer'; the predicate is intended
+to specify that there is no option to drop a 'packet'].
+
+Terminator Stages
+-----------------
+
+A 'start terminator' appears before the 'input' and an 'end terminator' after
+the final 'observer'.  The tasl of 'terminators' is to perform initialisation
+and destruction.  A 'terminator' will always be in the same 'stage sequence' as
+the first or last (where appropriate) 'stage' of the 'pipeline'.
+
+[*note:* the terminators are mainly intended to be conceptual, rather than
+concrete classes.  They might be functions of the stage sequence or of the
+individual stage.]
+
+The 'start terminator's' purpose is to convert 'packets' from a 'pipe' into
+'packets' on a 'local pipe'.  [*note:* this is necesary because the input must
+always read data from a 'pipe' (to get events from the socket server).  If the
+'input' and 'output' are in the same 'job', then there is a need to.]
+
+The 'end terminator's' purpose is to dispose of observer packets.
+
+Problems
+--------
+
+.where does the input stage block?
+
+* output, blocking limited by queue size
+  - hard to manage the total amount of data (sort of)
+  - poorer latency responding to file changes (but only if the next stage is
+    slow in reading)
+* input, waiting for player events
+  - might stave if there aren't enough "read some data" events; it's hard to
+    guarantee that the outputter is going to be good enough at that.
+  - we'd prolly have to block on the output as well
+  - it also means that if the output and the input are in the same job then we
+    need some way of converting multi-threaded read events (from the
+
+.what about reinitialising the output?
+
+* it's necessary if the sample rate changes
+* also it could be used to do crossfading, although that would be extremely
+  hard work
