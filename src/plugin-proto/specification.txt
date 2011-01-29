@@ -1,11 +1,14 @@
-Organisation
-------------
+The Pipelie
+-----------
 
 The player is an ordered list of 'stages' which form a 'pipeline'.
 
 The 'pipeline' is also the order of inter-stage communication of 'packets'.
 'packets' are the data which is being processed.  'Events' are types of 'packet'
 on the 'pipeline'.
+
+Stage Sequence
+--------------
 
 Stages are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
 several 'stages' in order of processing into one monothreaded group.
@@ -27,6 +30,9 @@ A 'stage sequence' iterates its list of 'stages' and calls the processing method
 of the 'stage'.  The 'stage' itself will write its output to an 'outputter'.
 The 'outputter' abstracts the difference between a 'thread pipe' and a 'local
 pipe'.
+
+Jobs
+----
 
 'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
 thread.  A 'job' can contain multiple 'stage sequences' [*note:* thus, a job can
@@ -75,8 +81,11 @@ Output Stage
 
 An 'output' is a kind of 'stage'.  The 'output' writes its 'packets' to some
 sound hardware (or similar).  There is only ever one 'output' stage it is always
-after the 'processes'.  The 'output' deals with the same 'events' as a
-'process' including passing its data along to the next 'stage'.
+after the 'processes'.
+
+The 'output' deals with the same 'events' as a 'process' including passing its
+data along to the next 'stage'.  Additionally, the +configure+ event asks for
+the output to reconfigure itself for a new set of parameters.
 
 [*note:* outputs often involve their own asynchronus queue (i.e the SDL thread)
 which means the data would be shared with an observer.  This is OK because a)
@@ -100,7 +109,7 @@ Terminator Stages
 -----------------
 
 A 'start terminator' appears before the 'input' and an 'end terminator' after
-the final 'observer'.  The tasl of 'terminators' is to perform initialisation
+the final 'observer'.  The task of 'terminators' is to perform initialisation
 and destruction.  A 'terminator' will always be in the same 'stage sequence' as
 the first or last (where appropriate) 'stage' of the 'pipeline'.
 
@@ -124,15 +133,9 @@ Problems
   - hard to manage the total amount of data (sort of)
   - poorer latency responding to file changes (but only if the next stage is
     slow in reading)
+  - need to poll events somehow anyway
 * input, waiting for player events
   - might stave if there aren't enough "read some data" events; it's hard to
     guarantee that the outputter is going to be good enough at that.
-  - we'd prolly have to block on the output as well
-  - it also means that if the output and the input are in the same job then we
-    need some way of converting multi-threaded read events (from the
-
-.what about reinitialising the output?
-
-* it's necessary if the sample rate changes
-* also it could be used to do crossfading, although that would be extremely
-  hard work
+  - we'd have to block on output if the next stage is in another job, although
+    this would probably be a fairly short wait.
