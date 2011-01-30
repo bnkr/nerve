@@ -1,51 +1,17 @@
 TODO
 ----
 
-* re-specify stuff about terminators and how the stage sequence is organised
-* we don't need the virtual outputters anymore; that's been collapsed with
-  terminators into a new concept of 'connectors'
-* input stages are different from any of the other stages now.  This should be
-  more clear
+* update nameing of stages (wrt simple stage)
+* update naming of connections
 
-The Pipelie
------------
+The Pipeline
+------------
 
 The player is an ordered list of 'stages' which form a 'pipeline'.
 
 The 'pipeline' is also the order of inter-stage communication of 'packets'.
 'packets' are the data which is being processed.  'Events' are types of 'packet'
 on the 'pipeline'.
-
-Stage Sequence
---------------
-
-'Stages' are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
-several 'stages' in order of processing into one monothreaded group.
-
-A 'stage sequence' performs blocking reads and writes of data using a 'pipes'.
-Each 'stage sequence' has two 'pipes' -- one for input and one for output --
-which form a 'junction'.
-
-A 'pipe' can either be a 'local pipe' which is not thread-safe and can only
-communicate within the 'stage sequence' or a 'thread pipe', which is thread
-safe and passes 'packets' on to a 'stage sequence' in another thread.
-
-[*note:* Beacuse 'stage sequences' are ordered, it is always the case that a
-'stage sequences's' output 'pipe' will always point to another thread (i.e be a
-'thread pipe').  That said, some 'stages' might need to alter 'local pipes'
-anyway for inter-stage communication outside of the 'pipeline' sequence.]
-
-A 'stage sequence' iterates its list of 'stages' and calls the processing method
-of the 'stage'.  The 'stage' itself will write its output to an 'outputter'.
-The 'outputter' abstracts the difference between a 'thread pipe' and a 'local
-pipe'.
-
-Jobs
-----
-
-'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
-thread.  A 'job' can contain multiple 'stage sequences' [*note:* thus, a job can
-block multiple times].
 
 Input Stage
 -----------
@@ -62,18 +28,15 @@ The 'input' must handle several special 'events':
 
 [*note:* This does not necessarily mean that the stage itself will query the
 'packet' for event data.  It could be handled by the 'stage sequence' or the
-'terminators'.]
+'connections'.]
 
-The 'input stage' will translate these 'events' into ones needed for the
-'process stage' and dispatch them on the 'pipeline'.
+Simple Stage
+------------
 
-Process Stage
--------------
+A 'simple stage' is a kind of 'stage' which takes 'packets' and then optionally
+outputs packets.  A 'simple stage' can delay, drop, create, or modify 'packets'.
 
-A 'process' is a kind of 'stage'.  A 'process' can delay, drop, create, or
-modify 'packets'.  'Processes' always come after the 'input'.
-
-The 'process stage' deals with the following 'events':
+The 'simple stage' deals with the following 'events':
 
 * +abandon+ means that the current work must be discarded because the context is
   changing (eg. song change).
@@ -85,12 +48,18 @@ The 'process' must propogate events to the next 'stage' in the 'stage sequence'
 (i.e pass it down the 'pipeline').  [*note:* this would not necessarily be
 done by a concrete stage object.]
 
+Process Stage
+-------------
+
+A 'process' is a kind of 'simple stage'.  'Process stages' always come after the
+'input'.
+
 Output Stage
 ------------
 
-An 'output' is a kind of 'stage'.  The 'output' writes its 'packets' to some
-sound hardware (or similar).  There is only ever one 'output' stage it is always
-after the 'processes'.
+An 'output' is a restriction of a 'simple stage'.  The 'output' writes its
+'packets' to some sound hardware (or similar).  There is only ever one 'output'
+stage it is always after the 'processes'.
 
 The 'output' deals with the same 'events' as a 'process'.  Additionally, the
 +configure+ event asks for the output to reconfigure itself for a new set of
@@ -101,7 +70,10 @@ The 'output' including performs the same packet operations as a 'process'.
 sequence'.  If there is special handling for an 'output', then either each
 'stage' will need to be checked by the 'stage sequence' or every 'stage' in the
 sequence will need to check 'events' itself.  In other words, despite the
-'output' doing what is essentially a noop, it actually works out being faster.]
+'output' doing what is essentially a noop, it actually works out being faster.
+All that said, it does not necessarily mean that an actualy implementation of an
+'output' needs the same concrete API as a 'process'; the "restriction" parts
+(i.e no output modification) could be done in a shared place.]
 
 [*note:* outputs often involve their own asynchronus queue (i.e the SDL thread)
 which means the data would be shared with an observer.  This is OK because a)
@@ -115,30 +87,53 @@ scope; therefore, it has the same constraints as a normal outputting of a
 Observer Stage
 --------------
 
-An 'observer' is a kind of 'stage'.  It always comes after the 'output' stage.
-An 'observer' works like a 'process' and deals with the same 'events'.  An
-'observer' always propogates its 'packets' [*note*: this would not necessarily
-be done by a concrete implementation of an 'observer'; the predicate is intended
-to specify that there is no option to drop a 'packet'].
+An 'observer' is a kind of 'simple stage'.  It always comes after the 'output'
+stage.  An 'observer' works like a 'process' and deals with the same 'events'.
+An 'observer' always propogates its 'packets' [*note*: this would not
+necessarily be done by a concrete implementation of an 'observer'; the predicate
+is intended to specify that there is no option to drop a 'packet'].
 
-Terminator Stages
------------------
+Inter-Stage Communication
+-------------------------
 
-A 'start terminator' appears before the 'input' and an 'end terminator' after
-the final 'observer'.  The task of 'terminators' is to perform initialisation
-and destruction.  A 'terminator' will always be in the same 'stage sequence' as
-the first or last (where appropriate) 'stage' of the 'pipeline'.
+'Stages' communicate by 'pipes' which have the semantics of a queue.  A 'pipe'
+can either be a 'local pipe' which is not thread-safe and can only communicate
+within the 'stage sequence' or a 'thread pipe', which is thread safe and passes
+'packets' on to a 'stage sequence' in another thread.
 
-[*note:* the terminators are mainly intended to be conceptual, rather than
-concrete classes.  They might be functions of the stage sequence or of the
-individual stage.]
+Stage Sequence
+--------------
 
-The 'start terminator's' purpose is to convert 'packets' from a 'pipe' into
-'packets' on a 'local pipe'.  [*note:* this is necesary because the input must
-always read data from a 'pipe' (to get events from the socket server).  If the
-'input' and 'output' are in the same 'job', then there is a need to.]
+'Stages' are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
+several 'stages' in order of processing into one monothreaded group.
 
-The 'end terminator's' purpose is to dispose of observer packets.
+A 'stage sequence' iterates its list of 'stages' and calls the processing method
+of the 'stage'.  The 'stage' itself will write its output to a 'pipe' [*note:*
+the nature of this writing may be abstract as is could be more efficiant to
+treat 'local pipes' and 'thread pipes' interchangably.]
+
+'Stage sequences' are connected to each other in a 'connection'.  A 'connection'
+works by using 'thread pipes'.  A 'connection' which reads data in is an 'input
+connection' while one which writes data out is an 'output connection'.
+
+[*note:* Because 'stage sequences' are ordered, it is always the case that a
+'stage sequences's' output 'pipe' will always point to another thread (i.e be a
+'thread pipe').  That said, some 'stages' might need to alter 'local pipes'
+anyway for inter-stage communication outside of the 'pipeline' sequence.]
+
+The 'input connection' to first 'sequence' in the 'pipeline' and the output
+'connection' after the final 'observer' are called 'terminators'; the 'initial
+terminator' and 'final terminator' respectively.
+
+The 'initial terminator' is responsible for reading the events used by an
+'input' and converting the 'input's' data into 'passing stages'.
+
+Jobs
+----
+
+'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
+thread.  A 'job' can contain multiple 'stage sequences' [*note:* thus, a job can
+block multiple times].
 
 Problems
 --------
