@@ -40,54 +40,12 @@ class in_connection_base {
   void begin(local_queue q) = 0;
 };
 
-// This is very similar to a process stage but it expects different events on
-// the packets.  It is verry difficult to handle input stages in the same way as
-// simple stages because they mess with the packets in strange ways.  There
-// would need to be a different kind of stage sequence for an in terminator or
-// lots more checks for events which are mostly irrelevant, including some O(n)
-// checks over every stage in a sequence.  On balence, despite design weirdness,
-// this is faster.
 class in_terminator : in_connection_base {
-  input_stage is_;
-
-  // TODO:
-  //   This design is looking very poor:
-  //
-  //   - all other in connections only produce one packet.  If the in terminator
-  //     can produce multiple then all connections need to do extra needless work.
-  //   - the fact that multiple packets can occur means that it's much harder to
-  //     deal with special events (like flush) because we need to be aware that
-  //     we have to jump back to the start of the sequence.
-  //   - wrapping a stage -- allbeit not a "simple stage" -- in a connection is
-  //     confusing wrt the api.
-  //   - the packet returned by the input stage is tested again in the stage
-  //     sequence
-
-  begin(local_queue q) {
-    pkt = q.read();
-    if (pkt.event == read) {
-      is_.read(q);
-    }
-    else if (pkt.event == skip) {
-      is_.skip(where);
-      pkt = new_flush_packet
-      q.push(pkt);
-
-      // TODO:
-      //   If we don't read something here then the local queue in the
-      //   terminator is a total waste of time.  I did say that it might be
-      //   the case that we want to do an immediate readahead so I think it's a
-      //   good idea to preserve the flexibility but it requires an API change
-      //   and, to be honest, a bit more thought.
-    }
-  }
+  packet begin() { return pkt = q.read(); }
 };
 
 class in_connector : in_connection_base {
-  // This is a bit innefficiant because it pushes a single packet to a queue
-  // which we know will be empty.  It's the only way to allow an input stage to
-  // read more than one packet at a time though.
-  void begin(local_queue p) { pkt = q.read(); p.push(pkt); }
+  packet begin() { return pkt = q.read(); }
 };
 
 class out_connection_base {
@@ -115,6 +73,121 @@ class out_connector : out_connection_base {
 
   // flush has special requirements here
   void flush_end(pkt) { end(pkt); p_.clear(); }
+};
+
+// ////////////////////////////////////////////////////////// //
+// Stage Sequence: Sequence: Two Sequences and one Terminator //
+// ////////////////////////////////////////////////////////// //
+
+// This polymorphic solution is used to solve the awkwardness of the input
+// stage, the main
+//
+// - it is not a simple stage (in that is expects events)
+// - it implies the production of other events -- its own events are translated
+//   into events for the simple stages
+// - it can output multiple packets
+//
+// One solution would have been to put the input stage in the terminator, which
+// would remove the need for this polymorphic stuff.  Here's why it won't work:
+//
+// - every in connector needs to use a local queue, but only the input stage
+//   could ever produce multiple packets
+// - calls to begin() are always virtual
+// - translated event packet caused by the skip events etc. will be tested again
+//   in the stage sequence though we know what operation we have do do because we
+//   just set the event type.
+// - in connectors need to be polymorphic anyway (so either way you get a
+//   virtual call)
+class basic_stage_sequence {
+  void run() = 0;
+
+  local_queue buffer[2];
+
+  void single_data_event(packet) {
+    // We always only have one packet because the connector only reads one at a
+    // time.
+    stages.begin()->data(packet, out);
+    local_queue *in, *out = &buffer[0], &buffer[1];
+    multi_data_event(in, out);
+  }
+
+  // This exists because the initial sequence starts with the input stage as a
+  // special case, and that can result in multiple packets.
+  void multi_data_event(in, out) {
+
+    // Note that becauase the input stage can be in the terminator, this list
+    // can be empty.
+    for (BOOST_AUTO(s, ++stages.begin()); s != stages.end(); ++s) {
+      do {
+        s->data(in->top(), out);
+        in->pop();
+      } while (! in.empty());
+
+      // data has all been consumed
+      if (out->empty()) {
+        goto finish;
+      }
+      std::swap(in, out);
+    }
+
+    NERVE_ASSERT(! in->empty(), "we should have finished already if there was no data");
+
+    // This is technically an unnecessary buffer step.  However, the only
+    // other solution is a polymorphic output strategy given to each stage.
+    // On balance, the non-polymorphic method should be faster because most of
+    // teh time it's just a couple of bound checks on the queue.
+    do {
+      end_term->end_data(in.top());
+      in.pop();
+    } while (! in->empty());
+
+    NERVE_ASSERT(in->empty(), "all buffered packets must be used");
+    NERVE_ASSERT(out->empty(), "all buffered packets must be used");
+  };
+
+  void flush_event() {
+    std::for_each(simple_stages.begin(), simple_stages.end(), mem_fcn(&simpe_stage::flush));
+    end_term->end_flush();
+  }
+};
+
+// sequence which contains the input stage
+class initial_stage_sequence : basic_stage_sequence {
+  input_stage is_;
+
+  void run() {
+    packet = in_term->begin();
+    if (packet.type == load) {
+      is_.load(details);
+      is_.read(buffer[0]);
+      multi_data_event(buffer[0], buffer[1]);
+    }
+    else if (packet.type == skip) {
+      is_.skip();
+      flush_event();
+    }
+    else if (...) {
+      x_event();
+    }
+  }
+
+};
+
+// sequence which is not the initial stage
+class connecting_stage_sequence : basic_stage_sequence {
+  void run() {
+    pkt = begin_term->begin(in);
+
+    if (pkt.event == data) {
+      single_data_event(pkt);
+    }
+    else if (event == flush) {
+      flush_event();
+    }
+    else if (...) {
+      x_event();
+    }
+  }
 };
 
 // //////////////////////// //
@@ -173,6 +246,9 @@ class stage_sequence {
       in.pop();
     }
     // other events
+
+    NERVE_ASSERT(in->empty(), "all buffered packets must be used");
+    NERVE_ASSERT(out->empty(), "all buffered packets must be used");
   }
 };
 
@@ -256,6 +332,19 @@ class output_stage_base : simple_stage {
     }
 
     this->output(pkt, input_events_);
+    // This is still a bit messy because we know for certain that the output
+    // stage will pass on a single packet unmodified.  It would be ideal to
+    // simply leave the stage-to-stage local pipes as they are and then call all
+    // the observer stages, but this entails a checking overhead for every stage
+    // so this way will work out faster.
+    //
+    // TODO:
+    //   This could be fixed by relaxing the requirement on stages to always
+    //   communicate to another thread.  This is entirely do-able beccause the
+    //   input connector already has to be virtual because the input stage might
+    //   need to read from a local pipe.  The output connector too because it
+    //   might be the final terminator.  Furthermore, it doesn't actually change
+    //   how the jobs are executed.
     outputter.write(pkt);
   }
 };
@@ -268,6 +357,16 @@ class output_stage : output_stage_base {
 // ////////////// //
 
 class observer_stage : simple_stage {};
+
+// /// //
+// Job //
+// /// //
+
+class job {
+  void run() {
+    std::for_each(stage_sequences.begin(), stage_sequences.end(), stage_seq_base::run);
+  }
+}
 
 /********* older bits ********/
 
