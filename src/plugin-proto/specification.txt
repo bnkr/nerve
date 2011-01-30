@@ -10,7 +10,7 @@ on the 'pipeline'.
 Stage Sequence
 --------------
 
-Stages are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
+'Stages' are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
 several 'stages' in order of processing into one monothreaded group.
 
 A 'stage sequence' performs blocking reads and writes of data using a 'pipes'.
@@ -83,9 +83,16 @@ An 'output' is a kind of 'stage'.  The 'output' writes its 'packets' to some
 sound hardware (or similar).  There is only ever one 'output' stage it is always
 after the 'processes'.
 
-The 'output' deals with the same 'events' as a 'process' including passing its
-data along to the next 'stage'.  Additionally, the +configure+ event asks for
-the output to reconfigure itself for a new set of parameters.
+The 'output' deals with the same 'events' as a 'process'.  Additionally, the
++configure+ event asks for the output to reconfigure itself for a new set of
+parameters.
+
+The 'output' including performs the same packet operations as a 'process'.
+[*note:* This is necessary because an 'output' can be in the middle of a 'stage
+sequence'.  If there is special handling for an 'output', then either each
+'stage' will need to be checked by the 'stage sequence' or every 'stage' in the
+sequence will need to check 'events' itself.  In other words, despite the
+'output' doing what is essentially a noop, it actually works out being faster.]
 
 [*note:* outputs often involve their own asynchronus queue (i.e the SDL thread)
 which means the data would be shared with an observer.  This is OK because a)
