@@ -317,20 +317,12 @@ class output_stage_base : simple_stage {
       this->reconfigure(pkt);
     }
 
-    this->output(pkt, input_events_);
-    // This is still a bit messy because we know for certain that the output
-    // stage will pass on a single packet unmodified.  It would be ideal to
-    // simply leave the stage-to-stage local pipes as they are and then call all
-    // the observer stages, but this entails a checking overhead for every stage
-    // so this way will work out faster.
-    //
     // TODO:
-    //   This could be fixed by relaxing the requirement on stages to always
-    //   communicate to another thread.  This is entirely do-able beccause the
-    //   input connector already has to be virtual because the input stage might
-    //   need to read from a local pipe.  The output connector too because it
-    //   might be the final terminator.  Furthermore, it doesn't actually change
-    //   how the jobs are executed.
+    //   See spec regarding observer sequences.  This would either be at the
+    //   start of an observer sequence or at the end of a simple sequence.
+    //   Probably at the start of an observer sequence.  This way we can use
+    //   a very similar format to the method used for the input_stage.
+    this->output(pkt, input_events_);
     outputter.write(pkt);
   }
 };

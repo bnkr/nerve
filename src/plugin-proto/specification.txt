@@ -128,5 +128,27 @@ Jobs
 ----
 
 'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
-thread.  A 'job' can contain multiple 'stage sequences'. [*note:* Thus, a job can
-block multiple times.]
+thread.  A 'job' can contain multiple 'stage sequences'. [*note:* Thus, a job
+can block multiple times.
+
+Problems
+--------
+
+.extra input buffer operations
+- in a stage sequence which is not the start terminator, we only read a single
+  packet
+- the current API design requires that add this single packet to a buffer before
+  processing.
+
+.observers
+* the current stage sequence is massively over the top for observers which never
+  actually modify anything or output multiple packets
+* we could add an +observer_stage_sequence+
+* an additional advantage of same would be that we might possibly fix the API
+  difficulties with the output stage (it could perhaps be solved in the same way
+  as input stages).
+* in order to preserve "any stage in any thread", this means relaxing the
+  requirements on non-terminating stage sequences outputting to thread pipes.
+* this causes difficulties regarding blocking again, but I think only if the
+  entire sequence is in one thread... and even then we have to block on
+  something from the socket server or the SDL output thread at some point.
