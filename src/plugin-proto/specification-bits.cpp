@@ -37,31 +37,62 @@ class local_pipe {
 
 class in_connection_base {
   thread_pipe in_q_;
-  packaet begin() = 0;
+  void begin(local_queue q) = 0;
 };
 
+// This is very similar to a process stage but it expects different events on
+// the packets.  It is verry difficult to handle input stages in the same way as
+// simple stages because they mess with the packets in strange ways.  There
+// would need to be a different kind of stage sequence for an in terminator or
+// lots more checks for events which are mostly irrelevant, including some O(n)
+// checks over every stage in a sequence.  On balence, despite design weirdness,
+// this is faster.
 class in_terminator : in_connection_base {
   input_stage is_;
 
   // TODO:
-  //   What if there are multiple packets read from read() ?  It's probably not
-  //   desireable but it could happen, and according to the spec, any plugin can
-  //   do whatever adding they want.
+  //   This design is looking very poor:
+  //
+  //   - all other in connections only produce one packet.  If the in terminator
+  //     can produce multiple then all connections need to do extra needless work.
+  //   - the fact that multiple packets can occur means that it's much harder to
+  //     deal with special events (like flush) because we need to be aware that
+  //     we have to jump back to the start of the sequence.
+  //   - wrapping a stage -- allbeit not a "simple stage" -- in a connection is
+  //     confusing wrt the api.
+  //   - the packet returned by the input stage is tested again in the stage
+  //     sequence
 
-  begin() {
-    q.read();
-    if (q.event == read) {
-      is_.read();
+  begin(local_queue q) {
+    pkt = q.read();
+    if (pkt.event == read) {
+      is_.read(q);
+    }
+    else if (pkt.event == skip) {
+      is_.skip(where);
+      pkt = new_flush_packet
+      q.push(pkt);
+
+      // TODO:
+      //   If we don't read something here then the local queue in the
+      //   terminator is a total waste of time.  I did say that it might be
+      //   the case that we want to do an immediate readahead so I think it's a
+      //   good idea to preserve the flexibility but it requires an API change
+      //   and, to be honest, a bit more thought.
     }
   }
 };
 
 class in_connector : in_connection_base {
-  begin() { return q.read(); }
+  // This is a bit innefficiant because it pushes a single packet to a queue
+  // which we know will be empty.  It's the only way to allow an input stage to
+  // read more than one packet at a time though.
+  void begin(local_queue p) { pkt = q.read(); p.push(pkt); }
 };
 
 class out_connection_base {
-  end(pkt) = 0;
+  virtual void end(pkt) = 0;
+  virtual void flush() = 0;
 };
 
 // deletes packets
@@ -70,6 +101,8 @@ class out_terminator : out_connection_base {
   void end(pkt) {
     free(pkt);
   }
+
+  void flush() {}
 };
 
 // propogates events and packets
@@ -79,46 +112,65 @@ class out_connector : out_connection_base {
   void end(pkt) {
     p_.write(pkt);
   }
+
+  // flush has special requirements here
+  void flush_end(pkt) { end(pkt); p_.clear(); }
 };
 
 // //////////////////////// //
 // Stage Sequence: Sequence //
 // //////////////////////// //
 
-
-// we still probably need a "mono_stage_sequence" which handles the large
-// differences between a sequence with only one stage.
 class stage_sequence {
+  void run() {
+    local_queue buffer[2];
+    local_queue *in, *out = &buffer[0], &buffer[1];
+    begin_term->begin(in);
 
-  // - removes the outputter
-  // - removes the junction entirely
-  // - does an unnecessary local_queue buffer step before calling end
-  //   - the majority of the time that will equate to a single assignment and
-  //     two rounds of bounds checking )one for insert and one for iterating)
-  //   - it also removes the virtual outputter call
-  // - stage_sequences are truely generic
-  // - only two virtual calls per run
-  //
-  // I think I'll stick with this design for now.
-  void run1() {
-    pkt = begin_term->begin();
+    NERVE_ASSERT(! in.empty(), "the begin terminator always produces data");
+
+    // It's OK to test only the top packet because if there was a flush sent
+    // from another sequence then the queue would have been cleared.  In other
+    // words non- data events are always at the head of the queue.
+    pkt = in.top
     if (pkt.event == data) {
-      in, out = local_queue
-      in << pkt
-      each_stage {|s|
-        in.each {|pkt|
-          s.data(pkt, out);
+
+      // Note that becauase the input stage can be in the terminator, this list
+      // can be empty.
+      for (BOOST_AUTO(s, stages.begin()); s != stages.end(); ++s) {
+        do {
+          s->data(in->top(), out);
+          in->pop();
+        } while (! in.empty());
+
+        // data has all been consumed
+        if (out->empty()) {
+          goto finish;
         }
-        swap(in, out)
+        std::swap(in, out);
       }
 
-      in.each {|pkt|
-        end_term->end(pkt);
-      }
+      NERVE_ASSERT(! in->empty(), "we should have finished already if there was no data");
+
+      // This is technically an unnecessary buffer step.  However, the only
+      // other solution is a polymorphic output strategy given to each stage.
+      // On balance, the non-polymorphic method should be faster because most of
+      // teh time it's just a couple of bound checks on the queue.
+      do {
+        end_term->end(in.top());
+        in.pop();
+      } while (! in->empty());
     }
     else if (event == finish) {
-      stages.each {|s| s.finish }
-      end_term->end(pkt);
+      // Input stages can buffer multiple packets, but only if they are ordinary
+      // data packets.
+      NERVE_ASSERT(
+          in->length() == 1,
+          "connection only buffer a single packet if said packet is non-data"
+      );
+      stages.each {|s| ts.finish }
+      end_term->end_flush(pkt);
+      in.pop();
     }
     // other events
   }
@@ -148,7 +200,7 @@ class input_stage {
   void pause();
   void skip(where);
   void load(file);
-  void read(outputter);
+  void read(local_q);
   void finish();
   // possibly others
 };
