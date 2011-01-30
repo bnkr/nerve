@@ -101,53 +101,95 @@ class out_connector : out_connection_base {
 class basic_stage_sequence {
   void run() = 0;
 
-  local_queue buffer[2];
+  local_queue spare_buffer;
 
   void single_data_event(packet) {
-    // We always only have one packet because the connector only reads one at a
-    // time.
-    stages.begin()->data(packet, out);
-    local_queue *in, *out = &buffer[0], &buffer[1];
-    multi_data_event(in, out);
+    // TODO:
+    //   This buffering is annoying and unnecessary, but it's hard to see how we
+    //   might integrate this into the existing algorithm.  A solution might be
+    //   to have the entire multi-data implementation in a loop, i.e
+    //
+    //     q.each {|e| progressive_process(e); }
+    //
+    //   This is probably slower than simply adding this buffer, though.
+    spare_buffer.push(packet);
+    processive_process_data(spare_buffer);
   }
 
-  // This exists because the initial sequence starts with the input stage as a
-  // special case, and that can result in multiple packets.
-  void multi_data_event(in, out) {
-
-    // Note that becauase the input stage can be in the terminator, this list
-    // can be empty.
-    for (BOOST_AUTO(s, ++stages.begin()); s != stages.end(); ++s) {
-      do {
-        s->data(in->top(), out);
-        in->pop();
-      } while (! in.empty());
-
-      // data has all been consumed
-      if (out->empty()) {
-        goto finish;
-      }
-      std::swap(in, out);
-    }
-
-    NERVE_ASSERT(! in->empty(), "we should have finished already if there was no data");
-
-    // This is technically an unnecessary buffer step.  However, the only
-    // other solution is a polymorphic output strategy given to each stage.
-    // On balance, the non-polymorphic method should be faster because most of
-    // teh time it's just a couple of bound checks on the queue.
-    do {
-      end_term->end_data(in.top());
-      in.pop();
-    } while (! in->empty());
-
-    NERVE_ASSERT(in->empty(), "all buffered packets must be used");
-    NERVE_ASSERT(out->empty(), "all buffered packets must be used");
+  // We must buffer somewhere, and it's less complicated to do it here.  In
+  // fact, if it's in the stage then it's very easy to never actually see that
+  // buffered data because the start connector will block until it has more
+  // packets.  The 'big buffering' stage would have to keep storing the new data
+  // and outputting the old.  There's also problems with flushing.  Let's just
+  // not go there ^^.
+  struct stage_and_buffer {
+    local_queue output;
+    simple_stage *stage;
   };
+  std::vector<stage_and_buffer> stages_;
+
+  // This arrangement passes a single packet along the sequence instead of
+  // having a full buffer step each time.
+  //
+  // This means that each stage can output as many packets as it likes but we
+  // only do one input per stage-iteration.  This is crucial because every
+  // "while buffering" loop will put something out on the output connection
+  // (unless all data is consumed by the stages).  This means that the pipeline
+  // won't starve if, for some reason, a stage outputs masses of packets.
+  //
+  // The loop also works progressively, so we stop considering stages whoose
+  // output has been processed fully.
+  void progressive_process_data(local_pipe *initial_in) {
+    iter_type beg = stages().begin();
+    iter_type end = stages().begin();
+
+    bool buffering;
+    local_queue *in = initial_in;
+    do {
+      packet *pkt = NULL;
+      buffering = false;
+      iter_type s = beg;
+      while (s != end) {
+        pkt = take_top(*in);
+        s->stage->data(pkt, s->buffer);
+        const size_t outputted = s->buffer.size();
+
+        // no more processing possible
+        if (outputted == 0) goto finish;
+
+        ++s;
+
+        // set a bookmark where we know there is buffered data to start at next time
+        if (! buffering && outputted > 1) {
+          buffering = true;
+          beg = s;
+        }
+
+        in = &s->buffer;
+      }
+
+      // This is a necessary buffered step because a) that s->buffer might have
+      // multiple elements in it and b) the only way to output without buffering
+      // is for the stage to do the connector's work.  This would mean a
+      // polymorphic interface to do the outputting.  On balance, the method
+      // without polymorphism should be faster because most of the time it's
+      // just a couple of bound checks on the queue.
+      end_connector->end_data(take_top(in));
+    } while (buffering);
+
+finish: ;
+  }
 
   void flush_event() {
     std::for_each(simple_stages.begin(), simple_stages.end(), mem_fcn(&simpe_stage::flush));
     end_term->end_flush();
+  }
+
+
+  void take_top(local_pipe q) {
+    packet p = q.top();
+    q.pop();
+    return p;
   }
 };
 
@@ -158,9 +200,15 @@ class initial_stage_sequence : basic_stage_sequence {
   void run() {
     packet = in_term->begin();
     if (packet.type == load) {
+      // buffered version:
       is_.load(details);
       is_.read(buffer[0]);
       multi_data_event(buffer[0], buffer[1]);
+
+      // progressive version:
+      local_q out;
+      is_.read(out);
+      progressive_process_data(out);
     }
     else if (packet.type == skip) {
       is_.skip();
@@ -176,7 +224,7 @@ class initial_stage_sequence : basic_stage_sequence {
 // sequence which is not the initial stage
 class connecting_stage_sequence : basic_stage_sequence {
   void run() {
-    pkt = begin_term->begin(in);
+    pkt = in_term->begin(in);
 
     if (pkt.event == data) {
       single_data_event(pkt);
