@@ -1,3 +1,12 @@
+TODO
+----
+
+* re-specify stuff about terminators and how the stage sequence is organised
+* we don't need the virtual outputters anymore; that's been collapsed with
+  terminators into a new concept of 'connectors'
+* input stages are different from any of the other stages now.  This should be
+  more clear
+
 The Pipelie
 -----------
 
