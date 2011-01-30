@@ -130,19 +130,3 @@ Jobs
 'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
 thread.  A 'job' can contain multiple 'stage sequences'. [*note:* Thus, a job can
 block multiple times.]
-
-Problems
---------
-
-.where does the input stage block?
-
-* output, blocking limited by queue size
-  - hard to manage the total amount of data (sort of)
-  - poorer latency responding to file changes (but only if the next stage is
-    slow in reading)
-  - need to poll events somehow anyway
-* input, waiting for player events
-  - might stave if there aren't enough "read some data" events; it's hard to
-    guarantee that the outputter is going to be good enough at that.
-  - we'd have to block on output if the next stage is in another job, although
-    this would probably be a fairly short wait.
