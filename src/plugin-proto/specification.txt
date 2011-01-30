@@ -107,13 +107,8 @@ the nature of this writing may be abstract as is could be more efficiant to
 treat 'local pipes' and 'thread pipes' interchangably.]
 
 'Stage sequences' are connected to each other in a 'connection'.  A 'connection'
-works by using 'thread pipes'.  A 'connection' which reads data in is an 'input
+works by using 'pipes'.  A 'connection' which reads data in is an 'input
 connection' while one which writes data out is an 'output connection'.
-
-[*note:* Because 'stage sequences' are ordered, it is always the case that a
-'stage sequences's' output 'pipe' will always point to another thread (i.e be a
-'thread pipe').  That said, some 'stages' might need to alter 'local pipes'
-anyway for inter-stage communication outside of the 'pipeline' sequence.]
 
 The 'input connection' to first 'sequence' in the 'pipeline' and the output
 'connection' after the final 'observer' are called 'terminators'; the 'initial
@@ -122,12 +117,19 @@ terminator' and 'final terminator' respectively.
 The 'initial terminator' is responsible for reading the events used by an
 'input' and converting the 'input's' data into 'passing stages'.
 
+All 'output connections' except the 'final terminator' always use 'thread
+pipes'.  All 'input connections' except the 'initial terminator' use 'thread
+pipes'.  The 'initial terminator' can use a 'local pipe' if the 'input' and
+'output' 'stages' are both in the same 'job'. [*note:* This means that if the
+'input' and 'output' are in the same thread, only one of them blocks (the
+'output') but otherwise they both block due to normal 'pipe' smenatics.]
+
 Jobs
 ----
 
 'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
-thread.  A 'job' can contain multiple 'stage sequences' [*note:* thus, a job can
-block multiple times].
+thread.  A 'job' can contain multiple 'stage sequences'. [*note:* Thus, a job can
+block multiple times.]
 
 Problems
 --------
