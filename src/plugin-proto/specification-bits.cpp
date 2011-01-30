@@ -190,68 +190,6 @@ class connecting_stage_sequence : basic_stage_sequence {
   }
 };
 
-// //////////////////////// //
-// Stage Sequence: Sequence //
-// //////////////////////// //
-
-class stage_sequence {
-  void run() {
-    local_queue buffer[2];
-    local_queue *in, *out = &buffer[0], &buffer[1];
-    begin_term->begin(in);
-
-    NERVE_ASSERT(! in.empty(), "the begin terminator always produces data");
-
-    // It's OK to test only the top packet because if there was a flush sent
-    // from another sequence then the queue would have been cleared.  In other
-    // words non- data events are always at the head of the queue.
-    pkt = in.top
-    if (pkt.event == data) {
-
-      // Note that becauase the input stage can be in the terminator, this list
-      // can be empty.
-      for (BOOST_AUTO(s, stages.begin()); s != stages.end(); ++s) {
-        do {
-          s->data(in->top(), out);
-          in->pop();
-        } while (! in.empty());
-
-        // data has all been consumed
-        if (out->empty()) {
-          goto finish;
-        }
-        std::swap(in, out);
-      }
-
-      NERVE_ASSERT(! in->empty(), "we should have finished already if there was no data");
-
-      // This is technically an unnecessary buffer step.  However, the only
-      // other solution is a polymorphic output strategy given to each stage.
-      // On balance, the non-polymorphic method should be faster because most of
-      // teh time it's just a couple of bound checks on the queue.
-      do {
-        end_term->end(in.top());
-        in.pop();
-      } while (! in->empty());
-    }
-    else if (event == finish) {
-      // Input stages can buffer multiple packets, but only if they are ordinary
-      // data packets.
-      NERVE_ASSERT(
-          in->length() == 1,
-          "connection only buffer a single packet if said packet is non-data"
-      );
-      stages.each {|s| ts.finish }
-      end_term->end_flush(pkt);
-      in.pop();
-    }
-    // other events
-
-    NERVE_ASSERT(in->empty(), "all buffered packets must be used");
-    NERVE_ASSERT(out->empty(), "all buffered packets must be used");
-  }
-};
-
 // //// //
 // Jobs //
 // //// //
