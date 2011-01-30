@@ -17,12 +17,6 @@ struct packet {
 // Stage Sequence: Communication //
 // ///////////////////////////// //
 
-template<class Pipe>
-class junction {
-  Pipe in_;
-  Pipe out_;
-};
-
 // like queues
 class thread_pipe {
   void write(packet);
@@ -34,20 +28,6 @@ class local_pipe {
   packet read();
 };
 
-class outputter {
-  virtual void write(packet) = 0;
-};
-
-class local_outputter  : outputter {
-  local_pipe p_;
-  void write(packet);
-};
-
-class thread_outputter : outputter{
-  thread_pipe p_;
-  void write(packet);
-};
-
 // ////////////////////////// //
 // Stage Sequence: Connectors //
 // ////////////////////////// //
@@ -55,13 +35,18 @@ class thread_outputter : outputter{
 // these fullfil the "terminator" requirements, and also some of the stage
 // sequence requiremnts (regarding pipes etc).
 
-class begin_connector {
+class in_connection_base {
   thread_pipe in_q_;
   packaet begin() = 0;
 };
 
-class initial_begin_connector {
+class in_terminator : in_connection_base {
   input_stage is_;
+
+  // TODO:
+  //   What if there are multiple packets read from read() ?  It's probably not
+  //   desireable but it could happen, and according to the spec, any plugin can
+  //   do whatever adding they want.
 
   begin() {
     q.read();
@@ -71,16 +56,16 @@ class initial_begin_connector {
   }
 };
 
-class continue_begin_connector {
+class in_connector : in_connection_base {
   begin() { return q.read(); }
 };
 
-class end_connector {
+class out_connection_base {
   end(pkt) = 0;
 };
 
 // deletes packets
-class final_end_connector {
+class out_terminator : out_connection_base {
   // so messy, and why do it?
   void end(pkt) {
     free(pkt);
@@ -88,7 +73,7 @@ class final_end_connector {
 };
 
 // propogates events and packets
-class continue_end_connector {
+class out_connector : out_connection_base {
   output_pipe p_;
 
   void end(pkt) {
@@ -139,8 +124,110 @@ class stage_sequence {
   }
 };
 
+// //// //
+// Jobs //
+// //// //
+
+class job {
+  stage_sequences_type sequences_;
+
+  void job_thread() {
+    std::for_each(sequences().begin(), sequences().end(), &sequence::synchronise);
+  }
+};
+
+// /////////// //
+// Input Stage //
+// /////////// //
+
+// requirements about reading are fullfilled by the initial_stage_sequence so we
+// don't need polymorphic bits.
+class input_stage {
+  // note: we can do a complicated API because we know that a stage sequence will
+  // always have the input at its start -- it means a virtual call though.
+  void pause();
+  void skip(where);
+  void load(file);
+  void read(outputter);
+  void finish();
+  // possibly others
+};
+
+// ///////////// //
+// Process Stage //
+// ///////////// //
+
+class simple_stage {
+  void data(pkt, outputter) = 0;
+  // propogating events is fullfilled by the stage sequence
+  void abandon() = 0;
+  void flush() = 0;
+  void finish() = 0;
+};
+
+class process_stage : simple_stage {
+};
+
+// //////////// //
+// Output Stage //
+// //////////// //
+
+class outputter {
+  virtual void write(packet) = 0;
+};
+
+class local_outputter  : outputter {
+  local_pipe p_;
+  void write(packet);
+};
+
+class thread_outputter : outputter{
+  thread_pipe p_;
+  void write(packet);
+};
+
+// this organisation means we don't need to deletgate -- there's only one
+// virtual call for each of the stage methods and two for the data method.
+class output_stage_base : simple_stage {
+  void output(pkt, outputter) = 0;
+  void reconfigure(pkt) = 0;
+
+  // A pipe to the input thread.  This can be local or threaded.
+  outputter input_events_;
+
+  void data(pkt, outputter) {
+    // fullfills the 'reqconfigure' event.  Somebody has to check it.  If we do
+    // it here then it avoids type checking of all stages.
+
+    if (pkt.configuration != last_configuration) {
+      this->reconfigure(pkt);
+    }
+
+    this->output(pkt, input_events_);
+    outputter.write(pkt);
+  }
+};
+
+class output_stage : output_stage_base {
+};
+
+// ////////////// //
+// Observer Stage //
+// ////////////// //
+
+class observer_stage : simple_stage {};
+
 /********* older bits ********/
 
+template<class Pipe>
+class junction {
+  Pipe in_;
+  Pipe out_;
+};
+
+
+// this idea is dumped because the inheritance is a it complex and it doesn't
+// have any way to satisfy the end-terminator requirements.
 class basic_stage_sequence {
   junction<thread_pipe, thread_pipe> pipe_;
   // between each stage
@@ -232,95 +319,3 @@ class initial_stage_sequence {
     }
   }
 };
-
-// //// //
-// Jobs //
-// //// //
-
-class job {
-  stage_sequences_type sequences_;
-
-  void job_thread() {
-    std::for_each(sequences().begin(), sequences().end(), &sequence::synchronise);
-  }
-};
-
-// /////////// //
-// Input Stage //
-// /////////// //
-
-// requirements about reading are fullfilled by the initial_stage_sequence so we
-// don't need polymorphic bits.
-class input_stage {
-  // note: we can do a complicated API because we know that a stage sequence will
-  // always have the input at its start -- it means a virtual call though.
-  void pause();
-  void skip(where);
-  void load(file);
-  void read(outputter);
-  void finish();
-  // possibly others
-};
-
-// ///////////// //
-// Process Stage //
-// ///////////// //
-
-class stage {
-  void data(pkt, outputter) = 0;
-  // propogating events is fullfilled by the stage sequence
-  void abandon() = 0;
-  void flush() = 0;
-  void finish() = 0;
-};
-
-class process_stage : non_input_stage {
-};
-
-// //////////// //
-// Output Stage //
-// //////////// //
-
-// this organisation means we don't need to deletgate -- there's only one
-// virtual call for each of the stage methods and two for the data method.
-//
-class output_stage_base : stage {
-  void output(pkt, outputter) = 0;
-  void reconfigure(pkt) = 0;
-
-  // a pipe to the input thread
-  outputter input_events_;
-
-  void data(pkt, outputter) {
-    // fullfills the 'reqconfigure' event.  Somebody has to check it.  If we do
-    // it here then it avoids type checking of all stages.
-
-    if (pkt.configuration != last_configuration) {
-      this->reconfigure(pkt);
-    }
-
-    this->output(pkt, input_events_);
-    outputter.write(pkt);
-  }
-};
-
-class output_stage : output_stage_base {
-};
-
-// ////////////// //
-// Observer Stage //
-// ////////////// //
-
-class observer_stage : stage {};
-
-// ///////////////// //
-// Terminator Stages //
-// ///////////////// //
-
-// start terminators are fullfilled by the stage_sequence
-
-class terminator_stage : observer_stage {
-
-};
-
-
