@@ -1,3 +1,8 @@
+TODO
+----
+
+* solve "sequences don't match stages" problem
+
 The Pipeline
 ------------
 
@@ -27,8 +32,7 @@ The 'input' must handle several special 'events':
 Simple Stage
 ------------
 
-A 'simple stage' is a kind of 'stage' which takes 'packets' and then optionally
-outputs packets.  A 'simple stage' can delay, drop, create, or modify 'packets'.
+A 'simple stage' is a kind of 'stage' which deals with several 'events':
 
 The 'simple stage' deals with the following 'events':
 
@@ -38,26 +42,36 @@ The 'simple stage' deals with the following 'events':
   completed computation must be stopped and outputted (e.g playlist empty).
 * +data+ is normal data to be processed.
 
-The 'process' must propogate events to the next 'stage' in the 'stage sequence'
-(i.e pass it down the 'pipeline').  [*note:* this would not necessarily be
-done by a concrete stage object.]
+The 'process' must propogate all these 'events' to the next 'stage' in the
+'stage sequence' (i.e pass it down the 'pipeline').  [*note:* this would not
+necessarily be done by a concrete stage object.]
 
 Process Stage
 -------------
 
-A 'process' is a kind of 'simple stage'.  'Process stages' always come after the
-'input'.
+A 'process' is an expansion of 'simple stage'.  'Process stages' always come
+after the 'input' and before the 'output'.  The 'process' stage has a +data+
+'event' whicn involves processing a single 'packet' and returning zero or more
+'packets'.  A 'process stage' can delay, drop, create, re-order, or modify
+'packets'.
+
+Observer Stage
+--------------
+
+An 'observer' is an expansion of 'simple stage'.  It has an +observe+ 'event'
+which involves reading a 'packet' but not modifying it.  'Observers' come after
+the 'process stages'.
+
+An 'observer' always propogates its 'packets' [*note*: this would not
+necessarily be done by a concrete implementation of an 'observer'; the predicate
+is intended to specify that there is no option to drop a 'packet'].
 
 Output Stage
 ------------
 
-An 'output' is a restriction of a 'simple stage'.  The 'output' writes its
+An 'output' is an extension of an 'observer stage'.  The 'output' writes its
 'packets' to some sound hardware (or similar).  There is only ever one 'output'
 stage it is always after the 'processes'.
-
-The 'output' deals with the same 'events' as a 'process'.  Additionally, the
-+configure+ event asks for the output to reconfigure itself for a new set of
-parameters.
 
 The 'output' including performs the same packet operations as a 'process'.
 [*note:* This is necessary because an 'output' can be in the middle of a 'stage
@@ -78,51 +92,60 @@ data.  [*note:* this communication could involve a 'pipe' of 'local' or 'thread'
 scope; therefore, it has the same constraints as a normal outputting of a
 'packet', but it does not necessarily need to use an identical method.]
 
-Observer Stage
---------------
-
-An 'observer' is a kind of 'simple stage'.  It always comes after the 'output'
-stage.  An 'observer' works like a 'process' and deals with the same 'events'.
-An 'observer' always propogates its 'packets' [*note*: this would not
-necessarily be done by a concrete implementation of an 'observer'; the predicate
-is intended to specify that there is no option to drop a 'packet'].
-
-Inter-Stage Communication
--------------------------
-
-'Stages' communicate by 'pipes' which have the semantics of a queue.  A 'pipe'
-can either be a 'local pipe' which is not thread-safe and can only communicate
-within the 'stage sequence' or a 'thread pipe', which is thread safe and passes
-'packets' on to a 'stage sequence' in another thread.
-
 Stage Sequence
 --------------
 
 'Stages' are grouped into 'stage sequences'.  Each 'stage sequence' synchronises
 several 'stages' in order of processing into one monothreaded group.
 
-A 'stage sequence' iterates its list of 'stages' and calls the processing method
-of the 'stage'.  The 'stage' itself will write its output to a 'pipe' [*note:*
-the nature of this writing may be abstract as is could be more efficiant to
-treat 'local pipes' and 'thread pipes' interchangably.]
+A 'stage sequence' which contains an 'input stage' is called the 'input
+sequence'.  A 'stage sequence' which contains an 'output stage' is called the
+'output sequence'.  'Stage sequences' which only contain 'process' or 'observer'
+stages are known as 'process sequences' or 'observer sequences' respectively.
+[*note:* It is easier to organise the sequences in these separate terms because
+the operations on the different kinds of 'stage' are so different.]
+
+Sequence Communication
+----------------------
 
 'Stage sequences' are connected to each other in a 'connection'.  A 'connection'
-works by using 'pipes'.  A 'connection' which reads data in is an 'input
-connection' while one which writes data out is an 'output connection'.
+which reads data in is an 'input connection' while one which writes data out is
+an 'output connection'.  A 'connection' works by using 'pipes'.  A 'pipe' which
+operates between two threads is a 'thread pipe' while one that only operates
+within a thread is a 'local pipe'.  [*note:* To be most general, it is 'stages'
+which are actually connected to each other, but this all happens within a 'stage
+sequence' in some capacity, and communication between 'stages' within a 'stage
+sequence' is always a 'local pipe'.]
 
 The 'input connection' to first 'sequence' in the 'pipeline' and the output
 'connection' after the final 'observer' are called 'terminators'; the 'initial
 terminator' and 'final terminator' respectively.
 
-The 'initial terminator' is responsible for reading the events used by an
-'input' and converting the 'input's' data into 'passing stages'.
-
 All 'output connections' except the 'final terminator' always use 'thread
 pipes'.  All 'input connections' except the 'initial terminator' use 'thread
 pipes'.  The 'initial terminator' can use a 'local pipe' if the 'input' and
-'output' 'stages' are both in the same 'job'. [*note:* This means that if the
-'input' and 'output' are in the same thread, only one of them blocks (the
-'output') but otherwise they both block due to normal 'pipe' smenatics.]
+'output' 'stages' are both in the same 'job'.  [*note:* Using 'thread pipes' for
+every 'stage sequence' means that if the 'input' and 'output' are in the same
+thread, only one of them blocks (the 'output') but otherwise they both block due
+to normal 'pipe' smenatics.]
+
+In communications between 'stage sequences' and between 'stages', there must
+always be exactly one 'packet operation' (the work done to process each 'event')
+per visit to each 'stage' in the 'pipeline's' sequence.  There must never be a
+variable number of 'packet operations' between two ordered 'stages'. This is
+called  the 'constant delay rule'.  [*note:* Using 'thread pipes' between 'stage
+sequences' automatically ensures this rule, assuming the mono-threaded parts
+also respect it.]
+
+[*note:* The 'constant delay rule' is a tricky concept.  It means is that
+multiple 'packet' output must be handled without blocking; there is never more
+than one 'packet' at a time passed to a single 'stage'.  To put it another way,
+we immediately pass the first 'packet' of output from a 'stage' on to the next
+'stage' in 'pipeline' order regardless of how many total 'packets' were
+generated.  We can not handle multiple 'packets' by repeatedly calling the next
+'stage' in a loop over those 'packets' because we end up with a long delay in
+writing any 'packets' to a 'thread pipe'.  This means that any waiting threads
+will will starve.]
 
 Jobs
 ----
@@ -140,15 +163,17 @@ Problems
 - the current API design requires that add this single packet to a buffer before
   processing.
 
-.observers
+.sequences don't match stages
 * the current stage sequence is massively over the top for observers which never
   actually modify anything or output multiple packets
 * we could add an +observer_stage_sequence+
-* an additional advantage of same would be that we might possibly fix the API
-  difficulties with the output stage (it could perhaps be solved in the same way
-  as input stages).
+  - this could also contain the 'output stage' which could fix the API mess in
+    there
 * in order to preserve "any stage in any thread", this means relaxing the
   requirements on non-terminating stage sequences outputting to thread pipes.
-* this causes difficulties regarding blocking again, but I think only if the
-  entire sequence is in one thread... and even then we have to block on
-  something from the socket server or the SDL output thread at some point.
+* that would break the constant delay rule
+* unless we did another progressive buffering step in the job thread
+* we have a similar problem though, because a hypothetical observer stage
+  sequence wouldn't ever need progressive buffering (it only outputs one stage).
+* it is the stage sequence implementation itself which is at fault at the moment
+  because it works in a loop of "while there is data buffered".

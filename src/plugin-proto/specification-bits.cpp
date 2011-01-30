@@ -111,7 +111,7 @@ class basic_stage_sequence {
     //
     //     q.each {|e| progressive_process(e); }
     //
-    //   This is probably slower than simply adding this buffer, though.
+    //   That is probably slower than simply adding this buffer, though.
     spare_buffer.push(packet);
     processive_process_data(spare_buffer);
   }
@@ -139,6 +139,9 @@ class basic_stage_sequence {
   //
   // The loop also works progressively, so we stop considering stages whoose
   // output has been processed fully.
+  //
+  // In nerve's terminology, this implementation enforced the "constant delay
+  // rule".
   void progressive_process_data(local_pipe *initial_in) {
     iter_type beg = stages().begin();
     iter_type end = stages().begin();
@@ -220,6 +223,11 @@ class initial_stage_sequence : basic_stage_sequence {
   }
 
 };
+
+// TODO:
+//   See todos in the output stage regarding having several types of stage
+//   sequence which match up more cloesly with the stages and variety of
+//   operations therein.
 
 // sequence which is not the initial stage
 class connecting_stage_sequence : basic_stage_sequence {
@@ -318,10 +326,28 @@ class output_stage_base : simple_stage {
     }
 
     // TODO:
-    //   See spec regarding observer sequences.  This would either be at the
-    //   start of an observer sequence or at the end of a simple sequence.
-    //   Probably at the start of an observer sequence.  This way we can use
-    //   a very similar format to the method used for the input_stage.
+    //   This method is mssy and a bit weird, but it's difficult to do while
+    //   having only one kind of stage sequence.  Multiple stage sequences is
+    //   extremely difficult to do becuase of constant delay rule.  Essentially
+    //   we'd need another layer of buffering (i.e thread pipe emulation) in
+    //   sequences which are connected and in the same thread.
+    //
+    //   We should re-name things:
+    //
+    //   - input stage sequence
+    //     - in input and optional processors
+    //   - process stage sequence
+    //     - processors only
+    //   - output stage sequence
+    //     - an output and also observers
+    //   - observer stage sequence
+    //     - observers only
+    //
+    //   The spec has these concepts, but we don't have concrete classes for
+    //   them and the spec does not a sequence to be exslusively one of these
+    //   things.  We also have the "thread pipe" requirement on internally
+    //   connect stage sequence outputs which we can't have if soem sequences
+    //   are local.
     this->output(pkt, input_events_);
     outputter.write(pkt);
   }
