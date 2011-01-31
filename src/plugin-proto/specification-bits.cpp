@@ -246,6 +246,175 @@ class connecting_stage_sequence : basic_stage_sequence {
   }
 };
 
+// //////////////////////////////// //
+// Stage Sequence: General Sequence //
+// //////////////////////////////// //
+
+// Algorithm object which enforces the constant delay rule when iterating over
+// stages which may produce any numberof output packets.
+class progressive_buffer {
+  iterator more_output_i;
+
+  struct buffering_wrapper {
+    local_pipe q;
+    state *s;
+  };
+  vector<buffering_wrapper<stage> > stages;
+
+  // Perform an iteration of the stages where no stage is visited twice (but
+  // some might be unvisited).  Pulls data from the input queue only when
+  // necessary.
+  void step() {
+    start_stage, start_data = initialise_loop();
+    iterate_once(start_stage, start_data);
+  }
+
+  // Call when the stages are going to flush their data.  This doesn't need to
+  // do anything yet.
+  void flush_reset() { }
+
+  // When abandoning.  This means all the buffers will be empty, so we need to
+  // go to the start again.
+  void abandon_reset() {
+    more_input_i = stages().end();
+    stages.each {|buffer| buffer.clear }
+  }
+
+  private:
+
+  // Find the first stage to run and the data to start with.  This might come
+  // from buffered data, or from the input connection.
+  void initialie_loop() {
+    packet *start_data;
+    iterator start_stage;
+
+    // Constant delay part 1: don't introduce more data into the pipeline until
+    // the buffers are clean.
+    if (more_output_i == stages.end()) {
+      start_data = in_conn.read;
+      start_stage = stages.begin();
+      more_output_i = start_stage;
+    }
+    else {
+      start_data = take_top(more_output_i->buffer);
+      // Start processing with the stage after the one that still has buffered
+      // data.
+      start_stage = more_output_i++;
+    }
+
+    [start_stage, start_data]
+  }
+
+  // Visit every stage after some known point and produce some output.  Any
+  // stage which outputs multiple packets will have those packets buffered.  The
+  // constant delay rule is enforced by the buffering on the condition that new
+  // packets are not inserted into the chain until all the old ones are gone.
+  // There is always one output produced on the output connection per packet
+  // input, providing no packet is consumed (but it is OK for packets to be
+  // consumed).
+  //
+  // This is a highly general algorithm.  Stages can do anything with their
+  // packets here and still have the constant delay rule.
+  void iterate_once(start_stage, packet *start_data) {
+    packet *input = start_data;
+    for (s = start_stage; s != end; ++s) {
+
+      // Constant delay part 2: only handle a single packet of returned data per
+      // virit to a stage.
+      s.stage->data(input, s.buffer);
+
+      if (s.buffer().empty()) {
+        goto finish;
+      }
+
+      input = take_top(ret);
+
+      // This incurs overhead if the stage can only output a single packet, but
+      // it does mean we can mix both generators and observers and that
+      // generators which produce strictly one packet don't need a buffer at
+      // all.
+      if (! bookmark_set) {
+        if (! s.buffer.empty()) {
+          // mark that this stage has more data to deal with
+          more_output_i = stage;
+          // make sure the bookmark isn't messed with by later stages
+          bookmark_set = true;
+        }
+        else {
+          // this stage does not need to be visited next step
+          ++more_output_i;
+        }
+      }
+
+    }
+
+    out_conn.write(input);
+
+finish:;
+  }
+};
+
+
+// Problems:
+//
+// - we have the "input stage is weird" problem again
+//   - we already came up with a couple of ideas to solve that one, the most
+//     sensible being multiple types of sequence
+//   - this implementation actually relaxes the "connections must be thread
+//     pipes" condition, so it would be even easier to entirely separate
+//     differnt kinds of stages and thus solve the "stages matching" problem in
+//     its entireity.
+//
+// This is a generalised sequence implementation which can handle any kind of
+// stage.  It is, of course, totally over the top for observer stages.
+class stage_sequence {
+  progressive_buffer data_loop;
+
+  // Constant delay is guaranteed by the use of the progressive buffering loop.
+  void run() {
+    // This is a bit messy but reduces the latency in discovering non-data
+    // events.
+    //
+    // Read non data is a new requirement on input connectors.
+    packet = in_conn->read_non_data();
+    if (packet) {
+      non_data_loop();
+    }
+    else {
+      data_loop.step();
+    }
+  }
+
+  // Constant delay is always enforced because special events don't do anything.
+  void non_data_loop(pkt) {
+    switch (pkt.event) {
+      case flush:
+        data_loop.flush_reset();
+        std::for_each(...);
+        break;
+      case abandon:
+        data_loop.abandon_reset();
+        std::for_each(...);
+      case finish:
+        ...
+      case load:
+        // TODO:
+        //   "Input stage is weird" problem.
+        //
+        // a tricky one again... it's a shame we need all this ubercode in here
+        // to deal with it, but in fairness said code never actually gets
+        // executeed mostof the time, and the switch here should be a
+        // branchtable...
+        break;
+    }
+
+    // this is a new requirement on output connectors
+    out_conn->wipe(pkt);
+  }
+};
+
+
+
 // //// //
 // Jobs //
 // //// //
