@@ -1,7 +1,7 @@
 TODO
 ----
 
-* solve "sequences don't match stages" problem
+* see "problems"
 
 The Pipeline
 ------------
@@ -144,53 +144,46 @@ pipes'.  The 'initial terminator' can use a 'local pipe' if the 'input' and
 'output' 'stages' are both in the same 'job'.  [*note:* Using 'thread pipes' for
 every 'stage sequence' means that if the 'input' and 'output' are in the same
 thread, only one of them blocks (the 'output') but otherwise they both block due
-to normal 'pipe' smenatics.]
-
-In communications between 'stage sequences' and between 'stages', there must
-always be exactly one 'packet operation' (the work done to process each 'event')
-per visit to each 'stage' in the 'pipeline's' sequence.  There must never be a
-variable number of 'packet operations' between two ordered 'stages'. This is
-called  the 'constant delay rule'.  [*note:* Using 'thread pipes' between 'stage
-sequences' automatically ensures this rule, assuming the mono-threaded parts
-also respect it.]
-
-[*note:* The 'constant delay rule' is a tricky concept.  It means is that
-multiple 'packet' output must be handled without blocking; there is never more
-than one 'packet' at a time passed to a single 'stage'.  To put it another way,
-we immediately pass the first 'packet' of output from a 'stage' on to the next
-'stage' in 'pipeline' order regardless of how many total 'packets' were
-generated.  We can not handle multiple 'packets' by repeatedly calling the next
-'stage' in a loop over those 'packets' because we end up with a long delay in
-writing any 'packets' to a 'thread pipe'.  This means that any waiting threads
-will will starve.]
+to normal 'pipe' smenatics.  'Thread pipes' also trivially enforce the 'constant
+delay rule' between connected 'stages'.]
 
 Jobs
 ----
 
 'Stage sequences' are contained in 'jobs'.  Each 'job' represents a single
 thread.  A 'job' can contain multiple 'stage sequences'. [*note:* Thus, a job
-can block multiple times.
+can block multiple times.]
+
+'Jobs' must not starve any 'stage sequence'.  [*note:* This is more nuanced than
+it first appears, hence explicit specification of something which is really
+impled.  Consider 'stage sequences' A, B, and C which are 'connected'.  The the
+same 'job' but B is not.  'job' implementation waits for data on each 'sequence'
+it sees.  A and C are in If A outputs a 'packet' and B consumes that 'packet',
+then C will starve while A should have run again.  This happens regardless of
+constant delay.]
 
 Problems
 --------
 
-.extra input buffer operations
-- in a stage sequence which is not the start terminator, we only read a single
-  packet
-- the current API design requires that add this single packet to a buffer before
-  processing.
-
 .sequences don't match stages
-* the current stage sequence is massively over the top for observers which never
-  actually modify anything or output multiple packets
-* we could add an +observer_stage_sequence+
-  - this could also contain the 'output stage' which could fix the API mess in
-    there
-* in order to preserve "any stage in any thread", this means relaxing the
-  requirements on non-terminating stage sequences outputting to thread pipes.
-* that would break the constant delay rule
-* unless we did another progressive buffering step in the job thread
-* we have a similar problem though, because a hypothetical observer stage
-  sequence wouldn't ever need progressive buffering (it only outputs one stage).
-* it is the stage sequence implementation itself which is at fault at the moment
-  because it works in a loop of "while there is data buffered".
+
+* any constant-delay sequence implementation which handles the producer stage is
+  going to be over the top for observer stages because they never output things
+* it would be easier to specify a single stage type per sequence and multiple
+  directly connected sequences per job
+* the current specification of sequences using thread pipes means that we can't
+  have multiple connected sequences in a job.
+
+* the actual implementation of mono-stage sequences is pretty easy because they
+  are really just less complicated specialisations of the existing general
+  sequence
+
+.sequence starvation
+
+* the specification of "no srarvation" is silly because "no stavation" is
+  implied.
+* what we should really specify is a consracint which prevents starvation, such
+  as only blocking once.
+* "only block once" is contradicted by having multiple multiple thread pipes,
+  which is required by multiple non-connrected sequences per job (which is a
+  hard requirement)
