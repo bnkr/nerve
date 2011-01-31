@@ -12,6 +12,22 @@ The 'pipeline' is also the order of inter-stage communication of 'packets'.
 'packets' are the data which is being processed.  'Events' are types of 'packet'
 on the 'pipeline'.
 
+Communication between 'stages' must respect the 'constant delay rule'.  This is
+defined as such: given an single iteration of a 'pipeline' of one or more
+'stages', no 'stage' must be visited twice.
+
+[*note:* This is a tricky concept.  It is important when 'stages' can output
+multiple 'packets' to perserve latency to the next 'stage'.  If the delay
+changes then part of the 'pipeline' will starve for input.
+
+For example, consider three connected 'stages' A, B, and C.  Each 'stage' copies
+its input 'packet' twice.  A trivial 'packet' passing algorithm would buffer the
+outputs from a 'stage' and then iterate them to call the next 'stage'.  This
+results in stage A running once, then stage B running twice, and stage C four
+times.  Now consider what would happen if each stage would produce variable
+amounts of outputs.  The number of 'stage' operations from A to C becomes
+variable.]
+
 Input Stage
 -----------
 
@@ -108,14 +124,15 @@ the operations on the different kinds of 'stage' are so different.]
 Sequence Communication
 ----------------------
 
-'Stage sequences' are connected to each other in a 'connection'.  A 'connection'
-which reads data in is an 'input connection' while one which writes data out is
-an 'output connection'.  A 'connection' works by using 'pipes'.  A 'pipe' which
-operates between two threads is a 'thread pipe' while one that only operates
-within a thread is a 'local pipe'.  [*note:* To be most general, it is 'stages'
-which are actually connected to each other, but this all happens within a 'stage
-sequence' in some capacity, and communication between 'stages' within a 'stage
-sequence' is always a 'local pipe'.]
+'Stage sequences' are 'connected' to each other in a 'connection'.  [*note:*
+This is meant to facilitates 'stage' to 'stage' communication rather than imply
+any special 'sequence' to 'sequence' communication.]  A 'connection' which reads
+data in is an 'input connection' while one which writes data out is an 'output
+connection'.  A 'connection' works by using 'pipes'.  A 'pipe' which operates
+between two threads is a 'thread pipe' while one that only operates within a
+thread is a 'local pipe'.  [*note:* Since a 'stage sequence' is mono threaded,
+all communication between 'stages' within a 'stage sequence' will be done with a
+'local pipe'.]
 
 The 'input connection' to first 'sequence' in the 'pipeline' and the output
 'connection' after the final 'observer' are called 'terminators'; the 'initial
