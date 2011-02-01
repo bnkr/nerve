@@ -251,7 +251,11 @@ class connecting_stage_sequence : basic_stage_sequence {
 // //////////////////////////////// //
 
 // Algorithm object which enforces the constant delay rule when iterating over
-// stages which may produce any numberof output packets.
+// stages which may produce any numberof output packets.  The drawback to this
+// method is that the buffers gradually increase in size until we run out of
+// input or the data is explicitly abandoned.  This happens in any case where
+// multiple outputs are allowed, though, and this implementation means that
+// stages don't have to care about doing their own buffering
 class progressive_buffer {
   iterator more_output_i;
 
@@ -321,6 +325,11 @@ class progressive_buffer {
 
       // Constant delay part 2: only handle a single packet of returned data per
       // virit to a stage.
+      //
+      // TODO:
+      //   Possible change: only read one packet.  Evenrything else is identical
+      //   except the buffered data is handled by the stage (i.e it might not
+      //   have any).
       s.stage->data(input, s.buffer);
 
       if (s.buffer().empty()) {
@@ -333,6 +342,11 @@ class progressive_buffer {
       // it does mean we can mix both generators and observers and that
       // generators which produce strictly one packet don't need a buffer at
       // all.
+      //
+      // TODO:
+      //   This uses the earliest buffering stage.  We want to go from the
+      //   latest buffering stage and then back to the one before it before
+      //   introducing a new packet.  Currently this is the easier way.
       if (! bookmark_set) {
         if (! s.buffer.empty()) {
           // mark that this stage has more data to deal with
@@ -345,7 +359,6 @@ class progressive_buffer {
           ++more_output_i;
         }
       }
-
     }
 
     out_conn.write(input);
@@ -366,16 +379,16 @@ finish:;
 //     its entireity.
 //
 // This is a generalised sequence implementation which can handle any kind of
-// stage.  It is, of course, totally over the top for observer stages.
+// stage.  It respects constant delay between stages within the same thread (i.e
+// when the output pipe is local).  It is, of course, totally over the top for
+// observer stages.
 class stage_sequence {
   progressive_buffer data_loop;
 
   // Constant delay is guaranteed by the use of the progressive buffering loop.
   void run() {
-    // This is a bit messy but reduces the latency in discovering non-data
-    // events.
-    //
-    // Read non data is a new requirement on input connectors.
+    // This is necessary to discover non-data events as quickly as possible.
+    // Otherwise a buffering stage will delay the input connector operation.
     packet = in_conn->read_non_data();
     if (packet) {
       non_data_loop();
@@ -396,10 +409,12 @@ class stage_sequence {
         data_loop.abandon_reset();
         std::for_each(...);
       case finish:
-        ...
+        ...;
       case load:
+        data_loop.abandon_reset();
         // TODO:
-        //   "Input stage is weird" problem.
+        //   "Input stage is weird" problem.  Essentially it doesn't work at
+        //   all unless we have a special "input stage sequence".
         //
         // a tricky one again... it's a shame we need all this ubercode in here
         // to deal with it, but in fairness said code never actually gets
@@ -412,8 +427,6 @@ class stage_sequence {
     out_conn->wipe(pkt);
   }
 };
-
-
 
 // //// //
 // Jobs //

@@ -1,7 +1,14 @@
 TODO
 ----
 
-* see "problems"
+* solve "stages matching sequences" and "constant delay with multiple outputs"
+  issues:
+  - re-specify stages from scratch
+  - re-specify sequence-to-sequence constant delay (i.e the thread pipe thing)
+  - add some basic api proto stuff to test multiple sequence types
+* solve non-connected "sequence starvation" aka multiple waits problem
+  - this is actually a major issue which stops input and output stages being in
+    the same sequence with processing in another
 
 The Pipeline
 ------------
@@ -167,15 +174,18 @@ Problems
 
 .sequences don't match stages
 
-* any constant-delay sequence implementation which handles the producer stage is
-  going to be over the top for observer stages because they never output things
+* any general constant-delay sequence implementation which handles the producer
+  stage is going to be over the top for observer stages because they never
+  output things
 * it would be easier to specify a single stage type per sequence and multiple
   directly connected sequences per job
 * the current specification of sequences using thread pipes means that we can't
   have multiple connected sequences in a job.
+* the implemenatation should work for non-thread pipes because it only ever
+  outputs one (or less) datas on its out connector.
 
-* the actual implementation of mono-stage sequences is pretty easy because they
-  are really just less complicated specialisations of the existing general
+* the actual implementation of mono-stagetype sequences is pretty easy because
+  they are really just less complicated specialisations of the existing general
   sequence
 
 .sequence starvation
@@ -187,3 +197,46 @@ Problems
 * "only block once" is contradicted by having multiple multiple thread pipes,
   which is required by multiple non-connrected sequences per job (which is a
   hard requirement)
+
+.constant delay with multiple outputs
+
+* if we buffer stuff from a stage generating packets, that stage will take much
+  longer than the others in the time thhat it takes to generate packets (i.e the
+  operation itself will be longer)
+* this effectively means that constant delay is not enforcable when the stage
+  sequence is doing buffering!
+* the only solution is to return less than two packets per stage operation
+
+So spec:
+
+* a visit to a 'stage' in an iteration of a 'pipeline' is called a 'stage
+  operation'
+* [list stage operations: data, observe, flush, etc. etc. also add a 'debuffer'
+  operation]
+* an iteration of a 'stage sequence' to run 'stage operations' on each 'stage' is
+  called a 'sequence iteration'
+
+Data Operation
+* 'stages' return zero or one packets from a 'data operation' [*note:* This
+  preserves constant delay.  If a stage operation returns lots of packets, the
+  generation of those 'packets' will make the 'stage operation' longer, even if
+  we progressively buffer the outputs.  Technically, there's no way to forbid a
+  'stage' from generating loads of 'packets' -- we just don't need to help them
+  do it!]
+* addition of packets must be handled with internal buffering. [*note:* The
+  "buffer" is not necessarily a queue.  It may merely indicate some algorithmic
+  state which results in new 'packets' being created, however, 'stages' which
+  delay 'packets' will naturally need some kind of tangible buffer.]
+* a stage which is returning buffered 'packets' is called a 'buffering stage'.
+* a 'sequence iteration' containing a 'buffering stage' will start at that
+  'stage'.  The 'debuffer operation' will be run on the 'buffering stage' in
+  subsequent 'stage iterations' until the supply of buffered 'packets' is
+  exhausted. [*note:*  No new 'packets' are introduced so the buffer gets
+  smaller, and no repeated visits are made so we keep 'constant delay'.]
+  - better to say  begin at the last stage to become a buffering stage, but it's
+    technically difficult
+* non-'data operations' must be checked for every 'sequence iteration' (even if
+  we are starting from a 'buffering stage') [*note:* This is required so that a
+  truncated sequence does not introduce a long delay in dealing with flushes and
+  so on.]
+
