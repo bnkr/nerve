@@ -46,15 +46,18 @@ is a mono-threaded, mono-stage typed group.  [*note:* Mono-typing is necessary
 to ensure efficiency given the multitude of differing operations on different
 'stages'.]
 
-An iteration of a 'stage sequence' to run 'stage operations' on each 'stage' is
-called a 'sequence iteration'.
-
 'Stage sequences' are grouped into 'sections'.  A 'section' is a mono-threaded,
 multi-'stage' typed group (via polymorphic 'sequence' types).  'Section' always
 communicate with other threads.  [*note:* 'Thread pipes' also trivially enforce
 the 'constant delay rule' between connected 'stages'.]
 
 'Sections' are grouped in 'jobs'.  'Jobs' map exactly onto threads.
+
+A 'stage sequence's' loop through its contained list of 'stages' is called a
+'sequence step' [*note:* Not an "iteration" because it doesn't necessarily visit
+all 'stages' and it only does one pass while the full iteration of the program
+is infinite.]  A single iterations of 'stage sequences' contained in a 'section'
+is called a 'section step'.
 
 'Stages' which are directly next to each other in 'pipeline' order are said to
 be 'connected'.  The same is said of 'sequences' and 'sections'.
@@ -115,12 +118,12 @@ It may merely indicate some algorithmic state which results in new 'packets'
 being created, however, 'stages' which delay 'packets' will naturally need some
 kind of tangible buffer.]
 
-A stage which is returning buffered 'packets' is called a 'buffering stage'.
-A 'sequence iteration' containing a 'buffering stage' will start at that
-'stage'.  The 'debuffer operation' will be run on the 'buffering stage' in
-subsequent 'stage iterations' until the supply of buffered 'packets' is
-exhausted. [*note:*  No new 'packets' are introduced so the buffer gets
-smaller, and no repeated visits are made so we keep 'constant delay'.]
+A stage which is returning buffered 'packets' is called a 'buffering stage'.  A
+'sequence step' containing a 'buffering stage' will start at that 'stage'.  The
+'debuffer operation' will be run on the 'buffering stage' in subsequent 'stage
+iterations' until the supply of buffered 'packets' is exhausted. [*note:*  No
+new 'packets' are introduced so the buffer gets smaller, and no repeated visits
+are made so we keep 'constant delay'.]
 
 [*note:* It is preferred to specify that  the 'debuffer' operation is run on the
 last 'stage' in the 'sequence' which has buffered data, but it is difficult to
