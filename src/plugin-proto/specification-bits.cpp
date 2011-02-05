@@ -335,29 +335,6 @@ class process_stage_sequence : stage_seqeuence {
 // Section //
 // /////// //
 
-// Definite stuff:
-//
-// * there must be progressive buffering in the section in order to remember
-//   which is teh buffering sequence (i.e any sequence which has a buffering
-//   stage)
-//
-// Conditional stuff:
-//
-// * if the section passes the input packet then there must be a separate
-//   debuffer call because otherwise we can't avoid passing more inputs.
-// * if the sequence returns a packet, we must also be able to tell whether the
-//   sequence needs to be debuffered
-//   - this is already a requirement of the sequence so it basically means we
-//     need the same return data
-//
-// Observations:
-//
-// * we could always make the stage sequence totally dumb, so that all of the
-//   progressive buffering is done here.  Would be nice to generalise the
-//   progbuf algorithms to support moving it about wherever necessary.
-// * the only remaining issue we have is how data is passed to and from the
-//   sequence
-
 // The section class contains multiple types of stages via the mono-typed
 // sequence container and always communicates with other threads (excepting the
 // input stage which might not).  The section is necessary:
@@ -370,129 +347,34 @@ class process_stage_sequence : stage_seqeuence {
 //   hax)
 // - we can't have sequences defining thread boundaries (which would solve the
 //   first requirement) because of the second requirement
+//
+// This implementation of a section totally leaves any communication of packets
+// to the sequences themselves (they'll use a "connector" abstraction).  This
+// means we need no special handling for buffering stages.
 class section {
-  sequences_type sequences_;
-
-  bool will_block();
-
-  // Most basic.  Won't work because we don't know when to start at a particular
-  // sequence.
-  void section_step1() {
-    for (s = sequences.begin(); s != sequences().end(); ++i) {
-      s->sequence_step();
-    }
+  sections(container &sequences) {
+    // relies that we have the data first of course or the iterator is invalid!
+    start_i = sequences().begin();
   }
 
-  iterator buffering_sequence;
+  bool would_block() {
+    return
+      start_i == stages().begin() &&
+      // It's only necessary to check the input because we can assume that
+      // something is waiting for the output (or will be eventually) and won't
+      // be in the same thread.
+      start_i->in_connector().would_block();
+  }
 
-  // Progressively buffered section iteration.  I wasn't expecting to need
-  // progressive buffering here.  Perhaps the details of passing a packet to the
-  // next stage could be handled only by the connectors?
-  void section_step2() {
-    if (buffering_seqeuence_i == sequences().end()) {
-      buffering_sequence_i = sequences().begin();
-      packet *in = in_pipe.read_non_data();
-    }
-    else {
-      packet *in;
-    }
-
-    bool buffering_this_step = false;
-
-    for (s = sequences.begin(); s != sequences().end(); ++i) {
-      packet_return ret = s->sequence_step();
-
-      if (ret.buffering()) {
-        buffering_sequence = s;
-      }
-      else if (! buffering_this_step) {
-        ++buffering_sequence;
-      }
-
-      // go to the next section
-      if (ret.packet() == NULL) {
+  void section_step() {
+    for (s = start_i; s != this->sequences().end(); ++s) {
+      if (s->sequence_step() == buffering) {
+        start_i = s;
         return;
       }
     }
 
-    out_pipe.write(pkt);
-  }
-
-  // Assume that all communication is handled by the connections.  This pretty
-  // much equivilent to going it all tin the job class.  All the extra work
-  // would be is a would_block check on each sequence.
-  void section_step3() {
-    for (s = start_i; s != sequences().end()) {
-      sequence_type::status_type r = s->sequence_step();
-
-      switch (r) {
-        case sequence_type::status_buffering:
-          start_i = s;
-          goto next_section;
-        case sequence_type::status_finished:
-          break;
-      }
-    }
-
-    // skipped if a sequence is buffering
-    start_i = sequences().begin();
-
-next_section: return;
-  }
-
-  // Handle connectors ourself and sequences have to have their own buffering
-  // state.
-  //
-  // Both of the post sequence_step checks would have been done in the sequence
-  // step.  Also, buffering and empty will never happen in observer stages.
-  // Neither is any of the checks at the start of the function remotely useful
-  // to ibservers.  Observers was pretty much the whole point of sections.
-  void section_step4() {
-    packet *input = NULL;
-    if (start_i == sequences().end()) {
-      input = in_conn->read();
-      start_i = sequences().begin();
-      s = sequences().begin();
-    }
-    else {
-      input = start_i->debuffer();
-      s = start_i++;
-    }
-
-    packet_return ret;
-    for (; s != sequences().end()) {
-      ret = s->sequence_step(input);
-
-      NERVE_ASSERT(! (ret.buffering() && ret.empty()), "sequence state return be buffering xor empty");
-
-      if (ret.buffering()) {
-        start_i = s;
-        goto next_section;
-      }
-
-      if (ret.empty()) {
-        goto next_section;
-      }
-    }
-
-    out_conn->write(ret.packet());
-
-next_section: return;
-  }
-
-  // for section_step4
-  bool would_block4() {
-    return start_i == stages().begin() && start_i->connector().would_block();
-  }
-};
-
-// section-step4
-class process_stage_sequence {
-  void sequence_step(packet *input) {
-    stages().each
-  }
-
-  packet *debuffer() {
+    start_i = this->sequences().begin();
   }
 };
 
@@ -500,6 +382,8 @@ class process_stage_sequence {
 // Jobs //
 // //// //
 
+// Maps onto a thread, contains sections, and ensures we don't block too many
+// times in a thread (which causes deadlocks).
 class job {
   sections_type sections_;
 
@@ -507,13 +391,19 @@ class job {
     for (;;) {
       bool blocked_already = false;
       for (s = sections().begin(); s != sections().end(); ++i) {
-        // Fullfills the "jobs mustn't block twice requirement.
+        // Fullfills the "jobs mustn't block twice" requirement.
+        //
+        // TODO:
+        //   The mechanism and purpose is not well defined.  Especially we might
+        //   care if blocking on input or output.  It might be that we do it
+        //   based on the return from section_step and let the messy details of
+        //   that be totally transparent.
+        //
         if (s->would_block()) {
           if (blocked_already) {
-            // TODO:
-            //   should we do a continue?  Other sections won't get visited
-            //   which means we have a bias for the beginning sections.
-            break;
+            // Continue instead of break to avoid a bias towards sections at the
+            // start of the job.
+            continue;
           }
           else {
             blocked_already = true;
