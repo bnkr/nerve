@@ -262,6 +262,23 @@ class stage_sequence {
 // necesasry to avoid having every stage check if their packets are and because
 // the input stage results in the creation of non-data events.
 class input_stage_sequence  : stage_sequence {
+  void sequence_step() {
+    packet = in_term->begin();
+    if (packet.type == load) {
+      // buffered version:
+      is_.load(details);
+      pkt.event = flush;
+    }
+    else if (packet.type == skip) {
+      is_.skip();
+      packet.type = flush;
+    }
+    else if (...) {
+      ...
+    }
+
+    out_con->write(packet);
+  }
 };
 
 // Simple sequence which can only handle those stages that look but don't touch.
@@ -281,7 +298,6 @@ class observer_stage_sequence : stage_sequence {
 
     out_conn->write(packet);
   }
-
 };
 
 // The most generals sequence.  It can handle any number of stages, all of which
@@ -319,30 +335,41 @@ class process_stage_sequence : stage_seqeuence {
 // Section //
 // /////// //
 
-// OK, the chief purpose of the 'section' concept was to:
+// Definite stuff:
 //
-// - stop multiple blocks in one a job
-// - allow multiple sequence types
+// * there must be progressive buffering in the section in order to remember
+//   which is teh buffering sequence (i.e any sequence which has a buffering
+//   stage)
 //
-// All we seem to have got is the same multi-type problems of the sequence type
-// again.
+// Conditional stuff:
 //
-// * We alwyas need to remember which sequence we are buffering at.  So we do
-//   need some kind of buffering algorithm, even if we don't use an expleicit
-//   section class.
-// * We can't supply a packet to the sequence unless we also have a separate
-//   debuffer call.
-// * We can have a literal returned packet from a sequence, so long as there is
-//   a way to cimmunicate whether we're buffering.
-// * If we do the section as part of the job class then we have to deal with the
-//   differences between local and thread communication entirely transparently.
-//   If sequemnces always return a pointer to their section, then sequences don't
-//   need to care about their connections and sections always know that they're
-//   using thread pipes.
-// * A section implementation will generally mean that we do all of the
-//   progressive buffering stuff twice; checking  the packet_return, doing the
-//   initialisation... it seems weird to me, but I can't think of way round it.
+// * if the section passes the input packet then there must be a separate
+//   debuffer call because otherwise we can't avoid passing more inputs.
+// * if the sequence returns a packet, we must also be able to tell whether the
+//   sequence needs to be debuffered
+//   - this is already a requirement of the sequence so it basically means we
+//     need the same return data
+//
+// Observations:
+//
+// * we could always make the stage sequence totally dumb, so that all of the
+//   progressive buffering is done here.  Would be nice to generalise the
+//   progbuf algorithms to support moving it about wherever necessary.
+// * the only remaining issue we have is how data is passed to and from the
+//   sequence
 
+// The section class contains multiple types of stages via the mono-typed
+// sequence container and always communicates with other threads (excepting the
+// input stage which might not).  The section is necessary:
+//
+// - otherwise a job can't tell where thread communication boundaries are and
+//   therefore can't ensure one block per iteration (which is necesasry to stop
+//   deadlocks)
+// - allow sequences to be specialised to each type of stage (which is necessary
+//   to avoid unnecessary work and to deal with special stages without massive
+//   hax)
+// - we can't have sequences defining thread boundaries (which would solve the
+//   first requirement) because of the second requirement
 class section {
   sequences_type sequences_;
 

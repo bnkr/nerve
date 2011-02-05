@@ -3,7 +3,7 @@ TODO
 
 * implement a working section class.  See the notes in the "section" part of the
   spec-bits.cpp.
-  - decide where the connectors are going to go and
+  - decide where the connectors are going to go
   - whether we pass the packets directly or not (requires the "debuffer" method
     on sequences)
   - just hack something up for now.  It doesn't need  to be ultimate, just so I
