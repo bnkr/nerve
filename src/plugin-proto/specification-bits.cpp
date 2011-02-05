@@ -94,127 +94,117 @@ class out_connector : out_connection_base {
   void flush_end(pkt) { end(pkt); p_.clear(); }
 };
 
+// Junction between two connectors.
+class junction {
+  public:
+
+  junction(in_connection &in, out_connection &out) : in_(in), out_(out) {}
+
+  in_connection &in_;
+  out_connection &out_;
+};
+
+
 // ////////////////////////////// //
 // Generalised Progressive Buffer //
 // ////////////////////////////// //
 
-// Algorithm object which enforces the constant delay rule when iterating over
-// stages which may produce any numberof output packets.  The drawback to this
-// method is that the buffers gradually increase in size until we run out of
-// input or the data is explicitly abandoned.  This happens in any case where
-// multiple outputs are allowed, though, and this implementation means that
-// stages don't have to care about doing their own buffering
+// Algorithm object for the following goals:
+//
+// - enforces the constant delay rule
+// - stages can produce any number of packets
+// - buffers don't expand (i.e if something is debuffering then no more input is
+//   added)
+//
+// The drawback is that there is overhead for stages which will only ever return
+// one or less packet.
 class progressive_buffer {
-  iterator more_output_i;
+  public:
 
-  struct buffering_wrapper {
-    local_pipe q;
-    state *s;
-  };
-  vector<buffering_wrapper<stage> > stages;
+  typedef std::vector<process_stage*> stages_type;
+  typedef stages_type::iterator iterator_type;
+  typedef boost::remove_pointer<stages_type::value_type> stage_type;
 
-  // Perform an iteration of the stages where no stage is visited twice (but
-  // some might be unvisited).  Pulls data from the input queue only when
-  // necessary.
-  void step() {
-    start_stage, start_data = initialise_loop();
-    iterate_once(start_stage, start_data);
+  // Stages must be fully initialised.
+  progressive_buffer(stages_type &stages, junction &pipes)
+  : stages_(stages), pipes_(pipes)
+  {
+    NERVE_ASSERT(! stages.empty(), "stages must be ready (read iterable) already");
+    start_i = this->stages().begin();
   }
-
-  // Call when the stages are going to flush their data.  This doesn't need to
-  // do anything yet.
-  void flush_reset() { }
 
   // This resets the progressive buffer (not the stages) for When the stages
   // themselves will be abandoned.  This means all the buffers will be empty, so
   // we need to go to the start again.
   void abandon_reset() {
-    more_input_i = stages().end();
-    stages.each {|buffer| buffer.clear }
+    start_ = stages().begin();
+    std::for_each(stages().begin(), stages().end(), boost::bind(&stage_type::clear, _1));
+  }
+
+  // Is there a buffering stage here?
+  bool buffering_stage() { return start_i != this->stages().begin(); }
+
+  // Perform an iteration of the stages where no stage is visited twice (but
+  // some might be unvisited).  Pulls data from the input queue only when
+  // necessary.
+  void step() {
+    packet *input;
+    iterator_type real_start = start_;
+
+    if (this->buffering_stage()) {
+      ++real_start_;
+      input = this->debuffer_input();
+    }
+    else {
+      input = this->read_input();
+    }
+
+    const iterator_type end = stages().end();
+
+    for (s = real_start; s != end; ++s) {
+      NERVE_ASSERT(! input->is_non_data(), "can't be doing a data loop on non-data");
+      const stage_return ret = s->process(input);
+
+      NERVE_ASSERT(! (ret.empty() && ret.buffering()), "empty xor buffering");
+      if (ret.empty()) {
+        return;
+      }
+      else if (ret.buffering()) {
+        // Simply assigning this every time we meet a buffering stage means we
+        // end up debuffering the latest stage which has stuff to debuffer.
+        start_ = s;
+      }
+
+      input = ret.packet();
+    }
+
+    this->pipe_output(input);
   }
 
   private:
 
-  // Find the first stage to run and the data to start with.  This might come
-  // from buffered data, or from the input connection.
-  void initialie_loop() {
-    packet *start_data;
-    iterator start_stage;
+  packet *pipe_input() { return pipes_.in().read(); }
+  void pipe_input(packet *p) { return pipes_.out().write(p); }
 
-    // Constant delay part 1: don't introduce more data into the pipeline until
-    // the buffers are clean.
-    if (more_output_i == stages.end()) {
-      start_data = in_conn.read;
-      start_stage = stages.begin();
-      more_output_i = start_stage;
-    }
-    else {
-      start_data = take_top(more_output_i->buffer);
-      // Start processing with the stage after the one that still has buffered
-      // data.
-      start_stage = more_output_i++;
+  //! Also resets buffering stage next time if necessary.
+  void debuffer_input() {
+    const stage_return ret = input = start_i->debuffer();
+
+    NERVE_ASSERT(! ret.empty(), "empty data from a buffering stage is forbidden");
+
+    if (! ret.buffering()) {
+      start_ = stages().begin();
     }
 
-    [start_stage, start_data]
+    return ret.packet();
   }
 
-  // Visit every stage after some known point and produce some output.  Any
-  // stage which outputs multiple packets will have those packets buffered.  The
-  // constant delay rule is enforced by the buffering on the condition that new
-  // packets are not inserted into the chain until all the old ones are gone.
-  // There is always one output produced on the output connection per packet
-  // input, providing no packet is consumed (but it is OK for packets to be
-  // consumed).
-  //
-  // This is a highly general algorithm.  Stages can do anything with their
-  // packets here and still have the constant delay rule.
-  void iterate_once(start_stage, packet *start_data) {
-    packet *input = start_data;
-    for (s = start_stage; s != end; ++s) {
+  stages_type &stages() { return stages_; }
+  jumnction &pipes() { return pipes_; }
 
-      // Constant delay part 2: only handle a single packet of returned data per
-      // virit to a stage.
-      //
-      // TODO:
-      //   Possible change: only read one packet.  Evenrything else is identical
-      //   except the buffered data is handled by the stage (i.e it might not
-      //   have any).
-      s.stage->data(input, s.buffer);
-
-      if (s.buffer().empty()) {
-        goto finish;
-      }
-
-      input = take_top(ret);
-
-      // This incurs overhead if the stage can only output a single packet, but
-      // it does mean we can mix both generators and observers and that
-      // generators which produce strictly one packet don't need a buffer at
-      // all.
-      //
-      // TODO:
-      //   This uses the earliest buffering stage.  We want to go from the
-      //   latest buffering stage and then back to the one before it before
-      //   introducing a new packet.  Currently this is the easier way.
-      if (! bookmark_set) {
-        if (! s.buffer.empty()) {
-          // mark that this stage has more data to deal with
-          more_output_i = stage;
-          // make sure the bookmark isn't messed with by later stages
-          bookmark_set = true;
-        }
-        else {
-          // this stage does not need to be visited next step
-          ++more_output_i;
-        }
-      }
-    }
-
-
-    out_conn.write(input);
-
-finish:;
-  }
+  stages_type &stages_;
+  junction pipes_;
+  iterator_type start_;
 };
 
 // ////////////// //
@@ -312,22 +302,30 @@ class process_stage_sequence : stage_seqeuence {
     // connector operation.
     //
     // TODO:
-    //   It would improve latency further if we did this at the end of each
-    //   stage...
+    //   This could be omtimised if we could iterate all stages in one go.  Then
+    //   the section could check for most non-data events.  That would mean no
+    //   need to pass flushes etc. down the local pipes so less checks all
+    //   round.  There are slight problems with the input stage though (because
+    //   it can "create" nd-events).
     //
     // TODO:
-    //   Should this be done by the secton?  We don't know the connectors  are
-    //   multi-threded because they might be terminators.  We know that the
-    //   stage sequence is always mono-threaded, except that it might be the
-    //   last stage sequence in a section which means that it is effectively
-    //   multi-threaded.
+    //   It would improve latency further if we did this at the end of each
+    //   stage.  Of course, check is useless on a local pipe...
     packet = in_conn->read_if_non_data();
     if (packet) {
+
+      // TODO:
+      //   Sub-optimal.
+      if (packet.type == abandon) {
+        data_loop.abandon_reset();
+      }
       this->non_data_step(packet);
     }
     else {
       data_loop.step();
     }
+
+    return data_loop.debuffering() ? status_debuffer : status_continue;
   }
 };
 
@@ -350,7 +348,11 @@ class process_stage_sequence : stage_seqeuence {
 //
 // This implementation of a section totally leaves any communication of packets
 // to the sequences themselves (they'll use a "connector" abstraction).  This
-// means we need no special handling for buffering stages.
+// means we need no special handling for buffering stages or passing of data
+// which is good because different stage types have different requirements on
+// this.  If we did any of that stuff here you'd end up with the same issue of
+// type requirements not matching exactly (e.g pointless progressive buffering
+// of observer stages).
 class section {
   sections(container &sequences) {
     // relies that we have the data first of course or the iterator is invalid!
