@@ -10,7 +10,18 @@
 %x string
 
 %{
-  #include LEXER_DEFS_FILE 
+
+#ifndef TOKENS_FILE
+#  error "-D TOKENS_FILE must be a string for the location of the token defs"
+#  error "If you are compiling using the CMake build system then this is a bug."
+#endif
+
+// Defined by the build system courtesy bbuild_parser.
+#include TOKENS_FILE
+// We can't use quote includes for compiler reasons so we need an -I.  Then the
+// inc file can use quote paths and dependencies are all correct.
+#include <lexer_header.inc.hpp>
+
 %}
 
 id [a-zA-Z_][a-zA-Z0-9_]*
@@ -74,3 +85,19 @@ inline void dont_call_me() {
   int y;
   ::yyunput(y,&x);
 }
+
+#ifdef NERVE_LEXER_DEBUG
+static void print_yytext(const char *text) {
+  size_t len = std::strlen(text), i = 0;
+  while (i < len) {
+    char c = text[i++];
+    if (c == '\n') {
+      std::cout << "\\n";
+    }
+    else {
+      std::cout << c;
+    }
+  }
+  std::cout << std::endl;
+}
+#endif

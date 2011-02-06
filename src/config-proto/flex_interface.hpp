@@ -27,21 +27,24 @@ namespace config {
 
     //! \ingroup grp_lexer
     struct params {
-      FILE *stream() const;
-      bool trace() const;
+      params() : stream_(NULL), trace_(false) {}
 
-      params &stream(FILE *f) ;
-      params &trace(bool v) ;
+      FILE *stream() const { return stream_; }
+      bool trace() const { return trace_; }
+
+      params &stream(FILE *f) { stream_ = f; return *this; }
+      params &trace(bool v) { trace_ = v; return *this; }
 
       private:
-
+      FILE *stream_;
+      bool trace_;
     };
 
     //@{
     //! \ingroup grp_lexer
 
     //! The flex_interface is static so it gets a free function.
-    inline void init(const params &);
+    void init(const params &);
 
     //! Text of the last matched token.  Note: this won't work to get the token
     //! text of where the parse actually is, because the lookahead token

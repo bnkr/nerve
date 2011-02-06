@@ -10,6 +10,13 @@ bbuild_parser(
   EXTRA_DEBUG
 )
 
+# Kind of annoying but it means we can easily include source dir files from the
+# lexer and parser which (ironically) it's nicer to do so that we can use quote
+# includes and the dependencies work properly.  Unfortunately the compiler
+# doesn't use #line info to find the current file because it can cause some
+# issues when you dstribute build sournces.
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
 bbuild_exe(
   TARGET config-proto
   SOURCES
@@ -17,8 +24,7 @@ bbuild_exe(
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS
+    # Dependncy on this is handled by bbuild_parser.
     "TOKENS_FILE=\"${tokens_file}\""
-    "LEXER_DEFS_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/flex_definitions.hpp\""
-    "PARSER_DEFS_FILE=\"${CMAKE_CURRENT_SOURCE_DIR}/lemon_definitions.hpp\""
   NO_INSTALL
 )
