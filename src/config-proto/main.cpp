@@ -5,17 +5,46 @@
 #include "pipeline_configs.hpp"
 
 #include <iostream>
+#include <cstdio>
 
-int main(int argc, char **argv) {
-  if (argc != 2) {
-    std::cout << argv[0] << ": not enough args" << std::endl;
-    return 1;
+int parse_args(config::config_parser::params &p, int argc, char **argv) {
+  bool file_given = false;
+  for (int i = 1; i != argc; ++i) {
+    if (std::strcmp(argv[i], "-p") == 0) {
+      p.trace_parser(true);
+    }
+    else if (std::strcmp(argv[i], "-l") == 0) {
+      p.trace_lexer(true);
+    }
+    else if (argv[i][0] == '-') {
+      std::cout << argv[0] << ": unrecognised argument: " << argv[i] << std::endl;
+      return false;
+    }
+    else if (file_given) {
+      std::cout << argv[0] << ": " << argv[i] << ": file already given" << std::endl;
+      return false;
+    }
+    else {
+      file_given = true;
+      p.file(argv[i]);
+    }
   }
 
-  config::config_parser::params p;
-  p.trace_lexer(true);
-  config::config_parser parser(p.file(argv[1]));
+  if (! p.file()) {
+    std::cout << argv[0] << ": no file given" << std::endl;
+    return false;
+  }
 
+  return true;
+}
+
+int main(int argc, char **argv) {
+  config::config_parser::params p;
+  if (! parse_args(p, argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
+  config::config_parser parser(p);
   config::pipeline_config pipes;
   parser.parse(pipes);
 }
