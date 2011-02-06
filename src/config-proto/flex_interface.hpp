@@ -24,12 +24,13 @@ namespace config {
       char   *text;
     };
 
+    // Only declared here due to inline accessors.
+    namespace detail { extern token_data current_token; }
+
     //! Used for repoting errors etc.
     typedef ::config::parse_context context_type;
-
-    namespace detail {
-      extern token_data current_token;
-    }
+    //! The "meaning" of the token.
+    typedef token_data token_type;
 
     //! \ingroup grp_config_lexer
     struct params {

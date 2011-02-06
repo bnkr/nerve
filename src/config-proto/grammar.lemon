@@ -20,12 +20,8 @@
 
 // In theory this will already be handled by the "error" rules.
 %syntax_error {
+  set_last_error(yymajor, TOKEN);
   context->reporter().report();
-
-  // TODO:
-  //   is there any way I can use these to variables to report "got x; expected
-  //   y".  It looks like the macro TOKEN is defined for this purpose, but it's
-  //   not documented as being a public api.
   use_variable(yymajor);
   use_variable(yyminor);
 }
@@ -35,43 +31,77 @@
   NERVE_ABORT("kersplooosh!");
 }
 
+%destructor config {
+  use_variable(yypminor); use_variable(context);
+}
+
 // Start synbol.
 config ::= thread_seq . {
-  std::cout << "hello!" << std::endl;
 }
 
 /***********
  * Threads *
  ***********/
 
-thread_seq ::= thread .
-thread_seq ::= thread_seq thread .
+thread_seq ::= thread . { }
+thread_seq ::= thread_seq thread . {}
 
-thread ::= THREAD LBRACE thread_conf_seq RBRACE .
+thread ::= THREAD LBRACE thread_conf_seq RBRACE . {}
 
-thread_conf_seq ::= thread_conf .
-thread_conf_seq ::= thread_conf_seq thread_conf .
+thread_conf_seq ::= thread_conf . {}
+thread_conf_seq ::= thread_conf_seq thread_conf . {}
 
-thread_conf ::= section .
-thread_conf ::= stage .
+thread_conf ::= section . {}
+thread_conf ::= stage . {}
 
 /************
  * Sections *
  ************/
 
-section ::= SECTION LBRACE section_conf_seq RBRACE .
+section ::= SECTION LBRACE section_conf_seq RBRACE . {}
 
-section_conf_seq ::= stage .
-section_conf_seq ::= section_conf_seq stage .
+section_conf_seq ::= stage . {}
+section_conf_seq ::= section_conf_seq stage . {}
 
 /**********
  * Stages *
  **********/
 
-stage ::= STAGE LBRACE stage_conf_seq RBRACE .
+stage ::= STAGE LBRACE stage_conf_seq RBRACE . {}
+stage ::= INPUT LBRACE stage_conf_seq RBRACE . {}
+stage ::= OUTPUT LBRACE stage_conf_seq RBRACE . {}
 
-stage_conf_seq ::= stage_conf .
-stage_conf_seq ::= stage_conf_seq stage_conf .
+stage_conf_seq ::= stage_conf . {}
+stage_conf_seq ::= stage_conf_seq stage_conf . {}
 
-stage_conf ::= PATH EQ STRING_LIT .
-stage_conf ::= PLUGIN EQ STRING_LIT .
+stage_conf ::= PATH EQ normal_value . {}
+stage_conf ::= TYPE EQ normal_value . {}
+stage_conf ::= NAME EQ normal_value . {}
+stage_conf ::= AFTER EQ after_value . {}
+stage_conf ::= error EQ any_value . {
+  ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='");
+}
+
+any_value ::= error . {}
+any_value ::= string .
+any_value ::= INPUT .
+any_value ::= OUTPUT .
+
+after_value ::= error . {
+  ERR_EXPECTED("string, 'input', or 'output' after '='");
+}
+after_value ::= string .
+after_value ::= INPUT .
+after_value ::= OUTPUT .
+
+normal_value ::= error . {
+  ERR_EXPECTED("string after '='");
+}
+normal_value ::= string .
+
+/********
+ * Util *
+ ********/
+
+string ::= STRING_LIT .
+string ::= IDENTIFIER_LIT .

@@ -50,12 +50,14 @@ ws    [\t \n\r]
   "thread"  { LEXER_RETURN(THREAD); }
   "section" { LEXER_RETURN(THREAD); }
   "stage"   { LEXER_RETURN(STAGE); }
-  "input"   { LEXER_RETURN(THREAD); }
-  "output"  { LEXER_RETURN(STAGE); }
+  "input"   { LEXER_RETURN(INPUT); }
+  "output"  { LEXER_RETURN(OUTPUT); }
 
-  "path"   { LEXER_RETURN(PATH); }
-  "plugin" { LEXER_RETURN(PLUGIN); }
-  "type"   { LEXER_RETURN(PLUGIN); }
+  "path"    { LEXER_RETURN(PATH); }
+  "type"    { LEXER_RETURN(TYPE); }
+
+  "after"   { LEXER_RETURN(AFTER); }
+  "name"    { LEXER_RETURN(NAME); }
 }
 
   /****************
@@ -63,8 +65,8 @@ ws    [\t \n\r]
    ****************/
 
 <INITIAL>{
-  \" { LEXER_BEGIN(STRING); }
-  [
+  \"           { LEXER_BEGIN(STRING); }
+  [a-zA-Z0-9]+ { LEXER_RETURN(IDENTIFIER_LIT); }
 }
 
 <STRING>{
