@@ -1,0 +1,75 @@
+// Copyright (C) 2009-2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+
+%token_prefix T_
+
+%include {
+  #include PARSER_DEFS_FILE
+}
+
+// Only works as a pointer.
+%extra_argument { ::config::lemon_interface::context_type context }
+
+// What the lexer will give the parser for the third parameter of the Parse
+// function.
+%token_type { config::flex_interface::token_data }
+
+%parse_failure {
+  // context->parse_failure();
+}
+
+%syntax_error {
+  // TODO:
+  //   is there any way I can use these to variables to report "got x; expected
+  //   y".  It looks like the macro TOKEN is defined for this purpose, but it's
+  //   not documented as being a public api.
+  use_variable(yymajor);
+  use_variable(yyminor);
+  // context->syntax_error();
+}
+
+%stack_overflow {
+  use_variable(yypMinor);
+  std::cerr << "xxsc-compile: parser stack overflow: oh dear." << std::endl;
+  std::abort();
+}
+
+// Start synbol.
+config ::= thread_seq .
+
+/***********
+ * Threads *
+ ***********/
+
+
+thread_seq ::= thread .
+thread_seq ::= thread_seq thread .
+
+thread ::= THREAD LBRACE thread_conf_seq RBRACE .
+
+thread_conf_seq ::= thread_conf .
+thread_conf_seq ::= thread_conf_seq thread_conf .
+
+thread_conf ::= section .
+thread_conf ::= stage .
+
+/************
+ * Sections *
+ ************/
+
+section ::= SECTION LBRACE section_conf_seq RBRACE .
+
+section_conf_seq ::= stage .
+section_conf_seq ::= section_conf_seq stage .
+
+/**********
+ * Stages *
+ **********/
+
+stage ::= STAGE LBRACE stage_conf_seq RBRACE .
+
+stage_conf_seq ::= stage_conf .
+stage_conf_seq ::= stage_conf_seq stage_conf .
+
+stage_conf ::= PATH EQ STRING_LIT .
+stage_conf ::= PLUGIN EQ STRING_LIT .

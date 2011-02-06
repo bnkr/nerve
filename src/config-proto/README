@@ -1,0 +1,5 @@
+# Copyright (C) 2011, James Webber.
+# Distributed under a 3-clause BSD license.  See COPYING.
+
+This parses the configuration file(s) based on the structure of the
+plugin/pipeline proto.

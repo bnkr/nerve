@@ -1,0 +1,63 @@
+// Copyright (C) 2009-2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+
+/*!
+ * \file
+ * Interface to the flex based lexer.
+ */
+
+#ifndef CONFIG_FLEX_INTERFACE_HPP_8ovjfk6q
+#define CONFIG_FLEX_INTERFACE_HPP_8ovjfk6q
+
+#include <cstdio>
+
+extern int yylex();
+
+namespace config {
+  namespace flex_interface {
+    //! The semantic value of a token: some text, Text/value stuff.
+    union token_data {
+      //! Arbitrary textual data (e.g a string literal or identifier)
+      char   *text;
+    };
+
+    namespace detail {
+      extern token_data current_token;
+    }
+
+    //! \ingroup grp_lexer
+    struct params {
+      FILE *stream() const;
+      bool trace() const;
+
+      params &stream(FILE *f) ;
+      params &trace(bool v) ;
+
+      private:
+
+    };
+
+    //@{
+    //! \ingroup grp_lexer
+
+    //! The flex_interface is static so it gets a free function.
+    inline void init(const params &);
+
+    //! Text of the last matched token.  Note: this won't work to get the token
+    //! text of where the parse actually is, because the lookahead token
+    //! overwrites it.
+    inline token_data get_current_token() { return detail::current_token; }
+
+    //! Get the next token.
+    inline int next_token() { return ::yylex(); }
+
+    //! Free text which was in token_data.text
+    extern void free_text(char *data);
+
+    //@}
+
+
+  }
+}
+
+#endif
