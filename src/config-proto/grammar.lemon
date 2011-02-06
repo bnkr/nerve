@@ -70,6 +70,9 @@ section_conf_seq ::= section_conf_seq stage . {}
 stage ::= STAGE LBRACE stage_conf_seq RBRACE . {}
 stage ::= INPUT LBRACE stage_conf_seq RBRACE . {}
 stage ::= OUTPUT LBRACE stage_conf_seq RBRACE . {}
+stage ::= STAGE empty_config .
+stage ::= INPUT empty_config .
+stage ::= OUTPUT empty_config .
 
 stage_conf_seq ::= stage_conf . {}
 stage_conf_seq ::= stage_conf_seq stage_conf . {}
@@ -105,3 +108,5 @@ normal_value ::= string .
 
 string ::= STRING_LIT .
 string ::= IDENTIFIER_LIT .
+
+empty_config ::= LBRACE RBRACE . { ERR("empty config"); }}
