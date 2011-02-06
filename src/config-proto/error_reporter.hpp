@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <boost/utility.hpp>
 
 namespace config {
   /*!
@@ -12,14 +13,15 @@ namespace config {
    * to a log file as well as stdout.  Some kind of special handling anwyay, so
    * it means we can't just dump it on stdout.
    */
-  class error_reporter {
+  class error_reporter : boost::noncopyable {
     public:
 
     // TODO:
     //   Ideally the format would be derrived from a big list of error
     //   constants.  Then we can document everything together.
 
-    error_reporter() : error_(false), fatal_error_(false) {}
+    explicit error_reporter() : error_(false), fatal_error_(false) {
+    }
 
     void report() { error_ = true;  }
     void report_fatal() { fatal_error_ = true; }
@@ -28,6 +30,7 @@ namespace config {
       error_ = true;
       va_list args;
       va_start(args, format);
+      print_file_line();
       std::vfprintf(stderr, format, args);
       std::fprintf(stderr, "\n");
       va_end(args);
@@ -37,6 +40,7 @@ namespace config {
       fatal_error_ = true;
       va_list args;
       va_start(args, format);
+      print_file_line();
       std::vfprintf(stderr, format, args);
       std::fprintf(stderr, "\n");
       va_end(args);

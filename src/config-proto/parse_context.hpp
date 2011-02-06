@@ -3,14 +3,17 @@
 
 #include "error_reporter.hpp"
 
+#include <boost/utility.hpp>
+
 namespace config {
   class pipeline_config;
 
   //! \ingroup grp_config
   //! Parsing context used by the lexer and parser.
-  class parse_context {
+  class parse_context : boost::noncopyable {
     public:
-    parse_context(pipeline_config &pc) : output_(pc) {}
+    explicit parse_context(pipeline_config &pc) : output_(pc) {
+    }
 
     error_reporter &reporter() { return reporter_; }
     pipeline_config &output() { return output_; }

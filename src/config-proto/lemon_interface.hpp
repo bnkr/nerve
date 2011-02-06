@@ -69,6 +69,7 @@ namespace config {
         ::ParseTrace(stdout, detail::parse_trace_prefix);
 #endif
       }
+      context_ = p.context();
     }
 
     ~lemon_interface() {

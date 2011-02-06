@@ -14,13 +14,14 @@
 
 // What the lexer will give the parser for the third parameter of the Parse
 // function.
-%token_type { config::flex_interface::token_data }
+%token_type { config::flex_interface::token_type }
 
-%parse_failure { context->reporter().report_fatal(); }
+%parse_failure { context->reporter().report_fatal("unhandled syntax error"); }
 
 // In theory this will already be handled by the "error" rules.
 %syntax_error {
   set_last_error(yymajor, TOKEN);
+  // just in case I forget elsewere
   context->reporter().report();
   use_variable(yymajor);
   use_variable(yyminor);
@@ -28,12 +29,12 @@
 
 %stack_overflow {
   use_variable(yypMinor);
-  NERVE_ABORT("kersplooosh!");
+  // Nicer to avoid aborting.  We might be able to do some cleaner exiting.
+  context->reporter().report_fatal("config parser out of stack");
 }
 
-%destructor config {
-  use_variable(yypminor); use_variable(context);
-}
+// Dummy to stop unused var warnings.
+%destructor config { use_variable(yypminor); use_variable(context); }
 
 // Start synbol.
 config ::= thread_seq . {
@@ -47,12 +48,12 @@ thread_seq ::= thread . { }
 thread_seq ::= thread_seq thread . {}
 
 thread ::= THREAD LBRACE thread_conf_seq RBRACE . {}
+thread ::= THREAD empty_config . {}
 
 thread_conf_seq ::= thread_conf . {}
 thread_conf_seq ::= thread_conf_seq thread_conf . {}
 
 thread_conf ::= section . {}
-thread_conf ::= stage . {}
 
 /************
  * Sections *

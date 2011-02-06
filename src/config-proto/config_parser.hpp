@@ -12,11 +12,13 @@
 
 #include "../plugin-proto/asserts.hpp"
 
+#include <boost/utility.hpp>
+
 namespace config {
   class pipeline_config;
 
   //! Main interface to configuration parsing.
-  class config_parser {
+  class config_parser : boost::noncopyable {
     public:
 
     struct params {
@@ -64,6 +66,7 @@ namespace config {
 #include "parse_context.hpp"
 
 #include <cstdio>
+#include <cassert>
 #include <cstring>
 #include <iostream>
 
@@ -121,7 +124,6 @@ void config_parser::parse(config::pipeline_config &output) {
     // The lexer doesn't return if it can't deal with the character so it's ok
     // to carry on.
     parse.token(tok);
-
     if (context.reporter().fatal_error()) {
       goto fatal_error;
     }
