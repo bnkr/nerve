@@ -18,7 +18,7 @@ bbuild_parser(
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(defs "NERVE_LEXER_TRACE=1" "NERVE_PARSER_TRACE=0")
+  set(defs "NERVE_LEXER_TRACE=1" "NERVE_PARSER_TRACE=1")
 else()
   set(defs)
 endif()

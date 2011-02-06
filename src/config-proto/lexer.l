@@ -64,6 +64,7 @@ ws    [\t \n\r]
 
 <INITIAL>{
   \" { LEXER_BEGIN(STRING); }
+  [
 }
 
 <STRING>{
@@ -82,7 +83,7 @@ ws    [\t \n\r]
 <INITIAL>{
   \n         { /* set some location stage */ } 
   {blank}+   {}
-  .          { LEXER_ERROR("unmatched character"); }
+  .          { LEXER_ERROR("unmatched character: %c", yytext[0]); }
 }
 
 %%

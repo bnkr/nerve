@@ -10,10 +10,11 @@
 
 #include "flex_interface.hpp"
 #include "nerve_config.hpp"
+#include "parse_context.hpp"
+#include "../plugin-proto/asserts.hpp"
 
 #include <cstring>
 #include <iostream>
-
 
 /***********************
  * Lexer Action Macros *
@@ -55,8 +56,7 @@ static const char *state_name(int num);
 // TODO:
 //   - tell the context there was an error
 //   - use the error reporter to format the message (separate presentation)
-#define LEXER_ERROR(msg__)\
-  std::cerr << msg__ << ": " << yytext << std::endl;
+#define LEXER_ERROR(fmt__, ...) context->reporter().report(fmt__, __VA_ARGS__);
 
 /***************
  * Static data *
@@ -64,11 +64,9 @@ static const char *state_name(int num);
 
 config::flex_interface::token_data config::flex_interface::detail::current_token;
 
+static ::config::flex_interface::context_type *context;
 static bool enable_trace = false;
 inline bool trace() { return enable_trace; }
-
-static bool error = false;
-static void set_error_state() { error = true; }
 
 /****************
  * Exported API *
@@ -80,16 +78,15 @@ extern void yyset_debug(int);
 namespace fi = ::config::flex_interface;
 
 void fi::init(const config::flex_interface::params &p) {
+  NERVE_ASSERT_PTR(p.stream());
+  NERVE_ASSERT_PTR(p.context());
+
+  context = p.context();
   enable_trace = p.trace();
   // it's too much debugging otherwise!
   ::yyset_debug(0);
   ::yyset_in(p.stream());
 }
-
-//! Error at end of document.
-bool fi::error() { }
-//! Stop immediately.
-bool fi::fatal_error() { }
 
 /************************
  * Token Data Managment *

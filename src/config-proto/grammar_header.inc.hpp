@@ -9,7 +9,11 @@
 #include "flex_interface.hpp"
 #include "lemon_interface.hpp"
 #include "nerve_config.hpp"
+#include "parse_context.hpp"
+#include "../plugin-proto/asserts.hpp"
 
+#include <iostream>
+#include <cstdlib>
 #include <cassert>
 
 // The lemon parser only puts its debugging routines in when NDEBUG is not
@@ -26,7 +30,5 @@
 #  define NDEBUG
 #endif
 
-#include <iostream>
-#include <cstdlib>
 
 template<class T> void use_variable(const T &) {}

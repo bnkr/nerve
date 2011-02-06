@@ -10,34 +10,35 @@
 }
 
 // Only works as a pointer.
-%extra_argument { ::config::lemon_interface::context_type context }
+%extra_argument { ::config::lemon_interface::context_type *context }
 
 // What the lexer will give the parser for the third parameter of the Parse
 // function.
 %token_type { config::flex_interface::token_data }
 
-%parse_failure {
-  // context->parse_failure();
-}
+%parse_failure { context->reporter().report_fatal(); }
 
+// In theory this will already be handled by the "error" rules.
 %syntax_error {
+  context->reporter().report();
+
   // TODO:
   //   is there any way I can use these to variables to report "got x; expected
   //   y".  It looks like the macro TOKEN is defined for this purpose, but it's
   //   not documented as being a public api.
   use_variable(yymajor);
   use_variable(yyminor);
-  // context->syntax_error();
 }
 
 %stack_overflow {
   use_variable(yypMinor);
-  std::cerr << "xxsc-compile: parser stack overflow: oh dear." << std::endl;
-  std::abort();
+  NERVE_ABORT("kersplooosh!");
 }
 
 // Start synbol.
-config ::= thread_seq .
+config ::= thread_seq . {
+  std::cout << "hello!" << std::endl;
+}
 
 /***********
  * Threads *

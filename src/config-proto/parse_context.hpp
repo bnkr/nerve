@@ -10,6 +10,7 @@ namespace config {
   //! Parsing context used by the lexer and parser.
   class parse_context {
     public:
+    parse_context(pipeline_config &pc) : output_(pc) {}
 
     error_reporter &reporter() { return reporter_; }
     pipeline_config &output() { return output_; }

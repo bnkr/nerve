@@ -11,16 +11,20 @@
 
 #include "flex_interface.hpp"
 
+namespace config { class parse_context; }
+
 namespace {
   // defined up here because we don't know about the class lemon_interface yet.
-  typedef void * parse_context_type;
+  typedef config::parse_context parse_context_type;
 }
 
 extern void *ParseAlloc(void *(*mallocProc)(size_t));
 extern void ParseFree(void *lemon_interface, void (*freeProc)(void*));
-extern void Parse(void *lemon_interface, int token_id, ::config::flex_interface::token_data, parse_context_type);
+extern void Parse(void *lemon_interface, int token_id, ::config::flex_interface::token_data, parse_context_type *);
 
-#if defined(ENABLE_PARSER_TRACE) && ENABLE_PARSER_TRACE
+#ifndef NERVE_PARSER_TRACE
+#  error "NERVE_PARSER_TRACE should be defined by nerve_config.hpp"
+#elif NERVE_PARSER_TRACE
 extern void ParseTrace(FILE *stream, char *zPrefix);
 #endif
 
@@ -28,8 +32,10 @@ extern void ParseTrace(FILE *stream, char *zPrefix);
 
 namespace config {
   namespace detail {
-#if defined(NERVE_ENABLE_PARSER_TRACE) && NERVE_ENABLE_PARSER_TRACE
-    static char parse_trace_prefix[] = "config lemon_interface:";
+#ifndef NERVE_PARSER_TRACE
+#  error "NERVE_PARSER_TRACE should be defined by nerve_config.hpp"
+#elif NERVE_PARSER_TRACE
+    static char parse_trace_prefix[] = "lemon: ";
 #endif
   }
 
@@ -46,21 +52,21 @@ namespace config {
       params() : context_(NULL), trace_(false) {}
 
       bool trace() const { return trace_; }
-      context_type context() const { return context_; }
+      context_type *context() const { return context_; }
 
       params &trace(bool v) { trace_ = v; return *this; }
-      params &context(context_type c) { context_ = c; return *this; }
+      params &context(context_type *c) { NERVE_ASSERT_PTR(c); context_ = c; return *this; }
 
       private:
-      context_type context_;
+      context_type *context_;
       bool trace_;
     };
 
     lemon_interface(const params &p) {
       state_ = ::ParseAlloc(malloc);
       if (p.trace()) {
-#if defined(NERVE_ENABLE_PARSER_TRACE) && NERVE_ENABLE_PARSER_TRACE
-        ::ParseTrace(stdout, parse_trace_prefix);
+#if NERVE_PARSER_TRACE
+        ::ParseTrace(stdout, detail::parse_trace_prefix);
 #endif
       }
     }
@@ -84,7 +90,7 @@ namespace config {
 
     private:
 
-    context_type context_;
+    context_type *context_;
     void *state_;
   };
 }

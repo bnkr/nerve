@@ -96,13 +96,15 @@ void config_parser::parse(config::pipeline_config &output) {
   if (std::strcmp(p_.file(), "-") != 0) {
     fh.reset(std::fopen(p_.file(), "r"));
     if (! fh.get() || std::ferror(fh.get())) {
-      // TODO: exceptions?
+      // TODO:
+      //   exceptions?  I want to separate the output because often we'd want to
+      //   write into a log file as well.
       std::cerr << "xxsc-compile: could not open file '" << p_.file() << "'" << std::endl;
       return;
     }
   }
 
-  parse_context context;
+  parse_context context(output);
 
   lemon_interface parse = lemon_interface::params()
     .trace(p_.trace_parser())
@@ -110,7 +112,8 @@ void config_parser::parse(config::pipeline_config &output) {
 
   flex_interface::params fp = flex_interface::params()
     .trace(p_.trace_lexer())
-    .stream(fh.get());
+    .stream(fh.get())
+    .context(&context);
   flex_interface::init(fp);
 
   int tok;
@@ -128,11 +131,10 @@ void config_parser::parse(config::pipeline_config &output) {
 
   if (context.reporter().error()) {
 fatal_error:
-    // return something sensible or raise an exception
+    std::cerr << "parp" << std::endl;
     return;
   }
   else {
-    // return something sensible or raise an exception
     return;
   }
 
