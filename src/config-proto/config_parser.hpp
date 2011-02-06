@@ -7,8 +7,10 @@
  * actually want to use.
  */
 
-#ifndef CONFIG_PARSER_HPP_999mx4dk
-#define CONFIG_PARSER_HPP_999mx4dk
+#ifndef CONFIG_CONFIG_PARSER_HPP_999mx4dk
+#define CONFIG_CONFIG_PARSER_HPP_999mx4dk
+
+#include "../plugin-proto/asserts.hpp"
 
 namespace config {
   class pipeline_config;
@@ -32,7 +34,7 @@ namespace config {
       bool trace_lexer() const { return trace_lexer_; }
       bool lexer_only() const { return lexer_only_; }
 
-      params &file(const char *v) { file_ = v; return *this; }
+      params &file(const char *v) { NERVE_ASSERT_PTR(v); file_ = v; return *this; }
       params &trace_general(bool v) { trace_general_ = v; return *this; }
       params &trace_parser(bool v) { trace_parser_ = v; return *this; }
       params &trace_lexer(bool v) { trace_lexer_ = v; return *this; }
@@ -47,8 +49,7 @@ namespace config {
       bool lexer_only_;
     };
 
-    config_parser(const params &p) : p_(p) {}
-
+    config_parser(const params &p);
     void parse(pipeline_config &output);
 
     private:
@@ -64,6 +65,12 @@ namespace config {
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+
+using config::config_parser;
+
+config_parser::config_parser(const config_parser::params &p) : p_(p) {
+  NERVE_ASSERT(p_.file() != NULL, "file must never be null");
+}
 
 struct stdio_ptr {
   stdio_ptr() : fh_(NULL) {}
@@ -82,8 +89,9 @@ struct stdio_ptr {
   FILE *fh_;
 };
 
-void config::config_parser::parse(config::pipeline_config &output) {
+void config_parser::parse(config::pipeline_config &output) {
   stdio_ptr fh;
+
   if (std::strcmp(p_.file(), "-") != 0) {
     fh.reset(std::fopen(p_.file(), "r"));
     if (! fh.get() || std::ferror(fh.get())) {
