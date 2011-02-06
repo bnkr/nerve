@@ -61,6 +61,7 @@ namespace config {
 #include "lemon_interface.hpp"
 #include "flex_interface.hpp"
 #include "pipeline_configs.hpp"
+#include "parse_context.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -101,23 +102,40 @@ void config_parser::parse(config::pipeline_config &output) {
     }
   }
 
-  // TODO:
-  //   Perhaps the class is better named "lemon interface" to be clear it's not
-  //   the full parser...
-  lemon_interface parse(lemon_interface::params().trace(p_.trace_parser()).context(NULL));
-  flex_interface::init(flex_interface::params().stream(fh.get()).trace(p_.trace_lexer()));
+  parse_context context;
+
+  lemon_interface parse = lemon_interface::params()
+    .trace(p_.trace_parser())
+    .context(&context);
+
+  flex_interface::params fp = flex_interface::params()
+    .trace(p_.trace_lexer())
+    .stream(fh.get());
+  flex_interface::init(fp);
 
   int tok;
   while ((tok = flex_interface::next_token())) {
+    // The lexer doesn't return if it can't deal with the character so it's ok
+    // to carry on.
     parse.token(tok);
 
-    // TODO: check some state to work out if there was an error
+    if (context.reporter().fatal_error()) {
+      goto fatal_error;
+    }
   }
 
   parse.finish();
 
-  // TODO:
-  //   Return something sensible.
+  if (context.reporter().error()) {
+fatal_error:
+    // return something sensible or raise an exception
+    return;
+  }
+  else {
+    // return something sensible or raise an exception
+    return;
+  }
+
 }
 
 #endif

@@ -25,7 +25,7 @@ namespace config {
       extern token_data current_token;
     }
 
-    //! \ingroup grp_lexer
+    //! \ingroup grp_config_lexer
     struct params {
       params() : stream_(NULL), trace_(false) {}
 
@@ -41,10 +41,15 @@ namespace config {
     };
 
     //@{
-    //! \ingroup grp_lexer
+    //! \ingroup grp_config_lexer
 
     //! The flex_interface is static so it gets a free function.
     void init(const params &);
+
+    //! Error at end of document.
+    bool error();
+    //! Stop immediately.
+    bool fatal_error();
 
     //! Text of the last matched token.  Note: this won't work to get the token
     //! text of where the parse actually is, because the lookahead token
@@ -56,7 +61,6 @@ namespace config {
 
     //! Free text which was in token_data.text
     extern void free_text(char *data);
-
     //@}
 
 

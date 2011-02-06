@@ -14,15 +14,14 @@
 #include <cstring>
 #include <iostream>
 
-#ifndef NERVE_LEXER_TRACE
-#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
-#endif
 
 /***********************
  * Lexer Action Macros *
  ***********************/
 
 static void print_yytext(const char *);
+// defined in the lexer because the defs aren't made yet
+static const char *state_name(int num);
 
 #define LEXER_MSG_YYTEXT(msg__)\
   if (::trace()) {\
@@ -37,20 +36,27 @@ static void print_yytext(const char *);
 
 #define LEXER_BEGIN_NDEBUG(state__) BEGIN(state__);
 #define LEXER_BEGIN_DEBUG(state__) \
-  LEXER_MSG_YYTEXT("switch state to " #state__);\
+  LEXER_MSG_YYTEXT("switch state to " << state_name(state__));\
   LEXER_BEGIN_NDEBUG(state__);\
 
 /* alias debug macros */
-#if NERVE_LEXER_TRACE
+#ifndef NERVE_LEXER_TRACE
+#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
+#elif NERVE_LEXER_TRACE
 #  define LEXER_RETURN(tok__) LEXER_RETURN_DEBUG(tok__)
 #  define LEXER_BEGIN(tok__) LEXER_BEGIN_DEBUG(tok__)
 #  define LEXER_MSG(msg__) LEXER_MSG_YYTEXT(msg__)
 #else
-#  error "should be on -- wtf!"
 #  define LEXER_RETURN(tok__) LEXER_RETURN_NDEBUG(tok__)
 #  define LEXER_BEGIN(tok__) LEXER_BEGIN_NDEBUG(tok__)
 #  define LEXER_MSG(...)
 #endif
+
+// TODO:
+//   - tell the context there was an error
+//   - use the error reporter to format the message (separate presentation)
+#define LEXER_ERROR(msg__)\
+  std::cerr << msg__ << ": " << yytext << std::endl;
 
 /***************
  * Static data *
@@ -58,19 +64,32 @@ static void print_yytext(const char *);
 
 config::flex_interface::token_data config::flex_interface::detail::current_token;
 
-// specific to stuff I've put in done
 static bool enable_trace = false;
 inline bool trace() { return enable_trace; }
+
+static bool error = false;
+static void set_error_state() { error = true; }
+
+/****************
+ * Exported API *
+ ****************/
 
 extern void yyset_in(FILE *);
 extern void yyset_debug(int);
 
-void config::flex_interface::init(const config::flex_interface::params &p) {
+namespace fi = ::config::flex_interface;
+
+void fi::init(const config::flex_interface::params &p) {
   enable_trace = p.trace();
   // it's too much debugging otherwise!
   ::yyset_debug(0);
   ::yyset_in(p.stream());
 }
+
+//! Error at end of document.
+bool fi::error() { }
+//! Stop immediately.
+bool fi::fatal_error() { }
 
 /************************
  * Token Data Managment *

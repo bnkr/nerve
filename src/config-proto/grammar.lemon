@@ -43,7 +43,6 @@ config ::= thread_seq .
  * Threads *
  ***********/
 
-
 thread_seq ::= thread .
 thread_seq ::= thread_seq thread .
 

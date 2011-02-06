@@ -8,12 +8,12 @@
 /* Large size, but fast */
 /* %option fast */
 
-%x string
+%x STRING
 
 %{
 
 #ifndef TOKENS_FILE
-#  error "-D TOKENS_FILE must be a string for the location of the token defs"
+#  error "-D TOKENS_FILE must be a quoted string of the location of lemon's token defs header"
 #  error "If you are compiling using the CMake build system then this is a bug."
 #endif
 
@@ -47,8 +47,15 @@ ws    [\t \n\r]
   "{"      { LEXER_RETURN(LBRACE); }
   "}"      { LEXER_RETURN(RBRACE); }
 
+  "thread"  { LEXER_RETURN(THREAD); }
+  "section" { LEXER_RETURN(THREAD); }
+  "stage"   { LEXER_RETURN(STAGE); }
+  "input"   { LEXER_RETURN(THREAD); }
+  "output"  { LEXER_RETURN(STAGE); }
+
   "path"   { LEXER_RETURN(PATH); }
   "plugin" { LEXER_RETURN(PLUGIN); }
+  "type"   { LEXER_RETURN(PLUGIN); }
 }
 
   /****************
@@ -56,14 +63,14 @@ ws    [\t \n\r]
    ****************/
 
 <INITIAL>{
-  \" { LEXER_BEGIN(string); }
+  \" { LEXER_BEGIN(STRING); }
 }
 
-<string>{
+<STRING>{
   \.          { LEXER_MSG("Deal with escape in string"); }
   [^\"]+      { LEXER_MSG("Chomp string"); }
   \"          {
-    BEGIN(INITIAL);
+    LEXER_BEGIN(INITIAL);
     LEXER_RETURN(STRING_LIT);
   }
 }
@@ -75,7 +82,7 @@ ws    [\t \n\r]
 <INITIAL>{
   \n         { /* set some location stage */ } 
   {blank}+   {}
-  .          { /* raise an error */ }
+  .          { LEXER_ERROR("unmatched character"); }
 }
 
 %%
@@ -104,5 +111,16 @@ static void print_yytext(const char *text) {
     }
   }
   std::cout << std::endl;
+}
+
+static const char *state_name(int num) {
+  switch(num) {
+  case INITIAL:
+    return "INITIAL";
+  case STRING:
+    return "string";
+  default:
+    return "<unknown state>";
+  }
 }
 #endif
