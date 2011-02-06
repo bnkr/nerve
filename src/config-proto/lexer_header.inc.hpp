@@ -14,30 +14,42 @@
 #include <cstring>
 #include <iostream>
 
+#ifndef NERVE_LEXER_TRACE
+#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
+#endif
+
 /***********************
  * Lexer Action Macros *
  ***********************/
 
+static void print_yytext(const char *);
+
+#define LEXER_MSG_YYTEXT(msg__)\
+  if (::trace()) {\
+    std::cout << "lexer: " << yyget_lineno() << ": " << msg__ << ": ";\
+    print_yytext(yytext);\
+  }
+
 #define LEXER_RETURN_NDEBUG(tok__) return T_ ## tok__;
 #define LEXER_RETURN_DEBUG(tok__) \
-  std::cout << "lexer: " << line_num() << ": " << tokname__ << ": ";\
-  print_yytext(yytext);\
-  LEXER_RETURN_NDEBUG(tok__);
+  LEXER_MSG_YYTEXT(#tok__);\
+  LEXER_RETURN_NDEBUG(tok__);\
 
 #define LEXER_BEGIN_NDEBUG(state__) BEGIN(state__);
 #define LEXER_BEGIN_DEBUG(state__) \
-  std::cout << "lexer: " << line_num() << ": " << tokname__ << ": ";\
-  print_yytext(yytext);\
-  LEXER_BEGIN_NDEBUG(tok__);
+  LEXER_MSG_YYTEXT("switch state to " #state__);\
+  LEXER_BEGIN_NDEBUG(state__);\
 
 /* alias debug macros */
 #if NERVE_LEXER_TRACE
 #  define LEXER_RETURN(tok__) LEXER_RETURN_DEBUG(tok__)
 #  define LEXER_BEGIN(tok__) LEXER_BEGIN_DEBUG(tok__)
+#  define LEXER_MSG(msg__) LEXER_MSG_YYTEXT(msg__)
 #else
+#  error "should be on -- wtf!"
 #  define LEXER_RETURN(tok__) LEXER_RETURN_NDEBUG(tok__)
 #  define LEXER_BEGIN(tok__) LEXER_BEGIN_NDEBUG(tok__)
-#  define LEXER_MSG_DATA(...)
+#  define LEXER_MSG(...)
 #endif
 
 /***************
@@ -45,14 +57,18 @@
  ***************/
 
 config::flex_interface::token_data config::flex_interface::detail::current_token;
-static bool enable_trace = false;
 
+// specific to stuff I've put in done
+static bool enable_trace = false;
 inline bool trace() { return enable_trace; }
 
 extern void yyset_in(FILE *);
+extern void yyset_debug(int);
 
 void config::flex_interface::init(const config::flex_interface::params &p) {
   enable_trace = p.trace();
+  // it's too much debugging otherwise!
+  ::yyset_debug(0);
   ::yyset_in(p.stream());
 }
 

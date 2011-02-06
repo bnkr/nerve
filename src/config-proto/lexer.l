@@ -1,6 +1,7 @@
 /* Copyright (C) James Webber, 2009-2011.  Under a 3-clause BSD license.  See
  * COPYING. */
 
+%option yylineno
 %option noyywrap
 /* %option stack */
 
@@ -59,8 +60,8 @@ ws    [\t \n\r]
 }
 
 <string>{
-  \.          { LEXER_MSG_DATA("Deal with escape in string"); }
-  [^\"]+      { LEXER_MSG_DATA("Chomp string"); }
+  \.          { LEXER_MSG("Deal with escape in string"); }
+  [^\"]+      { LEXER_MSG("Chomp string"); }
   \"          {
     BEGIN(INITIAL);
     LEXER_RETURN(STRING_LIT);
@@ -86,7 +87,11 @@ inline void dont_call_me() {
   ::yyunput(y,&x);
 }
 
-#ifdef NERVE_LEXER_DEBUG
+#ifndef NERVE_LEXER_TRACE
+#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
+#endif
+
+#if NERVE_LEXER_TRACE
 static void print_yytext(const char *text) {
   size_t len = std::strlen(text), i = 0;
   while (i < len) {

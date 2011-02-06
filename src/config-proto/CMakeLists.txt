@@ -17,6 +17,12 @@ bbuild_parser(
 # issues when you dstribute build sournces.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(defs "NERVE_LEXER_TRACE=1" "NERVE_PARSER_TRACE=0")
+else()
+  set(defs)
+endif()
+
 bbuild_exe(
   TARGET config-proto
   SOURCES
@@ -26,5 +32,6 @@ bbuild_exe(
   CPPDEFS
     # Dependncy on this is handled by bbuild_parser.
     "TOKENS_FILE=\"${tokens_file}\""
+    ${defs}
   NO_INSTALL
 )

@@ -17,9 +17,12 @@
 //
 // NOTE: remember to define this *after* assert.hpp is included!  So I can
 // have a parse trace even with no asserts.
-#if NERVE_PARSER_TRACE
+#ifndef NERVE_PARSER_TRACE
+#  error "NERVE_LEXER_TRACE should be defined by config.hpp"
+#elif NERVE_PARSER_TRACE
 #  undef NDEBUG
 #else
+#  undef NDEBUG
 #  define NDEBUG
 #endif
 
@@ -27,4 +30,3 @@
 #include <cstdlib>
 
 template<class T> void use_variable(const T &) {}
-
