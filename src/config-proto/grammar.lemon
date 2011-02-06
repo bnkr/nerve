@@ -109,4 +109,4 @@ normal_value ::= string .
 string ::= STRING_LIT .
 string ::= IDENTIFIER_LIT .
 
-empty_config ::= LBRACE RBRACE . { ERR("empty config"); }}
+empty_config ::= LBRACE RBRACE . { ERR("empty config"); }
