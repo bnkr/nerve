@@ -26,7 +26,7 @@ namespace config {
 
     struct params {
       params()
-        : file_("-"),
+        : file_(NULL),
           trace_general_(false),
           trace_parser_(false),
           trace_lexer_(false),
@@ -39,7 +39,7 @@ namespace config {
       bool trace_lexer() const { return trace_lexer_; }
       bool lexer_only() const { return lexer_only_; }
 
-      params &file(const char *v) { NERVE_ASSERT_PTR(v); file_ = v; return *this; }
+      params &file(const char *v) { file_ = NERVE_CHECK_PTR(v); return *this; }
       params &trace_general(bool v) { trace_general_ = v; return *this; }
       params &trace_parser(bool v) { trace_parser_ = v; return *this; }
       params &trace_lexer(bool v) { trace_lexer_ = v; return *this; }
@@ -122,17 +122,15 @@ config_parser::config_parser(const config_parser::params &p) : p_(p) {
 bool config_parser::parse(config::pipeline_config &output) {
   stdio_ptr fh;
 
-  if (std::strcmp(p_.file(), "-") != 0) {
-    fh.reset(std::fopen(p_.file(), "r"));
-    if (! fh.get() || std::ferror(fh.get())) {
-      // TODO:
-      //   exceptions?  I want to separate the output because often we'd want to
-      //   write into a log file as well.  In theory the error_reporter class
-      //   will use some kind of already declared strategy.  We can just use
-      //   that here (or even it could be global if necessary).
-      std::cerr << "xxsc-compile: could not open file '" << p_.file() << "'" << std::endl;
-      return false;
-    }
+  fh.reset(std::fopen(NERVE_CHECK_PTR(p_.file()), "r"));
+  if (! fh.get() || std::ferror(fh.get())) {
+    // TODO:
+    //   exceptions?  I want to separate the output because often we'd want to
+    //   write into a log file as well.  In theory the error_reporter class
+    //   will use some kind of already declared strategy.  We can just use
+    //   that here (or even it could be global if necessary).
+    std::cerr << "could not open config file '" << p_.file() << "'" << std::endl;
+    return false;
   }
 
   parse_context context(output);

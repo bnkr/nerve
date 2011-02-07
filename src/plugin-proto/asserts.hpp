@@ -28,15 +28,21 @@
 
 namespace asserts {
   namespace detail {
-    template<class T> T *check_pointer(T *p, const char *code) {
-      NERVE_ASSERT(p != NULL, "pointer in " << code << " must not be null");
+    template<class T> T *check_pointer(int line, const char *file, T *p, const char *code) {
+      if (p == NULL) {
+        std::cerr
+          << file << ":" << line << ":\n"
+          << "  expression: '" << code << "'\n"
+          << "  must yield a non-null pointer" << std::endl;
+        std::abort();
+      }
       return p;
     }
   }
 }
 
 //! Check the pointer is non-null and return it.
-#define NERVE_CHECK_PTR(expr__) ::asserts::detail::check_pointer((expr__), #expr__)
+#define NERVE_CHECK_PTR(expr__) (::asserts::detail::check_pointer(__LINE__, __FILE__, (expr__), #expr__))
 
 //! Assertion with message but don't abort afterwards.
 #define NERVE_WASSERT(code__, msg__)\
