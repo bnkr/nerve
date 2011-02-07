@@ -28,7 +28,13 @@ namespace config {
     void new_section() { current.section = &NERVE_CHECK_PTR(current.job)->new_section(); }
     void new_stage() { current.stage = &NERVE_CHECK_PTR(current.section)->new_stage(); }
 
-    void end_job() { current.reset(); }
+    void end_job() {
+      if (this_job().empty()) {
+        error_reporter().report("thread contains no sections");
+      }
+      current.reset();
+    }
+
     void end_section() { current.stage = NULL; current.section = NULL; }
     void end_stage() { current.stage = NULL; }
 

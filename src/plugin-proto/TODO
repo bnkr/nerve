@@ -1,128 +1,15 @@
-Arbitrary Threads
------------------
+Real Implementation
+-------------------
 
-In trouble again because input and output might be in one thread and everything
-else in another.
+Turn the existing protocode into a real implementation.
 
-* implement the design below
+* there could be issues with blocking on output as well as blocking on input
+* continue working the existing specification-bits.cpp up to be compilable
+* tidy the spec and put it in doc
 
-Design Work
+Integration
 -----------
 
-Another design which decouples stage order from stage thread; i.e each stage can
-input and output to an arbitrary other stage, regardless of what thread they are
-both in.  This is mostly useful to allow us to put the input and output plugins
-in the same thread and everything else in a different one.
-
------
-class stage {
-  // two strategies for our input and output concerns
-  inputter_;
-  outputter_;
-
-  // it's possible we would not need these in the stage class
-  void call_process() { this->inputter_->read(this); }
-  void handle_input(packet *p) { this->process(p, outputter_); }
-
-  // this would be implemented in a subclass.
-  void process(packet *p, outputter *o) {
-    o->write(p);
-  }
-}
-
-class local_inputter {
-  void read(stage *send_to) {
-    // this is OK so long as *something* blocks.  Usually that's the input or
-    // output.
-    if (q->empty()) {
-      return
-    }
-    pkt = q->read();
-    send_to->handle_input(pkt);
-  }
-};
-
-class pipe_inputter {
-  virtual void read(stage *send_to) {
-    pkt = q->block_read();
-    send_to->handle_input(pkt);
-  }
-}
-
-class pipe_outputter {
-  void write(p) { pipe_.blocking_write(p); }
-};
-
-class local_outputter {
-  void write(p) { q_.push(p); }
-};
-----
-
-----
-// threads like this -- this can't do anything about events because it doesn't
-// know whether its plugins are in sequence
-void plugin_runner(stage_list) {
-  stage_list.each {|s|
-    s.call_process
-  }
-}
-
-# create thread objects for each thread wanted and add relevant stages to the
-# thread
-thread_list = []
-configs.each {|c|
-  th = thread.new
-  c.each_stage {|curr|
-    # Find out where this stage should input and output to
-    to = s.to_stage
-    from = s.from_stage
-
-    # control blocking reads propery
-    if same_thread(curr, from)
-      simple_q = ??
-      local_inputter.new(simple_q)
-    else
-      mt_q = ??
-      thread_inputter.new(thread_q)
-    end
-
-    # create a proper outputter
-    if same_thread(curr, to)
-      simple_q = ??
-      outputter = local_outputter.new(simple_q)
-    else
-      mt_queue = ??
-      outputter = thread_outputter.new
-    end
-
-    th.add_stage stage.new(inputter, outputter, plugin)
-  }
-}
-
-thread_list.each {|th| boost::thread(plugin_runner(th)) }
-
------
-
-The problem with this is in the step() function:
-
-* without knowing plugins are in sequence, you can't skip the rest of the
-  sequence when we run out of packets -- every one must check its monothreaded
-  queue, even if we know for sure that it's empty
-  - we could optimise this out by sorting the local stages
-  - still complicated because there could be more than one multi-threaded reader
-    in a thread; there are two distinct pipeipnes in the same thread in other
-    words.
-* it's not clear where the queues are stored
-* would it even be the slightest benefit over the current method?  Would you
-  really want to have multiple bits of each pipeline in different threads?  I
-  guess I could just say it's there for insanity reasons >_>
-  - it's not really much slower...
-* if he input and otuput is in the same thread, how does the socket server write
-  to the input thread?
-  - we might need to add a special stage which does blocking reads from the
-    socket server under those conditions
-* it occurs to me that it might be a lot easier to make each thread be a
-  boos::asio service.  Then the plugins can all be asynchronus but not
-  necessarily threaded.
-  - this design is actually half way there -- we might be able to deal with it
-    jus as well
+Integrate the code with the config reading parts.  This directory is a huge
+mess, so we'll use config-proto for this (actually there will be a third
+directory to do the integration).

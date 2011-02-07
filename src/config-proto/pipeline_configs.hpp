@@ -101,6 +101,8 @@ class job_config {
     return sections_.back();
   }
 
+  bool empty() const { return sections_.empty(); }
+
   section_iterator_type begin() { return sections_.begin(); }
   section_iterator_type end() { return sections_.end(); }
 

@@ -60,7 +60,7 @@ namespace config {
     private:
 
     void syntactic_pass(struct syntactic_context &);
-    void semantic_pass(pipeline_config &);
+    void semantic_pass(parse_context &);
 
     params p_;
   };
@@ -156,7 +156,7 @@ bool config_parser::parse(config::pipeline_config &output) {
     return false;
   }
 
-  semantic_pass(output);
+  semantic_pass(context);
 
   return ! context.reporter().error();
 }
@@ -180,11 +180,26 @@ void config_parser::syntactic_pass(syntactic_context &syn) {
   syn.parser.finish();
 }
 
-void config_parser::semantic_pass(config::pipeline_config &confs) {
+void config_parser::semantic_pass(config::parse_context &ctx) {
+  config::pipeline_config &confs = ctx.output();
   std::map<std::string, section_config*> names;
 
   typedef pipeline_config::job_iterator_type   job_iter_t;
   typedef job_config::section_iterator_type    section_iter_t;
+
+  // TODO:
+  //   Validate:
+  //
+  //   - sections connected within the same job
+  //   - observers before processes
+  //   - anything before input
+  //   - no input
+  //   - no output
+  //   - anything but processes before output
+  //   - anything but observers after output
+  //
+  //   Possibly some of this could be dealt with by the actual pipeline
+  //   declaration part...
 
   for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
     for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
@@ -193,10 +208,14 @@ void config_parser::semantic_pass(config::pipeline_config &confs) {
       if (names.count(sec->after_name())) {
         sec->after_section(names[std::string(sec->after_name())]);
       }
+      else {
+        // TODO:
+        //   Needs a locational report so the section needs to store the location
+        //   for its 'after' field.
+        ctx.reporter().report("section is 'after' non-existent section %s", sec->after_name());
+      }
     }
   }
-
-
 }
 
 #endif
