@@ -53,6 +53,8 @@ static const char *state_name(int num);
 #  define LEXER_MSG(...)
 #endif
 
+#define LEXER_NEWLINE() context->reporter().increment_line();
+
 // TODO:
 //   - tell the context there was an error
 //   - use the error reporter to format the message (separate presentation)

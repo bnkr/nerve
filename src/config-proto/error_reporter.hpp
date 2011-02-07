@@ -6,6 +6,27 @@
 #include <boost/utility.hpp>
 
 namespace config {
+
+  /*!
+   * \ingroup grp_config
+   * Locational state handled by the lexer (and whatever bit knows about he
+   * filename).
+   */
+  class parse_location {
+    public:
+
+    parse_location() : file_(NULL), line_(1) {}
+
+    int line() const { return line_; }
+    const char *file() const { return file_; }
+
+    void increment() { ++line_; }
+    void new_file(const char *file) { file_ = file; }
+
+    private:
+    const char *file_;
+    int line_;
+  };
   /*!
    * \ingroup grp_config
    *
@@ -51,12 +72,18 @@ namespace config {
     bool error() const { return error_ || fatal_error_; }
     bool fatal_error() const { return fatal_error_; }
 
+    void increment_line() { location_.increment(); }
+
+    const parse_location &location() const { return location_; }
+    parse_location &location() { return location_; }
+
     private:
 
-    void print_file_line() {
-      std::fprintf(stream_, "<file>:<line>: ");
+    void print_file_line() const {
+      std::fprintf(stream_, "%s:%d: ", this->location().file(), this->location().line());
     }
 
+    parse_location location_;
     bool error_;
     bool fatal_error_;
     FILE *stream_;

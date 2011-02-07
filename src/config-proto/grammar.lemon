@@ -75,6 +75,7 @@ thread_conf_seq ::= thread_conf . { }
 thread_conf_seq ::= thread_conf_seq thread_conf . { }
 
 thread_conf ::= section . { }
+thread_conf ::= invalid_field .
 
 /************
  * Sections *
@@ -82,23 +83,28 @@ thread_conf ::= section . { }
 
 section ::= section_key LBRACE section_conf_seq RBRACE . { }
 section ::= section_key empty_block . { }
+section ::= section_key error . { ERR_EXPECTED("'{' after section-key"); }
 
 section_key ::= SECTION .
-section_key ::= error . { ERR_EXPECTED("stage config before '{'"); }
+section_key ::= error . { ERR_EXPECTED("'section' before '{'"); }
 
-section_conf_seq ::= stage . { }
-section_conf_seq ::= section_conf_seq stage . { }
+section_conf_seq ::= section_conf . { }
+section_conf_seq ::= section_conf_seq section_conf . { }
+
+section_conf ::= stage .
+section_conf ::= invalid_field .
 
 /**********
  * Stages *
  **********/
 
-stage ::= STAGE LBRACE stage_conf_seq RBRACE . { }
-stage ::= INPUT LBRACE stage_conf_seq RBRACE . { }
-stage ::= OUTPUT LBRACE stage_conf_seq RBRACE . { }
-stage ::= STAGE empty_block .
-stage ::= INPUT empty_block .
-stage ::= OUTPUT empty_block .
+stage ::= stage_key LBRACE stage_conf_seq RBRACE . { }
+stage ::= stage_key empty_block .
+
+stage_key ::= STAGE .
+stage_key ::= INPUT .
+stage_key ::= OUTPUT .
+stage_key ::= error . { ERR_EXPECTED("'stage', 'input', or 'output' before '{'"); }
 
 stage_conf_seq ::= stage_conf . { }
 stage_conf_seq ::= stage_conf_seq stage_conf . { }
@@ -117,12 +123,6 @@ after_value ::= OUTPUT .
 normal_value ::= error . { ERR_EXPECTED("string after '='"); }
 normal_value ::= string .
 
-/**********
- * Errors *
- **********/
-
-// any_block ::= empty_block .
-
 non_stage_conf ::= error EQ any_value . {
   ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='");
 }
@@ -131,6 +131,12 @@ any_value ::= error . { ERR_EXPECTED("value after '='"); }
 any_value ::= string .
 any_value ::= INPUT .
 any_value ::= OUTPUT .
+
+/**********
+ * Errors *
+ **********/
+
+invalid_field ::= error EQ error . { ERR("field is not valid here"); }
 
 /********
  * Util *

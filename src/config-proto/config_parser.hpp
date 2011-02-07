@@ -109,6 +109,8 @@ void config_parser::parse(config::pipeline_config &output) {
 
   parse_context context(output);
 
+  context.reporter().location().new_file(p_.file());
+
   lemon_interface parse = lemon_interface::params()
     .trace(p_.trace_parser())
     .context(&context);

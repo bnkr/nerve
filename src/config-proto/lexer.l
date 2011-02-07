@@ -1,7 +1,7 @@
 /* Copyright (C) James Webber, 2009-2011.  Under a 3-clause BSD license.  See
  * COPYING. */
 
-%option yylineno
+%option noyylineno
 %option noyywrap
 /* %option stack */
 
@@ -55,7 +55,6 @@ ws    [\t \n\r]
 
   "path"    { LEXER_RETURN(PATH); }
   "type"    { LEXER_RETURN(TYPE); }
-
   "after"   { LEXER_RETURN(AFTER); }
   "name"    { LEXER_RETURN(NAME); }
 }
@@ -70,7 +69,8 @@ ws    [\t \n\r]
 }
 
 <STRING>{
-  \.          { LEXER_MSG("Deal with escape in string"); }
+  \\.         { LEXER_MSG("Deal with escape in string"); }
+  \n          { LEXER_NEWLINE(); }
   [^\"]+      { LEXER_MSG("Chomp string"); }
   \"          {
     LEXER_BEGIN(INITIAL);
@@ -83,7 +83,7 @@ ws    [\t \n\r]
    *************/
 
 <INITIAL>{
-  \n         { /* set some location stage */ } 
+  \n         { LEXER_NEWLINE(); }
   {blank}+   {}
   .          { LEXER_ERROR("unmatched character: %c", yytext[0]); }
 }
