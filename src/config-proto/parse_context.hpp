@@ -38,6 +38,33 @@ namespace config {
 
     //@}
 
+    //! \name Stage Actions
+    //! Complete stage config creation.
+    //@{
+
+    typedef flex_interface::text_ptr text_ptr;
+
+    void add_stage(text_ptr text) {
+      new_stage();
+      typedef stage_config::stage_ids id_type;
+      id_type id = stage_config::find_stage(text.get());
+      switch (id) {
+      case stage_config::id_unset:
+        reporter().report("not a valid stage id or not a loadable plugin: %s", text.get());
+        break;
+      case stage_config::id_plugin:
+        this_stage().path(text);
+        this_stage().type(id);
+        break;
+      default:
+        this_stage().type(id);
+        break;
+      }
+      end_stage();
+    }
+
+    //@}
+
     private:
     pipeline_config &output_;
 

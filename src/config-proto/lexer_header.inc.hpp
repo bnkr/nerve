@@ -82,7 +82,7 @@ namespace fi = ::config::flex_interface;
 void fi::init(const config::flex_interface::params &p) {
   context = NERVE_CHECK_PTR(p.context());
   enable_trace = p.trace();
-  // it's too much debugging otherwise!
+  // only necessary for checking the regex themselves
   ::yyset_debug(0);
   ::yyset_in(NERVE_CHECK_PTR(p.stream()));
 }

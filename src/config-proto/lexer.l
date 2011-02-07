@@ -40,20 +40,17 @@ ws    [\t \n\r]
    *******************/
 
 <INITIAL>{
-  "="      { LEXER_RETURN(EQ); }
+  #[^\n]+  {  }
+  "="      { /* LEXER_RETURN(EQ); */ }
   "{"      { LEXER_RETURN(LBRACE); }
   "}"      { LEXER_RETURN(RBRACE); }
 
-  "thread"  { LEXER_RETURN(THREAD); }
-  "section" { LEXER_RETURN(SECTION); }
-  "stage"   { LEXER_RETURN(STAGE); }
-  "input"   { LEXER_RETURN(INPUT); }
-  "output"  { LEXER_RETURN(OUTPUT); }
-
-  "path"    { LEXER_RETURN(PATH); }
-  "type"    { LEXER_RETURN(TYPE); }
-  "after"   { LEXER_RETURN(AFTER); }
-  "name"    { LEXER_RETURN(NAME); }
+  "thread"   { LEXER_RETURN(THREAD); }
+  "section " { LEXER_RETURN(SECTION); }
+  "stage"    { LEXER_RETURN(STAGE); }
+ 
+  "after"    { LEXER_RETURN(AFTER); }
+  "name"     { LEXER_RETURN(NAME); }
 }
 
   /****************
@@ -61,8 +58,8 @@ ws    [\t \n\r]
    ****************/
 
 <INITIAL>{
-  \"           { LEXER_BEGIN(STRING); }
-  [a-zA-Z0-9]+ { identifier_assign_token_text(); LEXER_RETURN(IDENTIFIER_LIT); }
+  \"                  { LEXER_BEGIN(STRING); }
+  [a-z0-9A-Z_/.=:\\]+ { identifier_assign_token_text(); LEXER_RETURN(IDENTIFIER_LIT); }
 }
 
 <STRING>{

@@ -12,7 +12,9 @@
 
 #ifndef CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 #define CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
+
 #include <vector>
+#include <cstring>
 
 namespace config {
 
@@ -34,6 +36,23 @@ class stage_config {
   const char *path() const { return path_.get(); }
   stage_ids type() const { return type_; }
 
+  //! Finds an identifier for the stage, returning id_plugin if it's a loadable
+  //! plugin, id_unset if it can't be found, or the id of a built-in stage.
+  static stage_ids find_stage(const char *name) {
+    NERVE_ASSERT_PTR(name);
+
+    if (std::strcmp(name, "sdl") == 0) {
+      return stage_config::id_sdl;
+    }
+    else if (std::strcmp(name, "ffmpeg") == 0) {
+      return stage_config::id_ffmpeg;
+    }
+    else {
+      return stage_config::id_unset;
+    }
+  }
+
+  private:
   flex_interface::text_ptr path_;
   stage_ids type_;
 };

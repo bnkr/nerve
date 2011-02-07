@@ -87,7 +87,6 @@ thread_conf_seq ::= thread_conf . { }
 thread_conf_seq ::= thread_conf_seq thread_conf . { }
 
 thread_conf ::= section . { }
-thread_conf ::= invalid_field .
 
 /************
  * Sections *
@@ -108,59 +107,20 @@ section_key ::= error . { context->new_section(); ERR_EXPECTED("'section' before
 section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
-section_conf ::= stage .
-section_conf ::= NAME EQ conf_string(S) . { context->this_section().name(make_text_ptr(S)); }
-section_conf ::= AFTER EQ conf_string(S) . { context->this_section().after_name(make_text_ptr(S)); }
-section_conf ::= invalid_field .
-
-/**********
- * Stages *
- **********/
-
-stage ::= stage_key LBRACE stage_conf_seq RBRACE . { context->end_stage(); }
-stage ::= stage_key empty_block . { context->end_stage(); }
-
-stage_key ::= STAGE . { context->new_stage(); }
-stage_key ::= INPUT . { context->new_stage(); }
-stage_key ::= OUTPUT . { context->new_stage(); }
-stage_key ::= error . { ERR_EXPECTED("'stage', 'input', or 'output' before '{'"); }
-
-stage_conf_seq ::= stage_conf . { }
-stage_conf_seq ::= stage_conf_seq stage_conf . { }
-
-stage_conf ::= PATH EQ conf_string(S) . { context->this_stage().path(make_text_ptr(S)); }
-stage_conf ::= TYPE EQ conf_string(S) . {
-  config::flex_interface::text_ptr p = make_text_ptr(S);
-  typedef config::stage_config::stage_ids id_type;
-  id_type id = text_to_id(p.get());
-  if (id == stage_config::id_unset) {
-    ERR("not a valid stage type: %s", p.get());
-  }
-  else {
-    context->this_stage().type(id);
-  }
+section_conf ::= NAME conf_string(S) . { context->this_section().name(make_text_ptr(S)); }
+section_conf ::= AFTER conf_string(S) . { context->this_section().after_name(make_text_ptr(S)); }
+section_conf ::= STAGE conf_string(S) . { context->add_stage(make_text_ptr(S)); }
+section_conf ::= error conf_string(S) . {
+  ERR_EXPECTED("'name', 'after', 'input', 'stage', or 'output'");
+  config::flex_interface::free_text(S);
 }
-stage_conf ::= non_stage_conf .
-
-non_stage_conf ::= PATH error . { ERR_EXPECTED("'=' after 'path'"); }
-non_stage_conf ::= TYPE error . { ERR_EXPECTED("'=' after 'type'"); }
-non_stage_conf ::= error EQ any_value . { ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='"); }
-
-any_value ::= error . { ERR_EXPECTED("value after '='"); }
-any_value ::= string .
-
-/**********
- * Errors *
- **********/
-
-invalid_field ::= error EQ error . { ERR("field is not valid here"); }
 
 /********
  * Util *
  ********/
 
 %type conf_string { char * }
-conf_string ::= error . { ERR_EXPECTED("string after '='"); }
+conf_string ::= error . { ERR_EXPECTED("string value for field");}
 conf_string(RET) ::= string(S) . { RET = S; }
 
 %type string { char * }

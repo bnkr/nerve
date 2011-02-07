@@ -36,8 +36,12 @@
 
 // TODO:
 //   This only works with NDEBUG defined.
-#define ERR_EXPECTED(what__)\
-  context->reporter().report("expected %s but got %s", what__, yyTokenName[get_last_error().token]);
+
+#include TOKENS_FILE
+
+// token name needs to be in the macro because it's declared static (yeah yeah I
+// shouldn't really be using it anyway).
+#define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
 
 template<class T> void use_variable(const T &) {}
 
@@ -62,24 +66,23 @@ static void set_last_error(int major, minor_type minor) {
 }
 const error_data &get_last_error() { return last_error; }
 
+static void err_expected(const char *exp, config::parse_context *pc, const char *tok_name) {
+  const char *val = 0;
+  switch (get_last_error().token) {
+  case T_IDENTIFIER_LIT:
+  case T_STRING_LIT:
+    val = get_last_error().data.text;
+    break;
+  default:
+    val = tok_name;
+  }
+
+  NERVE_CHECK_PTR(pc)->reporter().report("expected %s but got %s", exp, val);
+}
+
+/*******************
+ * Creating stages *
+ *******************/
+
 using config::flex_interface::make_text_ptr;
 using config::stage_config;
-
-stage_config::stage_ids text_to_id(const char *id) {
-  // TODO:
-  //   This would be better handled by a special lexer state.  Then we don't need
-  //   a lookup like this.  The TYPE = bit is OK wrt lookahead to throw us into
-  //   the new state for the next token.
-
-  NERVE_ASSERT_PTR(id);
-
-  if (std::strcmp(id, "sdl") == 0) {
-    return stage_config::id_sdl;
-  }
-  else if (std::strcmp(id, "ffmpeg") == 0) {
-    return stage_config::id_ffmpeg;
-  }
-  else {
-    return stage_config::id_unset;
-  }
-}
