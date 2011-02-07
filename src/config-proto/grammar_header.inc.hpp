@@ -62,11 +62,7 @@ static void set_last_error(int major, minor_type minor) {
 }
 const error_data &get_last_error() { return last_error; }
 
-config::flex_interface::pass_text make_pass_text(char *lexer_text) {
-  return config::flex_interface::pass_text(lexer_text);
-}
-
-
+using config::flex_interface::make_text_ptr;
 using config::stage_config;
 
 stage_config::stage_ids text_to_id(const char *id) {

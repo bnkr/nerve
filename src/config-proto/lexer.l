@@ -3,6 +3,7 @@
 
 %option noyylineno
 %option noyywrap
+%option nodefault
 /* %option stack */
 
 /* Large size, but fast */
@@ -65,14 +66,15 @@ ws    [\t \n\r]
 
 <INITIAL>{
   \"           { LEXER_BEGIN(STRING); }
-  [a-zA-Z0-9]+ { LEXER_RETURN(IDENTIFIER_LIT); }
+  [a-zA-Z0-9]+ { identifier_assign_token_text(); LEXER_RETURN(IDENTIFIER_LIT); }
 }
 
 <STRING>{
-  \\.         { LEXER_MSG("Deal with escape in string"); }
-  \n          { LEXER_NEWLINE(); }
-  [^\"]+      { LEXER_MSG("Chomp string"); }
+  \\.         { string_append_escape();  }
+  \n          { string_append_newline(); LEXER_NEWLINE(); }
+  [^\"]+      { string_append_text(); }
   \"          {
+    string_assign_token_text();
     LEXER_BEGIN(INITIAL);
     LEXER_RETURN(STRING_LIT);
   }

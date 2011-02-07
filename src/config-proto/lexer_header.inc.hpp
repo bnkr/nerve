@@ -64,7 +64,7 @@ static const char *state_name(int num);
  * Static data *
  ***************/
 
-config::flex_interface::token_data config::flex_interface::detail::current_token;
+config::flex_interface::token_type config::flex_interface::detail::current_token;
 
 static ::config::flex_interface::context_type *context;
 static bool enable_trace = false;
@@ -97,15 +97,47 @@ void fi::init(const config::flex_interface::params &p) {
 static std::allocator<char> char_alloc;
 
 void config::flex_interface::free_text(char *text) {
-  /* NERVE_ASSERT(text, "attempting to free null pointer"); */
+  NERVE_ASSERT(text, "attempting to free null pointer");
   // TODO: we should get rid of the need for a strlen, but it's very difficult.
   char_alloc.deallocate(text, std::strlen(text));
 }
 
-//! Set string which represents the current token based on yytext.
-void set_current_token_text() {
-  char *p = char_alloc.allocate(yyleng + 1);
-  std::strcpy(p, yytext);
+//! Copy-allocate the string and assign it to the current token text.
+static void assign_token_text(const char *copy, size_t length) {
+  char *p = char_alloc.allocate(length);
+  std::strncpy(p, copy, length);
   ::config::flex_interface::detail::current_token.text = p;
 }
 
+/************************************
+ * Creating strings and identifiers *
+ ************************************/
+
+static std::string buffer;
+
+static void string_append_escape() {
+  NERVE_ASSERT(yytext[0] == '\\', "this must only be called when there is an escape char");
+  NERVE_ASSERT(yytext[1] != '\0', "there must always be exactly two text chars in an escape");
+  NERVE_ASSERT(yytext[2] != '\0', "there must always be exactly two text chars in an escape");
+
+  const char c = yytext[1];
+
+  switch(c) {
+  case '"':
+  case '\\':
+    buffer += c;
+    break;
+  default:
+    LEXER_ERROR("invalid escape in string: %s", yytext);
+    buffer += yytext;
+  }
+}
+
+static void string_append_newline() { buffer += "\n"; }
+static void string_append_text() { buffer += yytext; }
+static void string_assign_token_text() {
+  assign_token_text(buffer.c_str(), buffer.length());
+  buffer.clear();
+}
+
+static void identifier_assign_token_text() { assign_token_text(yytext, yyleng + 1); }

@@ -95,7 +95,6 @@ thread_conf ::= invalid_field .
 
 section ::= section_key LBRACE section_conf_seq RBRACE . {
   config::section_config &s = context->this_section();
-  std::cout << s.name() << std::endl;
   if (s.name() == NULL) { ERR("section has no 'name' field"); }
   if (s.after_name() == NULL) { ERR("section has no 'after' field"); }
   context->end_section();
@@ -110,8 +109,8 @@ section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
 section_conf ::= stage .
-section_conf ::= NAME EQ conf_string(S) . { context->this_section().name(make_pass_text(S)); }
-section_conf ::= AFTER EQ conf_string(S) . { context->this_section().after_name(make_pass_text(S)); }
+section_conf ::= NAME EQ conf_string(S) . { context->this_section().name(make_text_ptr(S)); }
+section_conf ::= AFTER EQ conf_string(S) . { context->this_section().after_name(make_text_ptr(S)); }
 section_conf ::= invalid_field .
 
 /**********
@@ -129,9 +128,9 @@ stage_key ::= error . { ERR_EXPECTED("'stage', 'input', or 'output' before '{'")
 stage_conf_seq ::= stage_conf . { }
 stage_conf_seq ::= stage_conf_seq stage_conf . { }
 
-stage_conf ::= PATH EQ conf_string(S) . { context->this_stage().path(make_pass_text(S)); }
+stage_conf ::= PATH EQ conf_string(S) . { context->this_stage().path(make_text_ptr(S)); }
 stage_conf ::= TYPE EQ conf_string(S) . {
-  config::flex_interface::text_ptr p = make_pass_text(S);
+  config::flex_interface::text_ptr p = make_text_ptr(S);
   typedef config::stage_config::stage_ids id_type;
   id_type id = text_to_id(p.get());
   if (id == stage_config::id_unset) {

@@ -28,7 +28,7 @@ class stage_config {
 
   stage_config() : type_(id_unset) {}
 
-  void path(const flex_interface::pass_text &pt) { type(id_plugin); path_ = pt; }
+  void path(const flex_interface::text_ptr &pt) { type(id_plugin); path_ = pt; }
   void type(enum stage_ids i) { type_ = i; }
 
   const char *path() const { return path_.get(); }
@@ -49,11 +49,11 @@ class section_config {
 
   stage_config &new_stage() {
     stages_.push_back(stage_config());
-    return *(stages_.end() - 1);
+    return stages_.back();
   }
 
-  void name(flex_interface::pass_text pt) { name_ = pt; }
-  void after_name(flex_interface::pass_text pt) { after_name_ = pt; }
+  void name(flex_interface::text_ptr pt) { name_ = pt; }
+  void after_name(flex_interface::text_ptr pt) { after_name_ = pt; }
   void after_section(section_config *s) { after_section_ = NERVE_CHECK_PTR(s); }
 
   const char *name() const { return name_.get(); }
@@ -79,7 +79,7 @@ class job_config {
 
   section_config &new_section() {
     sections_.push_back(section_config());
-    return *(sections_.end() - 1);
+    return sections_.back();
   }
 
   section_iterator_type begin() { return sections_.begin(); }
@@ -98,7 +98,7 @@ class pipeline_config {
   //! Start a new job.
   job_config &new_job() {
     jobs_.push_back(job_config());
-    return *(jobs_.end() - 1);
+    return jobs_.back();
   }
 
   job_iterator_type begin() { return jobs_.begin(); }
