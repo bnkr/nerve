@@ -48,7 +48,7 @@ ws    [\t \n\r]
   "}"      { LEXER_RETURN(RBRACE); }
 
   "thread"  { LEXER_RETURN(THREAD); }
-  "section" { LEXER_RETURN(THREAD); }
+  "section" { LEXER_RETURN(SECTION); }
   "stage"   { LEXER_RETURN(STAGE); }
   "input"   { LEXER_RETURN(INPUT); }
   "output"  { LEXER_RETURN(OUTPUT); }

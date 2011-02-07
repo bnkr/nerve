@@ -1,6 +1,16 @@
 // Copyright (C) 2009-2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
+// Warnings:
+//
+// - if you put an empty block "{}" as the rule action, lemon will generate a
+//   rule which falls through to the next one above it in the stack!!!  This
+//   means that actions can be called more than once in obscure circumstances.
+//   This is a totally insane bug.
+// - the code blocks don't have syntax analysis at all so if you have a
+//   token(VAR) and a "VAR" in a string somewhere, then the VAR will be silently
+//   overwritten wherever it occurs!!!
+
 %token_prefix T_
 
 %include {
@@ -16,10 +26,16 @@
 // function.
 %token_type { config::flex_interface::token_type }
 
+// In theory this will already be handled by the "error" rules.
 %parse_failure { context->reporter().report_fatal("unhandled syntax error"); }
 
-// In theory this will already be handled by the "error" rules.
 %syntax_error {
+  // TODO:
+  //   This isn't working properly because this routine doesn't get called until
+  //   there has been 3 tokens successfully shifted.  Unfortunately the "empty
+  //   code blcok" fuckup might have been obscuring some stuff here.
+  // std::cout << "syntax error routine" << std::endl;
+
   set_last_error(yymajor, TOKEN);
   // just in case I forget elsewere
   context->reporter().report();
@@ -37,71 +53,84 @@
 %destructor config { use_variable(yypminor); use_variable(context); }
 
 // Start synbol.
-config ::= thread_seq . {
-}
+config_file ::= config_seq . { }
+config_file ::= . { ERR("empty configuration"); }
+
+config_seq ::= config . { }
+config_seq ::= config_seq config . { }
+
+config ::= thread .
 
 /***********
  * Threads *
  ***********/
 
-thread_seq ::= thread . { }
-thread_seq ::= thread_seq thread . {}
+thread ::= thread_key LBRACE thread_conf_seq RBRACE . { }
+thread ::= thread_key empty_block . { }
 
-thread ::= THREAD LBRACE thread_conf_seq RBRACE . {}
-thread ::= THREAD empty_config . {}
+thread_key ::= THREAD .
+thread_key ::= error . { ERR_EXPECTED("'thread' before '{'"); }
 
-thread_conf_seq ::= thread_conf . {}
-thread_conf_seq ::= thread_conf_seq thread_conf . {}
+thread_conf_seq ::= thread_conf . { }
+thread_conf_seq ::= thread_conf_seq thread_conf . { }
 
-thread_conf ::= section . {}
+thread_conf ::= section . { }
 
 /************
  * Sections *
  ************/
 
-section ::= SECTION LBRACE section_conf_seq RBRACE . {}
+section ::= section_key LBRACE section_conf_seq RBRACE . { }
+section ::= section_key empty_block . { }
 
-section_conf_seq ::= stage . {}
-section_conf_seq ::= section_conf_seq stage . {}
+section_key ::= SECTION .
+section_key ::= error . { ERR_EXPECTED("stage config before '{'"); }
+
+section_conf_seq ::= stage . { }
+section_conf_seq ::= section_conf_seq stage . { }
 
 /**********
  * Stages *
  **********/
 
-stage ::= STAGE LBRACE stage_conf_seq RBRACE . {}
-stage ::= INPUT LBRACE stage_conf_seq RBRACE . {}
-stage ::= OUTPUT LBRACE stage_conf_seq RBRACE . {}
-stage ::= STAGE empty_config .
-stage ::= INPUT empty_config .
-stage ::= OUTPUT empty_config .
+stage ::= STAGE LBRACE stage_conf_seq RBRACE . { }
+stage ::= INPUT LBRACE stage_conf_seq RBRACE . { }
+stage ::= OUTPUT LBRACE stage_conf_seq RBRACE . { }
+stage ::= STAGE empty_block .
+stage ::= INPUT empty_block .
+stage ::= OUTPUT empty_block .
 
-stage_conf_seq ::= stage_conf . {}
-stage_conf_seq ::= stage_conf_seq stage_conf . {}
+stage_conf_seq ::= stage_conf . { }
+stage_conf_seq ::= stage_conf_seq stage_conf . { }
 
-stage_conf ::= PATH EQ normal_value . {}
-stage_conf ::= TYPE EQ normal_value . {}
-stage_conf ::= NAME EQ normal_value . {}
-stage_conf ::= AFTER EQ after_value . {}
-stage_conf ::= error EQ any_value . {
-  ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='");
-}
+stage_conf ::= PATH EQ normal_value . { }
+stage_conf ::= TYPE EQ normal_value . { }
+stage_conf ::= NAME EQ normal_value . { }
+stage_conf ::= AFTER EQ after_value . { }
+stage_conf ::= non_stage_conf .
 
-any_value ::= error . {}
-any_value ::= string .
-any_value ::= INPUT .
-any_value ::= OUTPUT .
-
-after_value ::= error . {
-  ERR_EXPECTED("string, 'input', or 'output' after '='");
-}
+after_value ::= error . { ERR_EXPECTED("string, 'input', or 'output' after '='"); }
 after_value ::= string .
 after_value ::= INPUT .
 after_value ::= OUTPUT .
 
-normal_value ::= error . {
-  ERR_EXPECTED("string after '='");
-}
+normal_value ::= error . { ERR_EXPECTED("string after '='"); }
 normal_value ::= string .
+
+/**********
+ * Errors *
+ **********/
+
+// any_block ::= empty_block .
+
+non_stage_conf ::= error EQ any_value . {
+  ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='");
+}
+
+any_value ::= error . { ERR_EXPECTED("value after '='"); }
+any_value ::= string .
+any_value ::= INPUT .
+any_value ::= OUTPUT .
 
 /********
  * Util *
@@ -110,4 +139,4 @@ normal_value ::= string .
 string ::= STRING_LIT .
 string ::= IDENTIFIER_LIT .
 
-empty_config ::= LBRACE RBRACE . { ERR("empty config"); }
+empty_block ::= LBRACE RBRACE . { ERR("empty config"); }

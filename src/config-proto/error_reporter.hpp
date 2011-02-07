@@ -21,6 +21,8 @@ namespace config {
     //   constants.  Then we can document everything together.
 
     explicit error_reporter() : error_(false), fatal_error_(false) {
+      // so it syncs properly with the trace output
+      stream_ = stdout;
     }
 
     void report() { error_ = true;  }
@@ -31,8 +33,8 @@ namespace config {
       va_list args;
       va_start(args, format);
       print_file_line();
-      std::vfprintf(stderr, format, args);
-      std::fprintf(stderr, "\n");
+      std::vfprintf(stream_, format, args);
+      std::fprintf(stream_, "\n");
       va_end(args);
     }
 
@@ -41,8 +43,8 @@ namespace config {
       va_list args;
       va_start(args, format);
       print_file_line();
-      std::vfprintf(stderr, format, args);
-      std::fprintf(stderr, "\n");
+      std::vfprintf(stream_, format, args);
+      std::fprintf(stream_, "\n");
       va_end(args);
     }
 
@@ -52,10 +54,11 @@ namespace config {
     private:
 
     void print_file_line() {
-      std::fprintf(stderr, "<file>:<line>: ");
+      std::fprintf(stream_, "<file>:<line>: ");
     }
 
     bool error_;
     bool fatal_error_;
+    FILE *stream_;
   };
 }
