@@ -4,10 +4,6 @@
 %option noyylineno
 %option noyywrap
 %option nodefault
-/* %option stack */
-
-/* Large size, but fast */
-/* %option fast */
 
 %x STRING
 

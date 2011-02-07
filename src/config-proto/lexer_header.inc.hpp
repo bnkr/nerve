@@ -80,14 +80,11 @@ extern void yyset_debug(int);
 namespace fi = ::config::flex_interface;
 
 void fi::init(const config::flex_interface::params &p) {
-  NERVE_ASSERT_PTR(p.stream());
-  NERVE_ASSERT_PTR(p.context());
-
-  context = p.context();
+  context = NERVE_CHECK_PTR(p.context());
   enable_trace = p.trace();
   // it's too much debugging otherwise!
   ::yyset_debug(0);
-  ::yyset_in(p.stream());
+  ::yyset_in(NERVE_CHECK_PTR(p.stream()));
 }
 
 /************************
@@ -136,7 +133,7 @@ static void string_append_escape() {
 static void string_append_newline() { buffer += "\n"; }
 static void string_append_text() { buffer += yytext; }
 static void string_assign_token_text() {
-  assign_token_text(buffer.c_str(), buffer.length());
+  assign_token_text(buffer.c_str(), buffer.length() + 1);
   buffer.clear();
 }
 

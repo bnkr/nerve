@@ -75,8 +75,9 @@ namespace config {
     //! This is basically required because of no move construcrtors.
     typedef boost::shared_ptr<char> text_ptr;
 
-    inline text_ptr make_text_ptr(char *text) { return text_ptr(text, &free_text); }
-    inline text_ptr make_text_ptr(token_type tok) { return make_text_ptr(tok.text); }
+    //! These are indended only for use by the parser.
+    inline text_ptr make_text_ptr(char *text) { return text_ptr(NERVE_CHECK_PTR(text), &free_text); }
+    inline text_ptr make_text_ptr(token_type tok) { return make_text_ptr(NERVE_CHECK_PTR(tok.text)); }
 
     //@}
   }
