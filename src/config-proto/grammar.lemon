@@ -17,6 +17,10 @@
 // We can't use quote includes for compiler reasons so we need an -I.  Then the
 // inc file can use quote paths and dependencies are all correct.
 #include <grammar_header.inc.hpp>
+
+#define TRACE(code__)\
+  std::printf("%d: %s\n", __LINE__, #code__);\
+  code__;
 }
 
 // Only works as a pointer.
@@ -65,11 +69,19 @@ config ::= thread .
  * Threads *
  ***********/
 
-thread ::= thread_key LBRACE thread_conf_seq RBRACE . { }
-thread ::= thread_key empty_block . { }
+thread ::= thread_key LBRACE thread_conf_seq RBRACE . { context->end_job(); }
+thread ::= thread_key empty_block . { context->end_job(); }
 
-thread_key ::= THREAD .
-thread_key ::= error . { ERR_EXPECTED("'thread' before '{'"); }
+// TODO:
+//   It'd be useful to have the thread key kick the lexer into a special state
+//   which only lexes the keys we want so, for example, the 'AFTER' token will
+//   appear as an identifier instead.  This could make the parser a little more
+//   simple because we don't need to repeat all the tokens we want to have
+//   errors for.  The actual code won't be different because duplicate rules end
+//   up in the same switch case.
+
+thread_key ::= THREAD . { TRACE(context->new_job()); }
+thread_key ::= error . { TRACE(context->new_job()); ERR_EXPECTED("'thread' before '{'"); }
 
 thread_conf_seq ::= thread_conf . { }
 thread_conf_seq ::= thread_conf_seq thread_conf . { }
@@ -81,56 +93,62 @@ thread_conf ::= invalid_field .
  * Sections *
  ************/
 
-section ::= section_key LBRACE section_conf_seq RBRACE . { }
-section ::= section_key empty_block . { }
-section ::= section_key error . { ERR_EXPECTED("'{' after section-key"); }
+section ::= section_key LBRACE section_conf_seq RBRACE . {
+  config::section_config &s = context->this_section();
+  std::cout << s.name() << std::endl;
+  if (s.name() == NULL) { ERR("section has no 'name' field"); }
+  if (s.after_name() == NULL) { ERR("section has no 'after' field"); }
+  context->end_section();
+}
+section ::= section_key empty_block . { context->end_section(); }
+section ::= section_key error . { context->end_section(); ERR_EXPECTED("'{' after section-key"); }
 
-section_key ::= SECTION .
-section_key ::= error . { ERR_EXPECTED("'section' before '{'"); }
+section_key ::= SECTION . { TRACE(context->new_section()); }
+section_key ::= error . { TRACE(context->new_section()); ERR_EXPECTED("'section' before '{'"); }
 
-section_conf_seq ::= section_conf . { }
-section_conf_seq ::= section_conf_seq section_conf . { }
+section_conf_seq ::= section_conf .
+section_conf_seq ::= section_conf_seq section_conf .
 
 section_conf ::= stage .
+section_conf ::= NAME EQ conf_string(S) . { context->this_section().name(make_pass_text(S)); }
+section_conf ::= AFTER EQ conf_string(S) . { context->this_section().after_name(make_pass_text(S)); }
 section_conf ::= invalid_field .
 
 /**********
  * Stages *
  **********/
 
-stage ::= stage_key LBRACE stage_conf_seq RBRACE . { }
-stage ::= stage_key empty_block .
+stage ::= stage_key LBRACE stage_conf_seq RBRACE . { context->end_stage(); }
+stage ::= stage_key empty_block . { context->end_stage(); }
 
-stage_key ::= STAGE .
-stage_key ::= INPUT .
-stage_key ::= OUTPUT .
+stage_key ::= STAGE . { TRACE(context->new_stage()); }
+stage_key ::= INPUT . { TRACE(context->new_stage()); }
+stage_key ::= OUTPUT . { TRACE(context->new_stage()); }
 stage_key ::= error . { ERR_EXPECTED("'stage', 'input', or 'output' before '{'"); }
 
 stage_conf_seq ::= stage_conf . { }
 stage_conf_seq ::= stage_conf_seq stage_conf . { }
 
-stage_conf ::= PATH EQ normal_value . { }
-stage_conf ::= TYPE EQ normal_value . { }
-stage_conf ::= NAME EQ normal_value . { }
-stage_conf ::= AFTER EQ after_value . { }
+stage_conf ::= PATH EQ conf_string(S) . { context->this_stage().path(make_pass_text(S)); }
+stage_conf ::= TYPE EQ conf_string(S) . {
+  config::flex_interface::text_ptr p = make_pass_text(S);
+  typedef config::stage_config::stage_ids id_type;
+  id_type id = text_to_id(p.get());
+  if (id == stage_config::id_unset) {
+    ERR("not a valid stage type: %s", p.get());
+  }
+  else {
+    context->this_stage().type(id);
+  }
+}
 stage_conf ::= non_stage_conf .
 
-after_value ::= error . { ERR_EXPECTED("string, 'input', or 'output' after '='"); }
-after_value ::= string .
-after_value ::= INPUT .
-after_value ::= OUTPUT .
-
-normal_value ::= error . { ERR_EXPECTED("string after '='"); }
-normal_value ::= string .
-
-non_stage_conf ::= error EQ any_value . {
-  ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='");
-}
+non_stage_conf ::= PATH error . { ERR_EXPECTED("'=' after 'path'"); }
+non_stage_conf ::= TYPE error . { ERR_EXPECTED("'=' after 'type'"); }
+non_stage_conf ::= error EQ any_value . { ERR_EXPECTED("'path', 'type', 'name', or 'after' before '='"); }
 
 any_value ::= error . { ERR_EXPECTED("value after '='"); }
 any_value ::= string .
-any_value ::= INPUT .
-any_value ::= OUTPUT .
 
 /**********
  * Errors *
@@ -142,7 +160,12 @@ invalid_field ::= error EQ error . { ERR("field is not valid here"); }
  * Util *
  ********/
 
-string ::= STRING_LIT .
-string ::= IDENTIFIER_LIT .
+%type conf_string { char * }
+conf_string ::= error . { ERR_EXPECTED("string after '='"); }
+conf_string(RET) ::= string(S) . { RET = S; }
+
+%type string { char * }
+string(RET) ::= STRING_LIT(S) . { RET = S.text; }
+string(RET) ::= IDENTIFIER_LIT(S) . { RET = S.text; }
 
 empty_block ::= LBRACE RBRACE . { ERR("empty config"); }

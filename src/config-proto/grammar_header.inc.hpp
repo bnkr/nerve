@@ -10,11 +10,13 @@
 #include "lemon_interface.hpp"
 #include "nerve_config.hpp"
 #include "parse_context.hpp"
+#include "pipeline_configs.hpp"
 #include "../plugin-proto/asserts.hpp"
 
 #include <iostream>
 #include <cstdlib>
 #include <cassert>
+#include <cstring>
 
 // The lemon parser only puts its debugging routines in when NDEBUG is not
 // defined.
@@ -59,3 +61,29 @@ static void set_last_error(int major, minor_type minor) {
   last_error.data = minor;
 }
 const error_data &get_last_error() { return last_error; }
+
+config::flex_interface::pass_text make_pass_text(char *lexer_text) {
+  return config::flex_interface::pass_text(lexer_text);
+}
+
+
+using config::stage_config;
+
+stage_config::stage_ids text_to_id(const char *id) {
+  // TODO:
+  //   This would be better handled by a special lexer state.  Then we don't need
+  //   a lookup like this.  The TYPE = bit is OK wrt lookahead to throw us into
+  //   the new state for the next token.
+
+  NERVE_ASSERT_PTR(id);
+
+  if (std::strcmp(id, "sdl") == 0) {
+    return stage_config::id_sdl;
+  }
+  else if (std::strcmp(id, "ffmpeg") == 0) {
+    return stage_config::id_ffmpeg;
+  }
+  else {
+    return stage_config::id_unset;
+  }
+}
