@@ -5,6 +5,9 @@
  * \file
  *
  * Classes which store the configuration of the pipeline.
+ *
+ * These objects are pure data storage and are handled by the parsing state.
+ * This means they are always mutable.
  */
 
 #ifndef CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
@@ -13,47 +16,99 @@
 
 namespace config {
 
-//! \ingroup grp_settings
+//! \ingroup grp_config
 class stage_config {
   public:
+  enum stage_ids {
+    id_unset,
+    id_plugin,
+    id_sdl,
+    id_ffmpeg
+  };
 
+  stage_config() : type_(id_unset) {}
+
+  void path(const flex_interface::pass_text &pt) { type(id_plugin); path_ = pt; }
+  void type(enum stage_ids i) { type_ = i; }
+
+  const char *path() const { return path_.get(); }
+  stage_ids type() const { return type_; }
+
+  flex_interface::text_ptr path_;
+  stage_ids type_;
 };
 
-//! \ingroup grp_settings
-class sequence_config {
-  public:
-
-  private:
-  std::vector<stage_config> stages_;
-};
-
-//! \ingroup grp_settings
+//! \ingroup grp_config
+//!
+//! Note that we don't configure sequences because that's implied by the type of
+//! the stage.
 class section_config {
   public:
+  typedef std::vector<stage_config> stages_type;
+  typedef stages_type::iterator stage_iterator_type;
+
+  stage_config &new_stage() {
+    stages_.push_back(stage_config());
+    return *(stages_.end() - 1);
+  }
+
+  void name(flex_interface::pass_text pt) { name_ = pt; }
+  void after_name(flex_interface::pass_text pt) { after_name_ = pt; }
+  void after_section(section_config *s) { after_section_ = NERVE_CHECK_PTR(s); }
+
+  const char *name() const { return name_.get(); }
+  const char *after_name() const { return after_name_.get(); }
+  section_config *after_section() const { return after_section_; }
+
+  stage_iterator_type begin() { return stages_.begin(); }
+  stage_iterator_type end() { return stages_.end(); }
 
   private:
-  std::vector<sequence_config> sequences_;
+  stages_type stages_;
+  flex_interface::text_ptr name_;
+  flex_interface::text_ptr after_name_;
+  section_config *after_section_;
 };
 
-//! \ingroup grp_settings
+//! \ingroup grp_config
 class job_config {
   public:
 
+  typedef std::vector<section_config> sections_type;
+  typedef sections_type::iterator section_iterator_type;
+
+  section_config &new_section() {
+    sections_.push_back(section_config());
+    return *(sections_.end() - 1);
+  }
+
+  section_iterator_type begin() { return sections_.begin(); }
+  section_iterator_type end() { return sections_.end(); }
+
   private:
-  std::vector<section_config> sections_;
+  sections_type sections_;
 };
 
-//! \ingroup grp_settings
+//! \ingroup grp_config
 class pipeline_config {
   public:
+  typedef std::vector<job_config> jobs_type;
+  typedef jobs_type::iterator job_iterator_type;
+
+  //! Start a new job.
+  job_config &new_job() {
+    jobs_.push_back(job_config());
+    return *(jobs_.end() - 1);
+  }
+
+  job_iterator_type begin() { return jobs_.begin(); }
+  job_iterator_type end() { return jobs_.end(); }
 
   private:
-  std::vector<job_config> jobs_;
+  jobs_type jobs_;
 };
 
 
-
-
-}
+} // ns config
 
 #endif
