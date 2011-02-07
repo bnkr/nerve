@@ -107,23 +107,24 @@ section_key ::= error . { context->new_section(); ERR_EXPECTED("'section' before
 section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
-section_conf ::= NAME conf_string(S) . { context->this_section().name(make_text_ptr(S)); }
-section_conf ::= AFTER conf_string(S) . { context->this_section().after_name(make_text_ptr(S)); }
-section_conf ::= STAGE conf_string(S) . { context->add_stage(make_text_ptr(S)); }
-section_conf ::= error conf_string(S) . {
+section_conf ::= NAME string(S) . { context->this_section().name(make_text_ptr(S)); }
+section_conf ::= AFTER string(S) . { context->this_section().after_name(make_text_ptr(S)); }
+section_conf ::= STAGE string(S) . { context->add_stage(make_text_ptr(S)); }
+
+section_conf ::= error string(S) . {
   ERR_EXPECTED("'name', 'after', 'input', 'stage', or 'output'");
   config::flex_interface::free_text(S);
 }
+section_conf ::= NAME error . { ERR_EXPECTED("string value for field") }
+section_conf ::= AFTER error . { ERR_EXPECTED("string value for field") }
+section_conf ::= STAGE error . { ERR_EXPECTED("string value for field") }
 
 /********
  * Util *
  ********/
 
-%type conf_string { char * }
-conf_string ::= error . { ERR_EXPECTED("string value for field");}
-conf_string(RET) ::= string(S) . { RET = S; }
-
 %type string { char * }
+%destructor string { config::flex_interface::free_text($$); }
 string(RET) ::= STRING_LIT(S) . { RET = S.text; }
 string(RET) ::= IDENTIFIER_LIT(S) . { RET = S.text; }
 
