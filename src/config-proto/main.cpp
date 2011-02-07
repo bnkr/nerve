@@ -3,6 +3,7 @@
 
 #include "config_parser.hpp"
 #include "pipeline_configs.hpp"
+#include "make_pipeline.hpp"
 
 #include <iostream>
 #include <cstdio>
@@ -46,5 +47,12 @@ int main(int argc, char **argv) {
 
   config::config_parser parser(p);
   config::pipeline_config pipes;
-  parser.parse(pipes);
+
+  if (! parser.parse(pipes)) {
+    return EXIT_FAILURE;
+  }
+
+  make_pipeline(pipes);
+
+  return EXIT_SUCCESS;
 }
