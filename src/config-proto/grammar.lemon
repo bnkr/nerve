@@ -80,8 +80,8 @@ thread ::= thread_key empty_block . { context->end_job(); }
 //   errors for.  The actual code won't be different because duplicate rules end
 //   up in the same switch case.
 
-thread_key ::= THREAD . { TRACE(context->new_job()); }
-thread_key ::= error . { TRACE(context->new_job()); ERR_EXPECTED("'thread' before '{'"); }
+thread_key ::= THREAD . { context->new_job(); }
+thread_key ::= error . { context->new_job(); ERR_EXPECTED("'thread' before '{'"); }
 
 thread_conf_seq ::= thread_conf . { }
 thread_conf_seq ::= thread_conf_seq thread_conf . { }
@@ -103,8 +103,8 @@ section ::= section_key LBRACE section_conf_seq RBRACE . {
 section ::= section_key empty_block . { context->end_section(); }
 section ::= section_key error . { context->end_section(); ERR_EXPECTED("'{' after section-key"); }
 
-section_key ::= SECTION . { TRACE(context->new_section()); }
-section_key ::= error . { TRACE(context->new_section()); ERR_EXPECTED("'section' before '{'"); }
+section_key ::= SECTION . { context->new_section(); }
+section_key ::= error . { context->new_section(); ERR_EXPECTED("'section' before '{'"); }
 
 section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
@@ -121,9 +121,9 @@ section_conf ::= invalid_field .
 stage ::= stage_key LBRACE stage_conf_seq RBRACE . { context->end_stage(); }
 stage ::= stage_key empty_block . { context->end_stage(); }
 
-stage_key ::= STAGE . { TRACE(context->new_stage()); }
-stage_key ::= INPUT . { TRACE(context->new_stage()); }
-stage_key ::= OUTPUT . { TRACE(context->new_stage()); }
+stage_key ::= STAGE . { context->new_stage(); }
+stage_key ::= INPUT . { context->new_stage(); }
+stage_key ::= OUTPUT . { context->new_stage(); }
 stage_key ::= error . { ERR_EXPECTED("'stage', 'input', or 'output' before '{'"); }
 
 stage_conf_seq ::= stage_conf . { }
