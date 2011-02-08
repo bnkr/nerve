@@ -6,3 +6,18 @@
     huge deal to just return a literal packet.
 * name of packet_return
 * header file for packet_return (packets.hpp or stages.hpp or its own?)
+* connectors in general:
+  - output in section?
+    * sequence returns a packet ptr (or perhaps even a packet_return)
+    * we have to check whether the sequence is buffering
+      - that has to be done anyway
+    * no virtual output
+    * we have to check whether the sequence returned anything
+    * useless checks on returnedness/bufferingness for observers sequences
+      - so basically, a couple of extra ifs per sequence.
+  - output in sequence?
+    * virtual call to the connector when we could just return (that's one per
+      stage)
+  - I think that we are pretty much resolved on them being in sequences, but it
+    needs to be written down somewhere clearly (perhaps the docs for
+    sequence_step ?)
