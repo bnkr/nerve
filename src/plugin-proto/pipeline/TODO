@@ -1,0 +1,8 @@
+* communication with the progressive buffer.
+  - I put a pipe junction in there which has different meanings in the spec and
+    data pipe code.
+  - the intended meaning by the spec is that the junction has connectors in it
+  - since we know a sequence only returns zero or one packet then it's not a
+    huge deal to just return a literal packet.
+* name of packet_return
+* header file for packet_return (packets.hpp or stages.hpp or its own?)
