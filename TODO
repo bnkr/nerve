@@ -14,9 +14,7 @@ Status (as of 8th Feb 2011):
 * config-proto (finish off fairly obvious stuff)
 * socket-proto (no work done yet on any kind of protocol and communication with
   the pipeline is a bit hazy)
-* daemon-proto
-  - integration of the config and pipline parts of the program
-  - sort of started in config-proto (at least the todos for it)
+* daemon-proto (not really started)
 
 New prototypes:
 

@@ -3,3 +3,26 @@ into something that actually works somewhat.  If it's sucessful, it will be the
 basis for nerved.
 
 The config-proto will determine when this work starts.
+
+Things not covered elsewhere:
+
+* player state (e.g playlist including restoring state data)
+  - this is the integration of socket and pipeline
+* client communication (i.e saying when something has changed)
+  - as above, but it's something that should be thought about in the socket
+    proto anyway
+  - issues with blocking: how do you mix communication over shared memory (i.e
+    the thread pipe) and with a socket
+* mono-threading the socket server (might be that the client communication and
+  playlist stuff mean that it may as well sit in the same thread)
+  - integration of socket and pipeline (perhaps it can be an observer plugin?)
+* loading plugin shared objects (probably will be covered in part by
+  config-proto)
+  - this is the integration of pipeline and config
+* initialising stages
+  - this is the integration of pipeline and config
+  - the organisation shoudl be OK, but we could end up in trouble regarding
+    regerences and where things are stored etc.
+* method of debugging the pipeline without being threaded (it's not even
+  compiled yet so it's bound to have bugs!)
+
