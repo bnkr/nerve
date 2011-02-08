@@ -1,0 +1,5 @@
+This will be the integration of config, pipeline, socket, and i/o prototypes
+into something that actually works somewhat.  If it's sucessful, it will be the
+basis for nerved.
+
+The config-proto will determine when this work starts.

@@ -1,15 +1,17 @@
-Real Implementation
--------------------
+Implementation
+--------------
 
 Turn the existing protocode into a real implementation.
 
-* there could be issues with blocking on output as well as blocking on input
-* continue working the existing specification-bits.cpp up to be compilable
+* see pipeline/TODO for making everything compilable/linkable
 * tidy the spec and put it in doc
+  - need to clarify some bits about why there are these multiple levels
+  - also there needs to be some more clarification about the section blocking
+    bits
+  - should mention backtracking with multiple buffering stages
 
 Integration
 -----------
 
-Integrate the code with the config reading parts.  This directory is a huge
-mess, so we'll use config-proto for this (actually there will be a third
-directory to do the integration).
+Integrate the code with the config reading parts.  See config-proto (which will
+be the basis for it).

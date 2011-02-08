@@ -1,0 +1,19 @@
+This prototype has mostly failed.  There is still no reasonable way of doing
+degapifying.
+
+Summary:
+
+* code to write an input stage (ffmpeg)
+* code to write an output stage (sdl)
+* various ideas about degapifying
+* implementation of degap is not really workable as a pipeline stage (it'd need
+  to be re-written, but then I'd have to do that anyway given the quality)
+* lots of requirements on packets found out
+
+The conclusion is that the best working method at the moment is:
+
+* use amplitude thresholding
+* work on a track-by-track basis (i.e don't care about the track before and
+  after; just degap if there is silence at the track boundary).
+* make it within a working pipeline implementation
+* try different ideas out using generalised stages

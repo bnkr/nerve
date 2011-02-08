@@ -1,0 +1,31 @@
+Main Todo
+=========
+
+Prototypes
+----------
+
+This todo is just here to say "check the x-proto/ directories".  I'll start
+using this file when those are all done.
+
+Status (as of 8th Feb 2011):
+
+* gapless-proto (finished; supplies code for i/o and a bit for gaplessness)
+* plugin-proto (make compilable enough to use in integration)
+* config-proto (finish off fairly obvious stuff)
+* socket-proto (no work done yet on any kind of protocol and communication with
+  the pipeline is a bit hazy)
+* daemon-proto
+  - integration of the config and pipline parts of the program
+  - sort of started in config-proto (at least the todos for it)
+
+New prototypes:
+
+* degap-mk2-proto
+  - use gapless-proto
+* volume control plugin
+  - special because it must respond to the socket stuff
+  - also because it might be that the output plugin can do volume control more
+    easily
+  - both are tricky because it either involves some kind of special
+    implementation, or we need to mess with arbitrary packet transfers (event
+    mask or something).

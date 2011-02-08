@@ -1,16 +1,38 @@
-* communication with the progressive buffer.
-  - I put a pipe junction in there which has different meanings in the spec and
-    data pipe code.
-  - the intended meaning by the spec is that the junction has connectors in it
-  - since we know a sequence only returns zero or one packet then it's not a
-    huge deal to just return a literal packet.
-* name of packet_return
-* header file for packet_return (packets.hpp or stages.hpp or its own?)
+Connectors
+----------
+
+* restore the pipe junction thing
+* remove the existing junction (because we don't have thread pipe junctions any
+  more)
+* make the connector header from specification-bits
+* specififcation-bits can be removed
+* move the spec to doc (as pipeline-spec.txt or something)
+* make connectors compilable
+* link it all up with ../para.hpp and other bits
+* remove headers we aren't using any more
+
+Finishing Off
+--------------
+
+* make output stage compile (requires connectors)
+* packet_return
+  - don't like the name
+  - header file is too small really
+* integrate the pipeline with the rest of the project
+  - see todos in config-proto (which is the base for that)
+  - the "plugin-proto" directory can be removed when the integration begins
+
+Unsolved Problems
+-----------------
+
+These are both algorithmic so they can be done whenever.  I need to move this
+todo over to the integration part.
+
 * section blocking check:
   - I'm pretty sure it matters whether we block on input and output, but at the
     moment we only check input... I think this is an algorithmic detal, because
     it's the section class which decides blocking.
-* progressive buffering:
+* stacked progressive buffering:
   - we store an iterator to the last stage/seqeuence to buffer
   - suppose a stage/seq notifies that it's buffering
   - and then another one does
@@ -18,6 +40,3 @@
     packet gets written
   - best option is a stack of buffering iterators
   - said stack only needs to equal the length of the sequences/stages
-* connectors:
-  - at least the first version of the pipeline will use connectors.  None of
-    that is properly implemented just yet.
