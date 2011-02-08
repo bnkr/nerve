@@ -21,7 +21,18 @@ namespace pipeline {
   class stage_sequence {
     public:
 
-    virtual void sequence_step() = 0;
+    //! A namespace for the sequence state enum.
+    struct state {
+      enum step_state {
+        buffering,
+        complete
+      };
+    };
+    typedef state::step_state step_state;
+
+    //! Note: see docs for class section to explain why outputted packets is
+    //! done with the connector abstraction.
+    virtual step_state sequence_step() = 0;
 
     protected:
 

@@ -33,7 +33,7 @@ namespace pipeline {
     }
 
     // Constant delay is guaranteed by the use of the progressive buffering loop.
-    void sequence_step() {
+    stage_sequence::step_state sequence_step() {
       // Checking for non-data only is necessary to discover non-data events as
       // quickly as possible.  Otherwise a buffering stage will delay the input
       // connector operation.
@@ -48,16 +48,20 @@ namespace pipeline {
       // TODO:
       //   It would improve latency further if we did this at the end of each
       //   stage.  Of course, check is useless on a local pipe...
+
+      typedef stage_sequence::state state;
+
       packet *p = NERVE_CHECK_PTR(read_input());
       switch (p->event()) {
       case packet::event::data:
         data_loop_.step();
-        break;
+        return data_loop_.buffering() ? state::buffering : state::complete;
       case packet::event::abandon:
         data_loop_.abandon_reset();
         // fallthrough
       default:
         this->non_data_step(stages(), p);
+        return state::complete;
       }
     }
 

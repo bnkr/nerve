@@ -57,7 +57,7 @@ class progressive_buffer {
   void abandon_reset() { this->reset_start(); }
 
   // Is there a buffering stage here?
-  bool buffering_stage() { return this->start() != this->stages().begin(); }
+  bool buffering() { return this->start() != this->stages().begin(); }
 
   // Perform an iteration of the stages where no stage is visited twice (but
   // some might be unvisited).  Pulls data from the input queue only when
@@ -66,7 +66,7 @@ class progressive_buffer {
     packet *input;
     iterator_type real_start = start_;
 
-    if (this->buffering_stage()) {
+    if (this->buffering()) {
       ++real_start;
       input = this->debuffer_input();
     }
@@ -87,7 +87,12 @@ class progressive_buffer {
       else if (ret.buffering()) {
         // Simply assigning this every time we meet a buffering stage means we
         // end up debuffering the latest stage which has stuff to debuffer.
-        start_ = s;
+        //
+        // TODO:
+        //   This means we ignore any stage earlier in the sequence which is
+        //   buffering and therefore buffers expand when we push more data!  We
+        //   must use a stack to reduce our bufferingness.
+        start(s);
       }
 
       input = ret.packet();
@@ -120,7 +125,7 @@ class progressive_buffer {
     NERVE_ASSERT(! ret.empty(), "empty data from a buffering stage is forbidden");
 
     if (! ret.buffering()) {
-      start_ = stages().begin();
+      reset_start();
     }
 
     return ret.packet();

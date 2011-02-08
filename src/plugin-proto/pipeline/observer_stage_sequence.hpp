@@ -28,7 +28,7 @@ namespace pipeline {
       }
     };
 
-    void sequence_step() {
+    stage_sequence::step_state sequence_step() {
       packet *p = read_input();
 
       switch(NERVE_CHECK_PTR(p)->event()) {
@@ -43,6 +43,8 @@ namespace pipeline {
         this->non_data_step(stages(), p);
         break;
       }
+
+      return stage_sequence::state::complete;
     }
 
     private:

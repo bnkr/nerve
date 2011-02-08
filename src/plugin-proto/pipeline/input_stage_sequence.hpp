@@ -18,7 +18,7 @@ namespace pipeline {
   class input_stage_sequence : public stage_sequence {
     public:
 
-    void sequence_step() {
+    stage_sequence::step_state sequence_step() {
       packet &p = *NERVE_CHECK_PTR(read_input());
       switch (p.event()) {
       case packet::event::load:

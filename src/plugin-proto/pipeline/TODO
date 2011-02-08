@@ -6,18 +6,18 @@
     huge deal to just return a literal packet.
 * name of packet_return
 * header file for packet_return (packets.hpp or stages.hpp or its own?)
-* connectors in general:
-  - output in section?
-    * sequence returns a packet ptr (or perhaps even a packet_return)
-    * we have to check whether the sequence is buffering
-      - that has to be done anyway
-    * no virtual output
-    * we have to check whether the sequence returned anything
-    * useless checks on returnedness/bufferingness for observers sequences
-      - so basically, a couple of extra ifs per sequence.
-  - output in sequence?
-    * virtual call to the connector when we could just return (that's one per
-      stage)
-  - I think that we are pretty much resolved on them being in sequences, but it
-    needs to be written down somewhere clearly (perhaps the docs for
-    sequence_step ?)
+* section blocking check:
+  - I'm pretty sure it matters whether we block on input and output, but at the
+    moment we only check input... I think this is an algorithmic detal, because
+    it's the section class which decides blocking.
+* progressive buffering:
+  - we store an iterator to the last stage/seqeuence to buffer
+  - suppose a stage/seq notifies that it's buffering
+  - and then another one does
+  - buffering finishes, we overwrote the other buffering object so another input
+    packet gets written
+  - best option is a stack of buffering iterators
+  - said stack only needs to equal the length of the sequences/stages
+* connectors:
+  - at least the first version of the pipeline will use connectors.  None of
+    that is properly implemented just yet.
