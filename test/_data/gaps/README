@@ -1,0 +1,5 @@
+This is known correct data to test the player.  Most of the tracks are 
+deliberately split up and re-encoded.  Raw samples live in ./source-samples.
+When they are split, they are named by their file in source-samples.  If
+they are transcoded then they still keep their original extension from
+the source files.

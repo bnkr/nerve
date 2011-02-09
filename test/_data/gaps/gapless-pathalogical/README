@@ -1,0 +1,13 @@
+These are files with actual silence in known places.  We test the gap removal
+algorithm with them.
+
+Properties of these files:
+
+- p1 nogap last sample               = -19870
+- p1 gap last sample                 = -19870
+- p2 nogap first sample should be    = -20313
+- p2 gap first sample should be      = -20313
+- bytes of silence at end of p1      = 14688 (b274 to ebd4 (past eof) = 45684 to 60372) = 60372 - 45684
+                                     = start on frame 28 assuming 4096 byte frames
+- bytes of silence at start of p2    = 14688 (02c to 398c = 44 to 14732) = 14732 - 44
+                                     = stop on frame 4
