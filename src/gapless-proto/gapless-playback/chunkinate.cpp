@@ -9,7 +9,7 @@
 
 #include <boost/thread.hpp>
 
-#include <bdbg/trace/short_macros.hpp>
+#include "portabdbg.hpp"
 
 bool queue_small_enough() {
   return synced_queue.data().size() < 15;

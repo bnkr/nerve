@@ -11,14 +11,10 @@ manager so we can work out how interrupted songs will work and so on.
 #include "play.hpp"
 #include "dump_file.hpp"
 
-#include <bdbg/trace/static_definitions.hpp>
-#include <bdbg/trace/crash_detection.hpp>
-
-bdbg::trace::crash_detector cd;
-
 #include <boost/filesystem.hpp>
 
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <list>
 #include <algorithm>

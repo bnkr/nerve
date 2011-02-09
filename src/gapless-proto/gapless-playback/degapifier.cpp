@@ -1,5 +1,5 @@
 #include "degapifier.hpp"
-
+#include "portabdbg.hpp"
 
 /*
 General review of this algorithm:
@@ -54,8 +54,6 @@ Style and general enhancments.
 #include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 #include "packet_state.hpp"
-
-#include <bdbg/trace/short_macros.hpp>
 
 #include <cmath>
 #include <cstddef>

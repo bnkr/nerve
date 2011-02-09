@@ -9,7 +9,7 @@
 #include "shared_data.hpp"
 #include "dump_file.hpp"
 
-#include <bdbg/trace/short_macros.hpp>
+#include "portabdbg.hpp"
 
 #include <cstdlib>
 

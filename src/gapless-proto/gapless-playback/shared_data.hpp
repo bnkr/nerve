@@ -5,9 +5,8 @@
 #ifndef SHARED_DATA_HPP_v13oue0m
 #define SHARED_DATA_HPP_v13oue0m
 
-#include <para/locking.hpp>
 #include <boost/thread.hpp>
-
+#include "portapara.hpp"
 #include <queue>
 
 // TODO:

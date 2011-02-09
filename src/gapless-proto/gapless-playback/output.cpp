@@ -1,10 +1,6 @@
 #include "output.hpp"
-
 #include "shared_data.hpp"
-
-#include <bdbg/trace/short_macros.hpp>
-
-
+#include "portabdbg.hpp"
 
 void sdl_callback(void*,uint8_t *stream, int length) {
   typedef sync_traits_type::monitor_type monitor_type;
