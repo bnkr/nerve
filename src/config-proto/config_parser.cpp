@@ -57,12 +57,12 @@ config_parser::config_parser(const config_parser::params &p) : p_(p) {
 
 bool config_parser::parse(config::pipeline_config &output, const config_parser::files_type &fs) {
   parse_context context(output);
-  std::for_each(fs.begin(), fs.end(), boost::bind(&config_parser::parse_file, this, boost::ref(output), boost::ref(context), _1));
+  std::for_each(fs.begin(), fs.end(), boost::bind(&config_parser::parse_file, this, boost::ref(context), _1));
 
   return ! context.reporter().error();
 }
 
-bool config_parser::parse_file(config::pipeline_config &output, config::parse_context &context, const char *file) {
+bool config_parser::parse_file(config::parse_context &context, const char *file) {
   stdio_ptr fh;
 
   context.reporter().location().new_file(file);

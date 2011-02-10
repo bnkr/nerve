@@ -62,7 +62,7 @@ namespace config {
     typedef std::vector<const char *> files_type;
 
     bool parse(pipeline_config &output, const files_type &files);
-    bool parse_file(pipeline_config &out, parse_context &, const char *file);
+    bool parse_file(parse_context &, const char *file);
 
     private:
 

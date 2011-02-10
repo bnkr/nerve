@@ -138,7 +138,7 @@ struct semantic_checker {
 
       // Needed later to find the first section in pipeline order.
       if (sec->pipeline_previous() == NULL) {
-        NERVE_ASSERT(this->no_prev == NULL, "can't have two sections with no previous section");
+        // there can be something in no_prev under error conditions.
         this->no_prev = sec;
       }
     }
