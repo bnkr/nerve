@@ -13,6 +13,8 @@
 #ifndef CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 #define CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 
+#include "parse_location.hpp"
+
 #include <vector>
 #include <cstring>
 
@@ -79,6 +81,12 @@ class section_config {
   const char *after_name() const { return after_name_.get(); }
   section_config *after_section() const { return after_section_; }
 
+  //! The place where "after" was given.  This is necesasry because the semantic
+  //! pass should report errors in a sensible place, not the end of the
+  //! document.
+  const parse_location &location_after() { return location_after_; }
+  void location_after(const parse_location &copy) { location_after_ = copy; }
+
   stage_iterator_type begin() { return stages_.begin(); }
   stage_iterator_type end() { return stages_.end(); }
 
@@ -87,6 +95,7 @@ class section_config {
   flex_interface::text_ptr name_;
   flex_interface::text_ptr after_name_;
   section_config *after_section_;
+  parse_location location_after_;
 };
 
 //! \ingroup grp_config

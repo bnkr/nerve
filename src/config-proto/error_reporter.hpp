@@ -1,32 +1,16 @@
 // Copyright (C) 2009-2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
+#ifndef CONFIG_ERROR_REPORTER_HPP_tkskcau9
+#define CONFIG_ERROR_REPORTER_HPP_tkskcau9
+
+#include "parse_location.hpp"
+
 #include <cstdarg>
 #include <cstdio>
 #include <boost/utility.hpp>
 
 namespace config {
-
-  /*!
-   * \ingroup grp_config
-   * Locational state handled by the lexer (and whatever bit knows about he
-   * filename).
-   */
-  class parse_location {
-    public:
-
-    parse_location() : file_(NULL), line_(1) {}
-
-    int line() const { return line_; }
-    const char *file() const { return file_; }
-
-    void increment() { ++line_; }
-    void new_file(const char *file) { file_ = file; }
-
-    private:
-    const char *file_;
-    int line_;
-  };
   /*!
    * \ingroup grp_config
    *
@@ -49,24 +33,23 @@ namespace config {
     void report() { error_ = true;  }
     void report_fatal() { fatal_error_ = true; }
 
-    void report(const char *format, ...) {
-      error_ = true;
-      va_list args;
-      va_start(args, format);
-      print_file_line();
-      std::vfprintf(stream_, format, args);
-      std::fprintf(stream_, "\n");
+#define NERVE_ERROR_REPORTER_REPORT(member__, loc__)\
+      member__ = true;\
+      va_list args;\
+      va_start(args, format);\
+      write_report(loc__, format, args);\
       va_end(args);
+
+    void lreport(const parse_location &l, const char *format, ...) {
+      NERVE_ERROR_REPORTER_REPORT(error_, l);
+    }
+
+    void report(const char *format, ...) {
+      NERVE_ERROR_REPORTER_REPORT(error_, this->location());
     }
 
     void report_fatal(const char *format, ...) {
-      fatal_error_ = true;
-      va_list args;
-      va_start(args, format);
-      print_file_line();
-      std::vfprintf(stream_, format, args);
-      std::fprintf(stream_, "\n");
-      va_end(args);
+      NERVE_ERROR_REPORTER_REPORT(fatal_error_, this->location());
     }
 
     bool error() const { return error_ || fatal_error_; }
@@ -79,8 +62,10 @@ namespace config {
 
     private:
 
-    void print_file_line() const {
-      std::fprintf(stream_, "%s:%d: ", this->location().file(), this->location().line());
+    void write_report(const parse_location &loc, const char *format, va_list args) {
+      std::fprintf(stream_, "%s:%d: ", loc.file(), loc.line());
+      std::vfprintf(stream_, format, args);
+      std::fprintf(stream_, "\n");
     }
 
     parse_location location_;
@@ -89,3 +74,4 @@ namespace config {
     FILE *stream_;
   };
 }
+#endif

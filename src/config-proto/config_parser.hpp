@@ -180,12 +180,31 @@ void config_parser::syntactic_pass(syntactic_context &syn) {
   syn.parser.finish();
 }
 
+struct c_string {
+  explicit c_string(const char *c) : str_(c) {}
+
+  bool operator<(const c_string &c) const { return std::strcmp(c.str_, this->str_) < 0; }
+
+  const char *str_;
+};
+
 void config_parser::semantic_pass(config::parse_context &ctx) {
+  typedef c_string string_type;
+
   config::pipeline_config &confs = ctx.output();
-  std::map<std::string, section_config*> names;
+  std::map<c_string, section_config*> names;
 
   typedef pipeline_config::job_iterator_type   job_iter_t;
   typedef job_config::section_iterator_type    section_iter_t;
+
+  // TODO:
+  //   This could be done by the parser.
+  for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
+    for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
+      const char *n = NERVE_CHECK_PTR(sec->name());
+      names[string_type(n)] = &(*sec);
+    }
+  }
 
   // TODO:
   //   Validate:
@@ -203,16 +222,21 @@ void config_parser::semantic_pass(config::parse_context &ctx) {
 
   for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
     for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
-      names[std::string(sec->name())] = &(*sec);
+      string_type after_name(NERVE_CHECK_PTR(sec->after_name()));
 
-      if (names.count(sec->after_name())) {
-        sec->after_section(names[std::string(sec->after_name())]);
+      if (names.count(after_name)) {
+        config::section_config *const after = NERVE_CHECK_PTR(names[after_name]);
+        sec->after_section(after);
       }
       else {
         // TODO:
         //   Needs a locational report so the section needs to store the location
         //   for its 'after' field.
-        ctx.reporter().report("section is 'after' non-existent section %s", sec->after_name());
+        ctx.reporter().lreport(
+          sec->location_after(),
+          "section '%s' is after non-existent section '%s'",
+          NERVE_CHECK_PTR(sec->name()), NERVE_CHECK_PTR(sec->after_name())
+        );
       }
     }
   }
