@@ -208,6 +208,14 @@ struct semantic_checker {
   semantic_checker(config::parse_context &ctx)
   : rep(ctx.reporter()), confs(ctx.output()), after_nothing(NULL) {}
 
+  void check() {
+    register_names();
+    traverse();
+  }
+
+  private:
+
+  //! Make a lookup table for section names.
   void register_names() {
     NERVE_ASSERT(! confs.jobs().empty(), "parser must not succeed if there are no job confs");
 
@@ -231,29 +239,42 @@ struct semantic_checker {
     }
   }
 
-  void check_afters() {
+  //! Traverse the tree validating and semanticising each bit.
+  void traverse() {
     for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
       for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
-        if (sec->after_name() == NULL) {
-          if (after_nothing != NULL) {
-            rep.lreport(sec->location_start(), "only one section may have no 'after' (the input section)");
-            rep.lreport(after_nothing->location_start(), "other section with no 'after' is here");
-          }
-          else {
-            after_nothing = &(*sec);
-          }
-
-          continue;
-        }
-
-        check_section_after(&(*job), &(*sec));
+        check_section(&(*job), &(*sec));
+        // check_stage();
       }
     }
   }
 
-  private:
+  void check_section(job_config *const job, section_config *const sec) {
+    if (check_section_after_name(sec)) {
+      link_after_name(job, sec);
+    }
+  }
 
-  void check_section_after(job_config *job, section_config *sec) {
+  //! If false then don't validate more of the section after.
+  bool check_section_after_name(section_config *const sec) {
+    if (sec->after_name() == NULL) {
+      if (after_nothing != NULL) {
+        rep.lreport(sec->location_start(), "only one section may have no 'after' (the input section)");
+        rep.lreport(after_nothing->location_start(), "other section with no 'after' is here");
+      }
+      else {
+        after_nothing = &(*sec);
+      }
+
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+
+  //! Turn the after name into pointers to section config.
+  void link_after_name(job_config *job, section_config *sec) {
     string_type after_name(NERVE_CHECK_PTR(sec->after_name()));
     if (names.count(after_name)) {
       section_data &data = names[after_name];
@@ -288,10 +309,12 @@ struct semantic_checker {
     }
   }
 
+  void check_stage() {
+  }
+
   // TODO:
   //   Validate:
   //
-  //   - sections connected within the same job
   //   - observers before processes
   //   - anything before input
   //   - no input
@@ -299,8 +322,7 @@ struct semantic_checker {
   //   - anything but processes before output
   //   - anything but observers after output
   //
-  //   Possibly some of this could be dealt with by the actual pipeline
-  //   declaration part...
+  //   To do this we need to know about stages.
 
 
   config::error_reporter &rep;
@@ -312,8 +334,7 @@ struct semantic_checker {
 
 void config_parser::semantic_pass(config::parse_context &ctx) {
   semantic_checker ch(ctx);
-  ch.register_names();
-  ch.check_afters();
+  ch.check();
 }
 
 #endif
