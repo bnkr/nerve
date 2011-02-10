@@ -70,6 +70,7 @@ namespace config {
 #include "flex_interface.hpp"
 #include "pipeline_configs.hpp"
 #include "parse_context.hpp"
+#include "error_reporter.hpp"
 
 #include <cstdio>
 #include <cassert>
@@ -181,28 +182,109 @@ void config_parser::syntactic_pass(syntactic_context &syn) {
 }
 
 struct c_string {
-  explicit c_string(const char *c) : str_(c) {}
+  explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}
 
   bool operator<(const c_string &c) const { return std::strcmp(c.str_, this->str_) < 0; }
+
+  const char *c_str() { return str_; }
 
   const char *str_;
 };
 
-void config_parser::semantic_pass(config::parse_context &ctx) {
+// Simplify the state of the semantic pass.
+struct semantic_checker {
+  // Quick way to track which names are declared and what jobs they're in.
+  struct section_data {
+    config::job_config     *parent;
+    config::section_config *section;
+  };
+
   typedef c_string string_type;
+  typedef config::pipeline_config::job_iterator_type   job_iter_t;
+  typedef config::job_config::section_iterator_type    section_iter_t;
+  typedef config::section_config section_config;
+  typedef config::job_config job_config;
 
-  config::pipeline_config &confs = ctx.output();
-  std::map<c_string, section_config*> names;
+  semantic_checker(config::parse_context &ctx)
+  : rep(ctx.reporter()), confs(ctx.output()), after_nothing(NULL) {}
 
-  typedef pipeline_config::job_iterator_type   job_iter_t;
-  typedef job_config::section_iterator_type    section_iter_t;
+  void register_names() {
+    NERVE_ASSERT(! confs.jobs().empty(), "parser must not succeed if there are no job confs");
 
-  // TODO:
-  //   This could be done by the parser.
-  for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
-    for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
-      const char *n = NERVE_CHECK_PTR(sec->name());
-      names[string_type(n)] = &(*sec);
+    for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
+      NERVE_ASSERT(! job->sections().empty(), "parser must not succeed if there are no sections in a job");
+
+      for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
+        string_type n(NERVE_CHECK_PTR(sec->name()));
+
+        if (names.count(n)) {
+          rep.lreport(sec->location_start(), "section name %s already used", n.c_str());
+          config::section_config *const other_sec = NERVE_CHECK_PTR(names[n].section);
+          rep.lreport(other_sec->location_start(), "name used here");
+        }
+        else {
+          section_data &sd = names[n];
+          sd.parent = &(*job);
+          sd.section = &(*sec);
+        }
+      }
+    }
+  }
+
+  void check_afters() {
+    for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
+      for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
+        if (sec->after_name() == NULL) {
+          if (after_nothing != NULL) {
+            rep.lreport(sec->location_start(), "only one section may have no 'after' (the input section)");
+            rep.lreport(after_nothing->location_start(), "other section with no 'after' is here");
+          }
+          else {
+            after_nothing = &(*sec);
+          }
+
+          continue;
+        }
+
+        check_section_after(&(*job), &(*sec));
+      }
+    }
+  }
+
+  private:
+
+  void check_section_after(job_config *job, section_config *sec) {
+    string_type after_name(NERVE_CHECK_PTR(sec->after_name()));
+    if (names.count(after_name)) {
+      section_data &data = names[after_name];
+
+      section_config *const after_section = NERVE_CHECK_PTR(data.section);
+      section_config *const this_section = &(*sec);
+
+      job_config *const this_job = &(*job);
+      job_config *const after_job = NERVE_CHECK_PTR(data.parent);
+
+      if (this_job == after_job) {
+        rep.lreport(
+          this_section->location_start(),
+          "section %s is after %s which is in the same thread",
+          NERVE_CHECK_PTR(this_section->name()), NERVE_CHECK_PTR(after_section->name())
+        );
+        rep.lreport(
+          after_section->location_start(),
+          "section %s is here",
+          NERVE_CHECK_PTR(after_section->name())
+        );
+      }
+
+      sec->after_section(after_section);
+    }
+    else {
+      rep.lreport(
+        sec->location_after(),
+        "section '%s' is after non-existent section '%s'",
+        NERVE_CHECK_PTR(sec->name()), NERVE_CHECK_PTR(sec->after_name())
+      );
     }
   }
 
@@ -220,26 +302,18 @@ void config_parser::semantic_pass(config::parse_context &ctx) {
   //   Possibly some of this could be dealt with by the actual pipeline
   //   declaration part...
 
-  for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
-    for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
-      string_type after_name(NERVE_CHECK_PTR(sec->after_name()));
 
-      if (names.count(after_name)) {
-        config::section_config *const after = NERVE_CHECK_PTR(names[after_name]);
-        sec->after_section(after);
-      }
-      else {
-        // TODO:
-        //   Needs a locational report so the section needs to store the location
-        //   for its 'after' field.
-        ctx.reporter().lreport(
-          sec->location_after(),
-          "section '%s' is after non-existent section '%s'",
-          NERVE_CHECK_PTR(sec->name()), NERVE_CHECK_PTR(sec->after_name())
-        );
-      }
-    }
-  }
+  config::error_reporter &rep;
+  config::pipeline_config &confs;
+  config::section_config *after_nothing;
+
+  std::map<c_string, section_data> names;
+};
+
+void config_parser::semantic_pass(config::parse_context &ctx) {
+  semantic_checker ch(ctx);
+  ch.register_names();
+  ch.check_afters();
 }
 
 #endif

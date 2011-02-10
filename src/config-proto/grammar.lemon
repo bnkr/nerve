@@ -94,8 +94,8 @@ thread_conf ::= section . { }
 
 section ::= section_key LBRACE section_conf_seq RBRACE . {
   config::section_config &s = context->this_section();
+  // Note: we don't check after_name because it input state won't have one.
   if (s.name() == NULL) { ERR("section has no 'name' field"); }
-  if (s.after_name() == NULL) { ERR("section has no 'after' field"); }
   context->end_section();
 }
 section ::= section_key empty_block . { context->end_section(); }
@@ -107,14 +107,26 @@ section_key ::= error . { context->new_section(); ERR_EXPECTED("'section' before
 section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
-section_conf ::= NAME string(S) . { context->this_section().name(make_text_ptr(S)); }
+section_conf ::= NAME string(S) . {
+  if (context->this_section().name() != NULL) {
+    ERR("'name' field already set");
+  }
+  else{
+    context->this_section().name(make_text_ptr(S));
+  }
+}
 section_conf ::= AFTER string(S) . {
-  context->this_section().after_name(make_text_ptr(S), context->reporter().location());
+  if (context->this_section().after_name() != NULL) {
+    ERR("'after' field already set");
+  }
+  else {
+    context->this_section().after_name(make_text_ptr(S), context->reporter().location());
+  }
 }
 section_conf ::= STAGE string(S) . { context->add_stage(make_text_ptr(S)); }
 
 section_conf ::= error string(S) . {
-  ERR_EXPECTED("'name', 'after', 'input', 'stage', or 'output'");
+  ERR_EXPECTED("'name', 'after', or 'stage'");
   config::flex_interface::free_text(S);
 }
 section_conf ::= NAME error . { ERR_EXPECTED("string value for field") }

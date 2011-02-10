@@ -75,10 +75,14 @@ class section_config {
 
   void name(flex_interface::text_ptr pt) { name_ = pt; }
   void after_name(flex_interface::text_ptr pt, const parse_location &copy) {
-    this->after_location(copy);
+    this->location_after(copy);
     after_name_ = pt;
   }
   void after_section(section_config *s) { after_section_ = NERVE_CHECK_PTR(s); }
+
+  //! Is this the input section?
+  bool input() const { return input_; }
+  void input(bool v) { input_ = v; }
 
   const char *name() const { return name_.get(); }
   const char *after_name() const { return after_name_.get(); }
@@ -90,6 +94,10 @@ class section_config {
   const parse_location &location_after() { return location_after_; }
   void location_after(const parse_location &copy) { location_after_ = copy; }
 
+  //! Location of the start of the section.
+  const parse_location &location_start() { return location_start_; }
+  void location_start(const parse_location &copy) { location_start_ = copy; }
+
   stage_iterator_type begin() { return stages_.begin(); }
   stage_iterator_type end() { return stages_.end(); }
 
@@ -99,6 +107,8 @@ class section_config {
   flex_interface::text_ptr after_name_;
   section_config *after_section_;
   parse_location location_after_;
+  parse_location location_start_;
+  bool input_;
 };
 
 //! \ingroup grp_config
@@ -114,6 +124,8 @@ class job_config {
   }
 
   bool empty() const { return sections_.empty(); }
+
+  sections_type &sections() { return sections_; }
 
   section_iterator_type begin() { return sections_.begin(); }
   section_iterator_type end() { return sections_.end(); }
@@ -134,8 +146,10 @@ class pipeline_config {
     return jobs_.back();
   }
 
-  job_iterator_type begin() { return jobs_.begin(); }
-  job_iterator_type end() { return jobs_.end(); }
+  jobs_type &jobs() { return jobs_; }
+
+  job_iterator_type begin() { return jobs().begin(); }
+  job_iterator_type end() { return jobs().end(); }
 
   private:
   jobs_type jobs_;

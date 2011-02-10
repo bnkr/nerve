@@ -16,8 +16,14 @@ void make_pipeline(config::pipeline_config &pc) {
     std::cout << "thread #1" << std::endl;
 
     for (section_iter_t section = job->begin(); section != job->end(); ++section) {
-      std::cout << "- section '" << section->name() << std::endl;
-      std::cout << "  read from '" << section->after_section()->name() << std::endl;
+      std::cout << "- section: '" << section->name() << "'" << std::endl;
+      config::section_config *const after = section->after_section();
+      if (after) {
+        std::cout << "  read from: '" << after->name() << "'" << std::endl;
+      }
+      else {
+        std::cout << "  read from: (input)" << std::endl;
+      }
 
       // do the separation into different types here
       for (stage_iter_t stage = section->begin(); stage != section->end(); ++stage) {

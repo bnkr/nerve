@@ -17,15 +17,26 @@ namespace config {
     explicit parse_context(pipeline_config &pc) : output_(pc) {
     }
 
+    const error_reporter &reporter() const { return reporter_; }
     error_reporter &reporter() { return reporter_; }
     pipeline_config &output() { return output_; }
+
+    const parse_location &current_location() const { return this->reporter().location(); }
 
     //! \name Parser actions
     //! These maintain state within a parse.
     //@{
 
     void new_job() { current.job = &(output_.new_job()); }
-    void new_section() { current.section = &NERVE_CHECK_PTR(current.job)->new_section(); }
+
+    void new_section() {
+      job_config &j = *NERVE_CHECK_PTR(current.job);
+      section_config &s = j.new_section();
+      s.location_start(this->current_location());
+      current.section = &s;
+      current.stage = NULL;
+    }
+
     void new_stage() { current.stage = &NERVE_CHECK_PTR(current.section)->new_stage(); }
 
     void end_job() {

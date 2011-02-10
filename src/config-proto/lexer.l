@@ -46,9 +46,9 @@ ws    [\t \n\r]
   "}"      { LEXER_RETURN(RBRACE); }
 
   "thread"   { LEXER_RETURN(THREAD); }
-  "section " { LEXER_RETURN(SECTION); }
+  "section"  { LEXER_RETURN(SECTION); }
   "stage"    { LEXER_RETURN(STAGE); }
- 
+
   "after"    { LEXER_RETURN(AFTER); }
   "name"     { LEXER_RETURN(NAME); }
 }
