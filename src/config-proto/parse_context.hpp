@@ -17,8 +17,12 @@ namespace config {
   //! Parsing context used by the lexer and parser.
   class parse_context : boost::noncopyable {
     public:
-    explicit parse_context(pipeline_config &pc) : output_(pc) {
+    explicit parse_context(pipeline_config &pc)
+    : output_(pc) {
     }
+
+    //! \name Attributes
+    //@{
 
     const error_reporter &reporter() const { return reporter_; }
     error_reporter &reporter() { return reporter_; }
@@ -26,11 +30,13 @@ namespace config {
 
     const parse_location &current_location() const { return this->reporter().location(); }
 
+    //@}
+
     //! \name Parser actions
     //! These maintain state within a parse.
     //@{
 
-    void new_job() { current.job = &(output_.new_job()); }
+    void new_job() { current.reset(); current.job = &(output_.new_job()); }
 
     void new_section() {
       job_config &j = *NERVE_CHECK_PTR(current.job);
@@ -41,7 +47,10 @@ namespace config {
       current.stage = NULL;
     }
 
-    void new_stage() { current.stage = &NERVE_CHECK_PTR(current.section)->new_stage(); }
+    void new_stage() {
+      current.stage = &NERVE_CHECK_PTR(current.section)->new_stage();
+      this_stage().location(this->current_location());
+    }
 
     void end_job() {
       if (this_job().empty()) {
@@ -65,8 +74,21 @@ namespace config {
 
     typedef flex_interface::text_ptr text_ptr;
 
+    // Exception safety just in case.
+    struct scoped_new_stage {
+      scoped_new_stage(parse_context &pc) : pc_(pc) {
+        pc_.new_stage();
+      }
+
+      ~scoped_new_stage() {
+        pc_.end_stage();
+      }
+
+      parse_context &pc_;
+    };
+
     void add_stage(text_ptr text) {
-      new_stage();
+      scoped_new_stage s(*this);
       typedef stage_config::stage_ids id_type;
       id_type id = stage_config::find_stage(text.get());
       switch (id) {
@@ -81,7 +103,6 @@ namespace config {
         this_stage().type(id);
         break;
       }
-      end_stage();
     }
 
     //@}

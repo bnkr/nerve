@@ -115,6 +115,10 @@ class stage_config {
   const char *path() const { return path_.get(); }
   stage_ids type() const { return type_; }
 
+  //! Place this was declared.
+  const parse_location &location() const { return location_; }
+  void location(const parse_location &copy) { location_ = copy; }
+
   //! Finds an identifier for the stage, returning id_plugin if it's a loadable
   //! plugin, id_unset if it can't be found, or the id of a built-in stage.
   static stage_ids find_stage(const char *name) {
@@ -134,6 +138,7 @@ class stage_config {
   private:
   flex_interface::text_ptr path_;
   stage_ids type_;
+  parse_location location_;
 };
 
 struct job_config;
