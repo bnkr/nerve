@@ -59,6 +59,8 @@ class stage_config {
   stage_ids type_;
 };
 
+struct job_config;
+
 //! \ingroup grp_config
 //!
 //! Note that we don't configure sequences because that's implied by the type of
@@ -68,31 +70,39 @@ class section_config {
   typedef std::vector<stage_config> stages_type;
   typedef stages_type::iterator stage_iterator_type;
 
+  section_config() : next_section_(NULL), previous_section_(NULL), parent_job_(NULL) {}
+
   stage_config &new_stage() {
     stages_.push_back(stage_config());
     return stages_.back();
   }
 
   void name(flex_interface::text_ptr pt) { name_ = pt; }
-  void after_name(flex_interface::text_ptr pt, const parse_location &copy) {
-    this->location_after(copy);
-    after_name_ = pt;
+  void next_name(flex_interface::text_ptr pt, const parse_location &copy) {
+    this->location_next(copy);
+    next_name_ = pt;
   }
-  void after_section(section_config *s) { after_section_ = NERVE_CHECK_PTR(s); }
 
-  //! Is this the input section?
-  bool input() const { return input_; }
-  void input(bool v) { input_ = v; }
+  bool last_section() const { return next_section() == NULL; }
+  bool first_section() const { return previous_section() == NULL; }
 
   const char *name() const { return name_.get(); }
-  const char *after_name() const { return after_name_.get(); }
-  section_config *after_section() const { return after_section_; }
+  const char *next_name() const { return next_name_.get(); }
 
-  //! The place where "after" was given.  This is necesasry because the semantic
+  void next_section(section_config *s) { next_section_ = NERVE_CHECK_PTR(s); }
+  void previous_section(section_config *s) { previous_section_ = NERVE_CHECK_PTR(s); }
+
+  job_config &parent_job() { return *NERVE_CHECK_PTR(parent_job_); }
+  void parent_job(job_config *p) { parent_job_ = NERVE_CHECK_PTR(p); }
+
+  section_config *next_section() const { return next_section_; }
+  section_config *previous_section() const { return previous_section_; }
+
+  //! The place where "next" was given.  This is necesasry because the semantic
   //! pass should report errors in a sensible place, not the end of the
   //! document.
-  const parse_location &location_after() { return location_after_; }
-  void location_after(const parse_location &copy) { location_after_ = copy; }
+  const parse_location &location_next() { return location_next_; }
+  void location_next(const parse_location &copy) { location_next_ = copy; }
 
   //! Location of the start of the section.
   const parse_location &location_start() { return location_start_; }
@@ -106,11 +116,13 @@ class section_config {
   private:
   stages_type stages_;
   flex_interface::text_ptr name_;
-  flex_interface::text_ptr after_name_;
-  section_config *after_section_;
-  parse_location location_after_;
+  flex_interface::text_ptr next_name_;
+  parse_location location_next_;
   parse_location location_start_;
-  bool input_;
+
+  section_config *next_section_;
+  section_config *previous_section_;
+  job_config *parent_job_;
 };
 
 //! \ingroup grp_config
@@ -120,12 +132,16 @@ class job_config {
   typedef std::vector<section_config> sections_type;
   typedef sections_type::iterator section_iterator_type;
 
+  job_config() {}
+
   section_config &new_section() {
     sections_.push_back(section_config());
     return sections_.back();
   }
 
   bool empty() const { return sections_.empty(); }
+  //! Is there precisely one section.
+  bool mono_section() const { return sections_.size() == 1; }
 
   sections_type &sections() { return sections_; }
 
@@ -142,6 +158,8 @@ class pipeline_config {
   typedef std::vector<job_config> jobs_type;
   typedef jobs_type::iterator job_iterator_type;
 
+  pipeline_config() : first_section_(NULL) {}
+
   //! Start a new job.
   job_config &new_job() {
     jobs_.push_back(job_config());
@@ -153,7 +171,17 @@ class pipeline_config {
   job_iterator_type begin() { return jobs().begin(); }
   job_iterator_type end() { return jobs().end(); }
 
+  //! The first section in pileline order.  The full order is implied by the
+  //! section prev/next links.  The order within a job is determined by the
+  //! job() member of sections.
+  void first_section(section_config *s) { first_section_ = NERVE_CHECK_PTR(s); }
+  section_config &first_section()  { return *NERVE_CHECK_PTR(first_section_); }
+
+  //! Is there only a single section
+  bool mono_section() const { return jobs_.size() == 1 && jobs_[0].mono_section(); }
+
   private:
+  section_config *first_section_;
   jobs_type jobs_;
 };
 

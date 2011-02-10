@@ -49,7 +49,7 @@ ws    [\t \n\r]
   "section"  { LEXER_RETURN(SECTION); }
   "stage"    { LEXER_RETURN(STAGE); }
 
-  "after"    { LEXER_RETURN(AFTER); }
+  "next"     { LEXER_RETURN(NEXT); }
   "name"     { LEXER_RETURN(NAME); }
 }
 

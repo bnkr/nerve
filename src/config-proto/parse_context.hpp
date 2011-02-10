@@ -32,6 +32,7 @@ namespace config {
     void new_section() {
       job_config &j = *NERVE_CHECK_PTR(current.job);
       section_config &s = j.new_section();
+      s.parent_job(&j);
       s.location_start(this->current_location());
       current.section = &s;
       current.stage = NULL;

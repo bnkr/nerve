@@ -12,23 +12,36 @@ void make_pipeline(config::pipeline_config &pc) {
   typedef job_config::section_iterator_type     section_iter_t;
   typedef section_config::stage_iterator_type   stage_iter_t;
 
-  for (job_iter_t job = pc.begin(); job != pc.end(); ++job) {
-    std::cout << "thread #1" << std::endl;
+  std::map<job_config *, int> job_index;
 
-    for (section_iter_t section = job->begin(); section != job->end(); ++section) {
-      std::cout << "- section: '" << section->name() << "'" << std::endl;
-      config::section_config *const after = section->after_section();
-      if (after) {
-        std::cout << "  read from: '" << after->name() << "'" << std::endl;
-      }
-      else {
-        std::cout << "  read from: (input)" << std::endl;
-      }
-
-      // do the separation into different types here
-      for (stage_iter_t stage = section->begin(); stage != section->end(); ++stage) {
-        // std::cout << "  - stage '" << stage->name() << std::endl;
-      }
+  {
+    int ind = 0;
+    for (job_iter_t j = pc.begin(); j != pc.end(); ++j) {
+      job_index[&(*j)] = ind++;
     }
   }
+
+  section_config *sec = &pc.first_section();
+  do {
+    std::cout << "- section: '" << NERVE_CHECK_PTR(sec->name()) << "'" << std::endl;
+
+    section_config *const prev = sec->previous_section();
+    section_config *const next = sec->next_section();
+
+    const char *from = prev ? prev->name() : "(start pipe)";
+    const char *to = next ? next->name() : "(end pipe)";
+
+    std::cout << "  position: " << from << " -> " << to << std::endl;
+
+
+    // I think the real implementation will need to iterate over jobs to avoid
+    // this alloc-heavy map stuff.  Another solution would be to store a pointer
+    // to the actual pipeline structure being used for the thread in the config
+    // object which I don't like very much.
+    std::cout << "  thread #" << job_index[&sec->parent_job()] << std::endl;
+
+    for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
+      // std::cout << "  - stage '" << stage->name() << std::endl;
+    }
+  } while ((sec = sec->next_section()) != NULL);
 }
