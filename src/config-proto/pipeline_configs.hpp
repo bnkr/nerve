@@ -16,6 +16,7 @@
 #include "parse_location.hpp"
 
 #include <vector>
+#include <list>
 #include <cstring>
 
 namespace config {
@@ -86,7 +87,7 @@ struct job_config;
  */
 class section_config {
   public:
-  typedef std::vector<stage_config> stages_type;
+  typedef std::list<stage_config> stages_type;
   typedef stages_type::iterator stage_iterator_type;
 
   section_config()
@@ -163,7 +164,7 @@ class section_config {
 class job_config {
   public:
 
-  typedef std::vector<section_config> sections_type;
+  typedef std::list<section_config> sections_type;
   typedef sections_type::iterator section_iterator_type;
 
   job_config()
@@ -201,7 +202,7 @@ class job_config {
 //! \ingroup grp_config
 class pipeline_config {
   public:
-  typedef std::vector<job_config> jobs_type;
+  typedef std::list<job_config> jobs_type;
   typedef jobs_type::iterator job_iterator_type;
 
   pipeline_config()
@@ -209,6 +210,10 @@ class pipeline_config {
 
   //! Start a new job.
   job_config &new_job() {
+    //TODO:
+    //  This kind of thing only works because I'm using a list.  The pointers
+    //  would be invalidated otherwise.  It would be a lot neater to store a
+    //  vector of pointers to jobs.  Same goes for the rest.
     jobs_.push_back(job_config());
     return jobs_.back();
   }
@@ -223,7 +228,7 @@ class pipeline_config {
   section_config *pipeline_first() { return pipeline_first_; }
 
   //! Is there only a single section
-  bool mono_section() const { return jobs_.size() == 1 && jobs_[0].mono_section(); }
+  bool mono_section() const { return jobs_.size() == 1 && jobs_.begin()->mono_section(); }
 
   private:
   section_config *pipeline_first_;

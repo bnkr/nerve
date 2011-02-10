@@ -26,7 +26,7 @@ endif()
 bbuild_exe(
   TARGET config-proto
   SOURCES
-    main.cpp
+    main.cpp lemon_interface.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS

@@ -11,6 +11,8 @@
 
 #include "flex_interface.hpp"
 
+#include <boost/cstdint.hpp>
+
 namespace config { class parse_context; }
 
 namespace {
@@ -37,6 +39,10 @@ namespace config {
 #elif NERVE_PARSER_TRACE
     static char parse_trace_prefix[] = "lemon: ";
 #endif
+
+    //! Wrapping std::allocator.
+    void *parser_alloc(size_t bytes);
+    void parser_free(void *mem);
   }
 
   //! \ingroup grp_config_parser
@@ -63,7 +69,7 @@ namespace config {
     };
 
     lemon_interface(const params &p) {
-      state_ = ::ParseAlloc(malloc);
+      state_ = ::ParseAlloc(&detail::parser_alloc);
       if (p.trace()) {
 #if NERVE_PARSER_TRACE
         ::ParseTrace(stdout, detail::parse_trace_prefix);
@@ -73,7 +79,7 @@ namespace config {
     }
 
     ~lemon_interface() {
-      ::ParseFree(state_, free);
+      ::ParseFree(state_, &detail::parser_free);
     }
 
     //! Call for each token.  Some other staate mustbe used to work out if there
