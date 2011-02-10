@@ -1,7 +1,9 @@
 Stage Validation
 ----------------
 
-* need to type stages
+* types of stages
+* check types are ordered properly, and the always-required ones are there.
+* check in semantic or uasage?  Semantic is neater, of course.
 * modify pretty-printer with the various details
 
 Configuring Plugins

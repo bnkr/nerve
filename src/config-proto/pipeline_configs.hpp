@@ -10,6 +10,13 @@
  * This means they are always mutable.
  */
 
+//TODO:
+//  I need to modify this lot to vbe held int he list by pointer because they
+//  currently get coppied a lot.  Also, the lists shold really be vectors but
+//  you can't do that because adding new members nukes all the ponters (which
+//  are used by the new_job etc bits.)
+//
+
 #ifndef CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 #define CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 
@@ -34,10 +41,76 @@ class stage_config {
     id_ffmpeg
   };
 
+  enum categories {
+    // Note that a separate type is necessary for the output despite it
+    // essentially being an observer because we need to know that one exists in
+    // the pipeline.
+    cat_output,
+    cat_input,
+    cat_process,
+    cat_observe
+  };
+
   stage_config() : type_(id_unset) {}
+
+  //! The name of this stage's plugin (e.g sdl)
+  const char *name() const {
+    switch (this->type()) {
+    case id_unset:
+      NERVE_ABORT("don't call this until the path/id is done");
+    case id_plugin:
+      return NERVE_CHECK_PTR(this->path());
+    case id_sdl:
+      return "sdl";
+    case id_ffmpeg:
+      return "ffmpeg";
+    }
+
+    NERVE_ABORT("what are you doing here?");
+  }
+
+  //! What kind of stage it is (e.g process)
+  const char *category_name() const {
+    switch (this->category()) {
+    case cat_input:
+      return "input";
+    case cat_output:
+      return "output";
+    case cat_process:
+      return "process";
+    case cat_observe:
+      return "observe";
+    }
+
+    NERVE_ABORT("what are you doing here?");
+  }
+
+  categories category() const {
+    switch (this->type()) {
+    case id_unset:
+      NERVE_ABORT("don't call this until the path/id is done");
+    case id_plugin:
+      NERVE_ABORT("not implemented: finding the category from a plugin path");
+    case id_ffmpeg:
+      return cat_input;
+    case id_sdl:
+      return cat_output;
+    }
+
+    NERVE_ABORT("what are you doing here?");
+  }
 
   void path(const flex_interface::text_ptr &pt) { type(id_plugin); path_ = pt; }
   void type(enum stage_ids i) { type_ = i; }
+
+  //! Is the stage to be loaded from a shared object.
+  bool file_based() const {
+    // TODO:
+    //   This kind of thing really indicates we need another object to put this
+    //   one in which can only be constructed when it's ready to be queried.
+    NERVE_ASSERT(type() != id_unset, "not initialised yet");
+    return type() == id_plugin;
+  }
 
   const char *path() const { return path_.get(); }
   stage_ids type() const { return type_; }
@@ -213,10 +286,6 @@ class pipeline_config {
 
   //! Start a new job.
   job_config &new_job() {
-    //TODO:
-    //  This kind of thing only works because I'm using a list.  The pointers
-    //  would be invalidated otherwise.  It would be a lot neater to store a
-    //  vector of pointers to jobs.  Same goes for the rest.
     jobs_.push_back(job_config());
     return jobs_.back();
   }

@@ -53,11 +53,20 @@ void make_pipeline(config::pipeline_config &pc) {
     const char *from = prev ? prev->name() : "(start pipe)";
     const char *to = next ? next->name() : "(end pipe)";
 
-    std::cout << "  position: " << from << " -> " << to << std::endl;
+    std::cout << "  position: '" << from << "' -> '" << sec->name() << "' -> '" << to << "'" << std::endl;
     std::cout << "  thread #" << job_index[&sec->parent_job()] << std::endl;
 
+    NERVE_ASSERT(! sec->stages().empty(), "there must always be stages");
+
     for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
-      // std::cout << "  - stage '" << stage->name() << std::endl;
+      std::cout
+        << "  - stage: '" << NERVE_CHECK_PTR(stage->name()) << "' "
+        << "(" << NERVE_CHECK_PTR(stage->category_name()) << ")"
+        << std::endl;
+
+      if (stage->type() == stage_config::id_plugin) {
+        std::cout << "    path: " << NERVE_CHECK_PTR(stage->path()) << std::endl;
+      }
     }
   } while ((sec = sec->pipeline_next()) != NULL);
 }
