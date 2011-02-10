@@ -1,6 +1,9 @@
 // Copyright (C) 2009-2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
+#ifndef CONFIG_PARSE_CONTEXT_HPP_s4d4zw7e
+#define CONFIG_PARSE_CONTEXT_HPP_s4d4zw7e
+
 #include "error_reporter.hpp"
 #include "pipeline_configs.hpp"
 #include "../plugin-proto/asserts.hpp"
@@ -98,4 +101,6 @@ namespace config {
 
     error_reporter reporter_;
   };
-}
+
+} // ns config
+#endif

@@ -12,6 +12,7 @@
 
 #include <cstring>
 
+//! Something we can put in a map.
 struct c_string {
   explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}
 

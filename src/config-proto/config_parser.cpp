@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <boost/bind.hpp>
 
 using config::config_parser;
 
@@ -52,26 +53,25 @@ struct syntactic_context {
 // ////////////// //
 
 config_parser::config_parser(const config_parser::params &p) : p_(p) {
-  NERVE_ASSERT(p_.file() != NULL, "file must never be null");
 }
 
-bool config_parser::parse(config::pipeline_config &output) {
+bool config_parser::parse(config::pipeline_config &output, const config_parser::files_type &fs) {
+  parse_context context(output);
+  std::for_each(fs.begin(), fs.end(), boost::bind(&config_parser::parse_file, this, boost::ref(output), boost::ref(context), _1));
+
+  return ! context.reporter().error();
+}
+
+bool config_parser::parse_file(config::pipeline_config &output, config::parse_context &context, const char *file) {
   stdio_ptr fh;
 
-  fh.reset(std::fopen(NERVE_CHECK_PTR(p_.file()), "r"));
+  context.reporter().location().new_file(file);
+
+  fh.reset(std::fopen(NERVE_CHECK_PTR(file), "r"));
   if (! fh.get() || std::ferror(fh.get())) {
-    // TODO:
-    //   exceptions?  I want to separate the output because often we'd want to
-    //   write into a log file as well.  In theory the error_reporter class
-    //   will use some kind of already declared strategy.  We can just use
-    //   that here (or even it could be global if necessary).
-    std::cerr << "could not open config file '" << p_.file() << "'" << std::endl;
+    context.reporter().report("file not readable");
     return false;
   }
-
-  parse_context context(output);
-
-  context.reporter().location().new_file(p_.file());
 
   {
     lemon_interface parse = lemon_interface::params()
@@ -88,11 +88,9 @@ bool config_parser::parse(config::pipeline_config &output) {
     syntactic_pass(syn);
   }
 
-  if (context.reporter().error()) {
-    return false;
+  if (! context.reporter().error()) {
+    semantic_pass(context);
   }
-
-  semantic_pass(context);
 
   return ! context.reporter().error();
 }
