@@ -108,7 +108,9 @@ section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
 section_conf ::= NAME string(S) . { context->this_section().name(make_text_ptr(S)); }
-section_conf ::= AFTER string(S) . { context->this_section().after_name(make_text_ptr(S)); }
+section_conf ::= AFTER string(S) . {
+  context->this_section().after_name(make_text_ptr(S), context->reporter().location());
+}
 section_conf ::= STAGE string(S) . { context->add_stage(make_text_ptr(S)); }
 
 section_conf ::= error string(S) . {

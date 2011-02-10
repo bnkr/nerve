@@ -74,7 +74,10 @@ class section_config {
   }
 
   void name(flex_interface::text_ptr pt) { name_ = pt; }
-  void after_name(flex_interface::text_ptr pt) { after_name_ = pt; }
+  void after_name(flex_interface::text_ptr pt, const parse_location &copy) {
+    this->after_location(copy);
+    after_name_ = pt;
+  }
   void after_section(section_config *s) { after_section_ = NERVE_CHECK_PTR(s); }
 
   const char *name() const { return name_.get(); }
