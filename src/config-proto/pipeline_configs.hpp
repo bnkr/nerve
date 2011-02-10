@@ -14,6 +14,9 @@
 #define CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 
 #include "parse_location.hpp"
+#include "flex_interface.hpp"
+
+#include "../plugin-proto/asserts.hpp"
 
 #include <vector>
 #include <list>

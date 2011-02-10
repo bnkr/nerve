@@ -4,6 +4,8 @@
 #ifndef CONFIG_PARSE_LOCATION_HPP_qtoy4u4y
 #define CONFIG_PARSE_LOCATION_HPP_qtoy4u4y
 
+#include <cstdlib>
+
 namespace config {
   /*!
    * \ingroup grp_config

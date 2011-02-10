@@ -5,10 +5,12 @@
 #define PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 
 #include "pooled_stl.hpp"
+#include "pipeline_configs.hpp"
+#include "parse_context.hpp"
 
 #include "../plugin-proto/asserts.hpp"
 
-#include <string>
+#include <cstring>
 
 struct c_string {
   explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}

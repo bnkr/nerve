@@ -1,9 +1,15 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+
 /*!
  * \file
  * A test iteration of the pipeline as we would to actually initialise it all.
  */
 
 #include "pipeline_configs.hpp"
+
+#include <map>
+#include "../plugin-proto/asserts.hpp"
 
 void make_pipeline(config::pipeline_config &pc) {
   using namespace config;

@@ -5,6 +5,9 @@ Multiple Files
 * make a list of files
 * use std::string for the file location
 
+I'll use a class instead of a function becuase there's too much state all over
+the place.
+
 Stage Validation
 ----------------
 

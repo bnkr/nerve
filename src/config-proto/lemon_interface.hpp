@@ -10,6 +10,7 @@
 #define CONFIG_LEMON_PARSER_HPP_jncvazqg
 
 #include "flex_interface.hpp"
+#include "nerve_config.hpp"
 
 #include <boost/cstdint.hpp>
 
