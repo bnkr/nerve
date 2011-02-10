@@ -1,34 +1,40 @@
-Semantic Pass
--------------
-
-* store locations in relevant places (mostly just for the "after" field)
-* more validation of semantic bits (notes in the semantic pass function).  A lot
-  of this would be done by writing the pretty printer.
-
-Pretty Printer
+Multiple Files
 --------------
 
-* finish make_pipeline pretty-printer
-* make some code to support unit tests:
-  - use the pretty printer
-  - api like `nerved --config x --dump-config`
-  - I guess ruby will suffice for this
+* config_parser needs to be reworked very slightly
+* make a list of files
+* use std::string for the file location
 
-Usability Features
-------------------
+Stage Validation
+----------------
 
-* multiple files (means we might need to store locations in more places, e.g
-  duplicated section name and be careful about lexer init etc.)
+* need to type stages
+* modify pretty-printer with the various details
+
+Configuring Plugins
+-------------------
+
 * arbitrary configuration data -- we need to configure each plugin, so there
   must be some kind of configure sdl { field = value } thing.  This data also
   needs to be accessable to the rest of the program.
 
+Test Framework
+--------------
+
+- pretty printer must print job/section/sequence/stage in yaml or something
+  similar
+- option --dump-config
+- ruby lib to compare two outputs
+
 Integrate
 ---------
 
-* requires teh plugin-proto code to be completely working
-* we'll need to use the gapless stuff to create working stages
-* modify the pretty printer to create the entire pipeline
-* we'll do this in a new protoype; to be honest it's probably ready to go in
-  nerved (this will be in config/, and plugin-proto in pipeline/; the stages
-  themselves will be elsewhere)
+Requires working config-proto, and finished connectors in the pipeline bit.
+
+* modify the pretty-printer to declare each pipeline object
+* add the real initialisation stuff to the pipeline objects (constructors,
+  storage etc...)
+* use the gapless stuff to create working stages
+* use the socket proto to make the most simple possible command reciever
+  - we can deal with true communication and updating some other time.
+* we should have output!

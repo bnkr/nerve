@@ -22,6 +22,10 @@ namespace config {
     void new_file(const char *file) { file_ = file; }
 
     private:
+
+    // TODO:
+    //   This'll need to be a string if we are to support multiple files.
+
     const char *file_;
     int line_;
   };
