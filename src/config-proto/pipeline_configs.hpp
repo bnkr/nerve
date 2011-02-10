@@ -98,6 +98,8 @@ class section_config {
   const parse_location &location_start() { return location_start_; }
   void location_start(const parse_location &copy) { location_start_ = copy; }
 
+  stages_type &stages() { return stages_; }
+
   stage_iterator_type begin() { return stages_.begin(); }
   stage_iterator_type end() { return stages_.end(); }
 

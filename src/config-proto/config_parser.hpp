@@ -166,7 +166,6 @@ bool config_parser::parse(config::pipeline_config &output) {
 // Parsing Operations //
 // ////////////////// //
 
-
 void config_parser::syntactic_pass(syntactic_context &syn) {
   int tok;
   while ((tok = flex_interface::next_token())) {
@@ -181,6 +180,10 @@ void config_parser::syntactic_pass(syntactic_context &syn) {
   syn.parser.finish();
 }
 
+// ///////////// //
+// Semantic Pass //
+// ///////////// //
+
 struct c_string {
   explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}
 
@@ -191,7 +194,8 @@ struct c_string {
   const char *str_;
 };
 
-// Simplify the state of the semantic pass.
+//! Stores the state for the semantic and lets us avoid having one big nested
+//! loop uberalgorithm.
 struct semantic_checker {
   // Quick way to track which names are declared and what jobs they're in.
   struct section_data {
@@ -199,11 +203,16 @@ struct semantic_checker {
     config::section_config *section;
   };
 
-  typedef c_string string_type;
+  typedef std::map<c_string, section_data> map_type;
+  typedef map_type::key_type string_type;
+
   typedef config::pipeline_config::job_iterator_type   job_iter_t;
   typedef config::job_config::section_iterator_type    section_iter_t;
+  typedef config::section_config::stage_iterator_type  stage_iter_t;
+
   typedef config::section_config section_config;
-  typedef config::job_config job_config;
+  typedef config::job_config     job_config;
+  typedef config::stage_config   stage_config;
 
   semantic_checker(config::parse_context &ctx)
   : rep(ctx.reporter()), confs(ctx.output()), after_nothing(NULL) {}
@@ -242,14 +251,21 @@ struct semantic_checker {
   //! Traverse the tree validating and semanticising each bit.
   void traverse() {
     for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
+      NERVE_ASSERT(! job->sections().empty(), "there must always be sections in a job");
       for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
-        check_section(&(*job), &(*sec));
-        // check_stage();
+        NERVE_ASSERT(! sec->stages().empty(), "there must always be stages in a section");
+        visit_section(&(*job), &(*sec));
+
+        for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
+          visit_stage(&(*job), &(*sec), &(*stage));
+        }
       }
     }
   }
 
-  void check_section(job_config *const job, section_config *const sec) {
+  // Sections //
+
+  void visit_section(job_config *const job, section_config *const sec) {
     if (check_section_after_name(sec)) {
       link_after_name(job, sec);
     }
@@ -309,27 +325,31 @@ struct semantic_checker {
     }
   }
 
-  void check_stage() {
+  // Stages //
+
+  void visit_stage(job_config *const job, section_config *const sec, stage_config *const stage) {
+    // TODO:
+    //   Validate:
+    //
+    //   - observers before processes
+    //   - anything before input
+    //   - no input
+    //   - no output
+    //   - anything but processes before output
+    //   - anything but observers after output
+    //
+    //   To do this we need to know about stages.
+    //
+    //   Also, need to get the ordering right.  Sections need to be ordered
+    //   because otherwise the first time blocking a job would be waiting for
+    //   input from a section which is later in the list.
   }
-
-  // TODO:
-  //   Validate:
-  //
-  //   - observers before processes
-  //   - anything before input
-  //   - no input
-  //   - no output
-  //   - anything but processes before output
-  //   - anything but observers after output
-  //
-  //   To do this we need to know about stages.
-
 
   config::error_reporter &rep;
   config::pipeline_config &confs;
   config::section_config *after_nothing;
 
-  std::map<c_string, section_data> names;
+  map_type names;
 };
 
 void config_parser::semantic_pass(config::parse_context &ctx) {
