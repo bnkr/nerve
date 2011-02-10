@@ -14,6 +14,8 @@ void make_pipeline(config::pipeline_config &pc) {
 
   std::map<job_config *, int> job_index;
 
+  // TODO:
+  //   This method can be removed now we have a thred-order iteration.
   {
     int ind = 0;
     for (job_iter_t j = pc.begin(); j != pc.end(); ++j) {
@@ -21,27 +23,35 @@ void make_pipeline(config::pipeline_config &pc) {
     }
   }
 
-  section_config *sec = &pc.first_section();
+  // other method:
+  //
+  //   for j in jobs
+  //     for s in sections
+  //       next if not s->parent_job() == j
+  //       ...
+  //
+  // Or, now that job ordering exists, we could do:
+  //
+  //   each job
+  //     each section
+  //       ...
+  //
+
+  section_config *sec = NERVE_CHECK_PTR(pc.pipeline_first());
   do {
     std::cout << "- section: '" << NERVE_CHECK_PTR(sec->name()) << "'" << std::endl;
 
-    section_config *const prev = sec->previous_section();
-    section_config *const next = sec->next_section();
+    section_config *const prev = sec->pipeline_previous();
+    section_config *const next = sec->pipeline_next();
 
     const char *from = prev ? prev->name() : "(start pipe)";
     const char *to = next ? next->name() : "(end pipe)";
 
     std::cout << "  position: " << from << " -> " << to << std::endl;
-
-
-    // I think the real implementation will need to iterate over jobs to avoid
-    // this alloc-heavy map stuff.  Another solution would be to store a pointer
-    // to the actual pipeline structure being used for the thread in the config
-    // object which I don't like very much.
     std::cout << "  thread #" << job_index[&sec->parent_job()] << std::endl;
 
     for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
       // std::cout << "  - stage '" << stage->name() << std::endl;
     }
-  } while ((sec = sec->next_section()) != NULL);
+  } while ((sec = sec->pipeline_next()) != NULL);
 }

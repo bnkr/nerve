@@ -61,16 +61,38 @@ class stage_config {
 
 struct job_config;
 
-//! \ingroup grp_config
-//!
-//! Note that we don't configure sequences because that's implied by the type of
-//! the stage.
+/*!
+ * \ingroup grp_config
+ *
+ * Note that we don't configure sequences because that's implied by the type of
+ * the stage.
+ *
+ * There are two ways of iterating the configs:
+ *
+ * - iterate jobs, iterate all sections (via the pipeline_next/prev) but skip
+ *   those sections which aren't in the job (via. parent_jov)
+ * - iterate jobs, iterate sections in that job (via. thread_next/prev)
+ *
+ * I think that the actual overhead is fairly similar for both.  The job
+ * iteration and the job skipping is two comparisons and the section iteration
+ * is one null-comparison but the number of sections is always large.
+ *
+ * The other method has one comparison for the job iteration and one
+ * null-comparison for the section iteration, but has two additional null
+ * comparisons to assign the in-job order list.
+ *
+ * Both methods are present because I don't really know which one will stand the
+ * test of time.
+ */
 class section_config {
   public:
   typedef std::vector<stage_config> stages_type;
   typedef stages_type::iterator stage_iterator_type;
 
-  section_config() : next_section_(NULL), previous_section_(NULL), parent_job_(NULL) {}
+  section_config()
+  : pipeline_next_(NULL), pipeline_previous_(NULL),
+    job_next_(NULL),
+    parent_job_(NULL) {}
 
   stage_config &new_stage() {
     stages_.push_back(stage_config());
@@ -83,20 +105,28 @@ class section_config {
     next_name_ = pt;
   }
 
-  bool last_section() const { return next_section() == NULL; }
-  bool first_section() const { return previous_section() == NULL; }
+  bool job_last() const { return pipeline_next() == NULL; }
+  bool job_first() const { return pipeline_previous() == NULL; }
 
   const char *name() const { return name_.get(); }
   const char *next_name() const { return next_name_.get(); }
 
-  void next_section(section_config *s) { next_section_ = NERVE_CHECK_PTR(s); }
-  void previous_section(section_config *s) { previous_section_ = NERVE_CHECK_PTR(s); }
-
   job_config &parent_job() { return *NERVE_CHECK_PTR(parent_job_); }
   void parent_job(job_config *p) { parent_job_ = NERVE_CHECK_PTR(p); }
 
-  section_config *next_section() const { return next_section_; }
-  section_config *previous_section() const { return previous_section_; }
+  //! \name Ordering
+  //!
+  //! These specify null-terminated linked lists across sections.  Thread order
+  //! is the list of sections with the same parent_job, while pipeline is the
+  //! complete list of sections across the entire pipeline.
+  //@{
+  void pipeline_next(section_config *s) { pipeline_next_ = NERVE_CHECK_PTR(s); }
+  void pipeline_previous(section_config *s) { pipeline_previous_ = NERVE_CHECK_PTR(s); }
+  void job_next(section_config *s) { job_next_ = NERVE_CHECK_PTR(s); }
+  section_config *pipeline_next() const { return pipeline_next_; }
+  section_config *pipeline_previous() const { return pipeline_previous_; }
+  section_config *job_next() const { return job_next_; }
+  //@}
 
   //! The place where "next" was given.  This is necesasry because the semantic
   //! pass should report errors in a sensible place, not the end of the
@@ -115,13 +145,17 @@ class section_config {
 
   private:
   stages_type stages_;
+
   flex_interface::text_ptr name_;
   flex_interface::text_ptr next_name_;
+
   parse_location location_next_;
   parse_location location_start_;
 
-  section_config *next_section_;
-  section_config *previous_section_;
+  section_config *pipeline_next_;
+  section_config *pipeline_previous_;
+  section_config *job_next_;
+
   job_config *parent_job_;
 };
 
@@ -132,7 +166,9 @@ class job_config {
   typedef std::vector<section_config> sections_type;
   typedef sections_type::iterator section_iterator_type;
 
-  job_config() {}
+  job_config()
+  : job_first_(NULL),
+    job_last_(NULL) {}
 
   section_config &new_section() {
     sections_.push_back(section_config());
@@ -148,8 +184,18 @@ class job_config {
   section_iterator_type begin() { return sections_.begin(); }
   section_iterator_type end() { return sections_.end(); }
 
+  //! The first section in this thread in pipeline order.
+  void job_first(section_config *s) { job_first_ = NERVE_CHECK_PTR(s); }
+  section_config *job_first()  { return job_first_; }
+
+  //! This is used entirely for controlling the list linkage.
+  void job_last(section_config *s) { job_last_ = NERVE_CHECK_PTR(s); }
+  section_config *job_last()  { return job_last_; }
+
   private:
   sections_type sections_;
+  section_config *job_first_;
+  section_config *job_last_;
 };
 
 //! \ingroup grp_config
@@ -158,7 +204,8 @@ class pipeline_config {
   typedef std::vector<job_config> jobs_type;
   typedef jobs_type::iterator job_iterator_type;
 
-  pipeline_config() : first_section_(NULL) {}
+  pipeline_config()
+  : pipeline_first_(NULL) {}
 
   //! Start a new job.
   job_config &new_job() {
@@ -171,17 +218,15 @@ class pipeline_config {
   job_iterator_type begin() { return jobs().begin(); }
   job_iterator_type end() { return jobs().end(); }
 
-  //! The first section in pileline order.  The full order is implied by the
-  //! section prev/next links.  The order within a job is determined by the
-  //! job() member of sections.
-  void first_section(section_config *s) { first_section_ = NERVE_CHECK_PTR(s); }
-  section_config &first_section()  { return *NERVE_CHECK_PTR(first_section_); }
+  //! The globally first section (as opposed to the per-thread first).
+  void pipeline_first(section_config *s) { pipeline_first_ = NERVE_CHECK_PTR(s); }
+  section_config *pipeline_first() { return pipeline_first_; }
 
   //! Is there only a single section
   bool mono_section() const { return jobs_.size() == 1 && jobs_[0].mono_section(); }
 
   private:
-  section_config *first_section_;
+  section_config *pipeline_first_;
   jobs_type jobs_;
 };
 

@@ -275,69 +275,30 @@ struct semantic_checker {
 
     NERVE_ASSERT(this->no_prev != NULL || rep.error(), "no_prev must have been assigned unless there was an erro");
 
-    if (this->no_prev) {
-      confs.first_section(this->no_prev);
+    if (! this->no_prev) {
+      return;
     }
 
-    // TODO:
-    //   It might be necessary to establish a per-job starting section to make
-    //   the algorithm for actually declaring sections and stages easier.  If we
-    //   can only know which thread to put sections in by the parent_job()
-    //   member then we end up needing to map the job_config to a to pipeline
-    //   job structure.  If we can go in job order then it's just a case of
-    //   stopping the loop when the job changes.
+    confs.pipeline_first(this->no_prev);
+
+    // This might turn out to be unnecessary.  It gives us a way to iterate
+    // sections based on a job rather than iterating every section and checking
+    // the parent_job.
     //
-    //     for j in jobs
-    //       pj = new pipeline::job
-    //       do {
-    //         ps = new pipeline::section
-    //         pj << ps
-    //         for st in s-> stages
-    //           pst = new pipeline::stage
-    //           ps << pst
-    //         end
-    //       } while ((s = s->next_thread_section() != NULL);
-    //     end
-    //
-    //   The algorithm for establishing a job list:
-    //
-    //     for s in sections
-    //       j = s->parent_job();
-    //       if j->first_section() == NULL
-    //         j->first_section(s);
-    //         j->last_section(s);
-    //       else
-    //         j->last_section()->next_thread_section(s);
-    //         j->last_section(s);
-    //       end
-    //     end
-    //
-    //   Of course, it could be easier to simply iterate the section list and
-    //   skip every section not in that job:
-    //
-    //     for j in jobs
-    //       for s in sections
-    //         next if not s->parent_job() == j
-    //
-    //         ...
-    //       end
-    //     end
-    //
-    //   I think that the actual overhead is identical for both.  The job
-    //   iteration and the job skipping is two comparisons and the section
-    //   iteration is one null-comparison.
-    //
-    //   The other method has one comparison for the job iteration and one
-    //   null-comparison for the section iteration, but has two additional null
-    //   comparisons to assign the in-job order list.  Also the last section
-    //   thing is a bit iffy because it's entirely for this algorithm's benefit.
-    //
-    //   Further, it might not be necessary to go per-job anyway, depending on
-    //   how pipeline initialisation goes.
-    //
-    //
-    //
-    //
+    section_config *s = NERVE_CHECK_PTR(confs.pipeline_first());
+    do {
+      job_config &j = s->parent_job();
+      if (j.job_first() == NULL) {
+        NERVE_ASSERT(j.job_last() == NULL, "last section is null if we haven't assigned a first section yet");
+        j.job_first(s);
+        j.job_last(s);
+      }
+      else {
+        section_config *const l = NERVE_CHECK_PTR(j.job_last());
+        l->job_next(s);
+        j.job_last(s);
+      }
+    } while ((s = s->pipeline_next()) != NULL);
   }
 
   // Sections //
@@ -347,7 +308,7 @@ struct semantic_checker {
       link_sections(job, sec);
 
       // Needed later to find the first section in pipeline order.
-      if (sec->previous_section() == NULL) {
+      if (sec->pipeline_previous() == NULL) {
         NERVE_ASSERT(this->no_prev == NULL, "can't have two sections with no previous section");
         this->no_prev = sec;
       }
@@ -378,7 +339,7 @@ struct semantic_checker {
     if (names.count(next_name)) {
       section_data &data = names[next_name];
 
-      section_config *const next_section = NERVE_CHECK_PTR(data.section);
+      section_config *const pipeline_next = NERVE_CHECK_PTR(data.section);
       section_config *const this_section = sec;
 
       job_config *const this_job = &(*job);
@@ -388,17 +349,17 @@ struct semantic_checker {
         rep.lreport(
           this_section->location_start(),
           "section %s's next is %s which is in the same thread",
-          NERVE_CHECK_PTR(this_section->name()), NERVE_CHECK_PTR(next_section->name())
+          NERVE_CHECK_PTR(this_section->name()), NERVE_CHECK_PTR(pipeline_next->name())
         );
         rep.lreport(
-          next_section->location_start(),
+          pipeline_next->location_start(),
           "section %s is here",
-          NERVE_CHECK_PTR(next_section->name())
+          NERVE_CHECK_PTR(pipeline_next->name())
         );
       }
 
-      next_section->previous_section(this_section);
-      this_section->next_section(next_section);
+      pipeline_next->pipeline_previous(this_section);
+      this_section->pipeline_next(pipeline_next);
     }
     else {
       rep.lreport(
