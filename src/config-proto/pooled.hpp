@@ -14,10 +14,11 @@
 namespace pooled {
   template<class Contained>
   struct container {
-    typedef boost::fast_pool_allocator<Contained> allocator_type;
+    typedef boost::pool_allocator<Contained> contiguous_allocator_type;
+    typedef boost::fast_pool_allocator<Contained> object_allocator_type;
 
-    typedef std::vector<Contained, allocator_type> vector;
-    typedef std::list<Contained, allocator_type> list;
+    typedef std::vector<Contained, contiguous_allocator_type> vector;
+    typedef std::list<Contained, object_allocator_type> list;
   };
 
   template<class Key, class Value>
@@ -31,6 +32,19 @@ namespace pooled {
   };
 
   typedef std::basic_string<char, std::char_traits<char>, boost::fast_pool_allocator<char> > string;
+
+  template<class T>
+  T *alloc() { return boost::fast_pool_allocator<T>().allocate(1); }
+
+  template<class T>
+  void free(T *ptr) { return boost::fast_pool_allocator<T>().deallocate(ptr, 1); }
+
+  //! Pooling which remembers how much was allocated.
+  //@{
+  void *tracked_byte_alloc(size_t);
+  void tracked_byte_free(void *);
+  void *tracked_byte_realloc(void *ptr, size_t bytes);
+  //@}
 }
 
 #endif

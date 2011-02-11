@@ -58,7 +58,6 @@ config_parser::config_parser(const config_parser::params &p) : p_(p) {
 bool config_parser::parse(config::pipeline_config &output, const config_parser::files_type &fs) {
   parse_context context(output);
   std::for_each(fs.begin(), fs.end(), boost::bind(&config_parser::parse_file, this, boost::ref(context), _1));
-
   return ! context.reporter().error();
 }
 

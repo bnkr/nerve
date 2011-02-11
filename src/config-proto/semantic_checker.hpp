@@ -4,7 +4,7 @@
 #ifndef PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 #define PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 
-#include "pooled_stl.hpp"
+#include "pooled.hpp"
 #include "pipeline_configs.hpp"
 #include "parse_context.hpp"
 
@@ -95,7 +95,7 @@ struct semantic_checker {
 
     // We might not have visited it because it doesn't have to have a name.
     if (confs.mono_section()) {
-      this->no_prev = &(*(confs.begin()->sections().begin()));
+      this->no_prev = &(*(confs.begin()->begin()));
     }
 
     NERVE_ASSERT(this->no_prev != NULL || rep.error(), "no_prev must have been assigned unless there was an erro");
@@ -218,7 +218,7 @@ struct semantic_checker {
     stage_config::categories last_cat;
   };
 
-  void visit_stage(job_config *const job, section_config *const sec, stage_config *const stage) {
+  void visit_stage(job_config *, section_config *, stage_config *const stage) {
     if (visit_state.initial) {
       if (stage->category() != stage_config::cat_input) {
         rep.lreport(

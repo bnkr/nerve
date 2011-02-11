@@ -10,13 +10,6 @@
  * This means they are always mutable.
  */
 
-//TODO:
-//  I need to modify this lot to vbe held int he list by pointer because they
-//  currently get coppied a lot.  Also, the lists shold really be vectors but
-//  you can't do that because adding new members nukes all the ponters (which
-//  are used by the new_job etc bits.)
-//
-
 #ifndef CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 #define CONFIG_PIPELINE_CONFIGS_HPP_n8dsnrmy
 
@@ -24,15 +17,24 @@
 #include "flex_interface.hpp"
 
 #include "../plugin-proto/asserts.hpp"
+#include "pooled.hpp"
 
-#include <vector>
-#include <list>
+#include <boost/iterator/indirect_iterator.hpp>
+#include <boost/utility.hpp>
 #include <cstring>
 
+// TODO:
+//   The create/destroy methods should be pooled too, but it doesn't appear to
+//   work very well.
+
 namespace config {
+  template<class Iterator>
+  typename boost::indirect_iterator<Iterator> make_deref_iter(Iterator i) {
+    return typename boost::indirect_iterator<Iterator>(i);
+  }
 
 //! \ingroup grp_config
-class stage_config {
+class stage_config : boost::noncopyable {
   public:
   enum stage_ids {
     id_unset,
@@ -50,6 +52,17 @@ class stage_config {
     cat_process,
     cat_observe
   };
+
+  typedef stage_config * create_type;
+  static create_type create() {
+    return pooled::alloc<stage_config>();
+    // return new stage_config;
+  }
+
+  static void destroy(create_type p) {
+    pooled::free(p);
+    // delete p;
+  }
 
   stage_config() : type_(id_unset) {}
 
@@ -170,22 +183,56 @@ struct job_config;
  * Both methods are present because I don't really know which one will stand the
  * test of time.
  */
-class section_config {
+class section_config : boost::noncopyable {
   public:
-  typedef std::list<stage_config> stages_type;
-  typedef stages_type::iterator stage_iterator_type;
+  typedef section_config *create_type;
+  // This could be a ptr_vector which would give us nicer functions (it
+  // automatically dereferences) but it's suboptimal when you have total
+  // ownership of the pointer.
+  typedef pooled::container<stage_config::create_type>::vector stages_type;
+  typedef boost::indirect_iterator<stages_type::iterator> stage_iterator_type;
+
+  //! \name Resources
+  //@{
 
   section_config()
   : pipeline_next_(NULL), pipeline_previous_(NULL),
     job_next_(NULL),
     parent_job_(NULL) {}
 
-  stage_config &new_stage() {
-    stages_.push_back(stage_config());
+  ~section_config() {
+    std::for_each(stages().begin(), stages().end(), stage_config::destroy);
+  }
+
+  stage_config *new_stage() {
+    stages_.push_back(stage_config::create());
     return stages_.back();
   }
 
+  typedef boost::fast_pool_allocator<section_config> allocator_type;
+  static allocator_type section_alloc;
+
+  static create_type create() {
+    // return section_alloc.allocate(1);
+    // return pooled::alloc<section_config>();
+    return new section_config;
+  }
+
+  static void destroy(create_type p) {
+    delete p;
+  }
+
+  //@}
+
+  //! \name Attributes
+  //@{
+
+  stages_type &stages() { return stages_; }
+  stage_iterator_type begin() { return make_deref_iter(stages_.begin()); }
+  stage_iterator_type end() { return make_deref_iter(stages_.end()); }
+
   void name(flex_interface::text_ptr pt) { name_ = pt; }
+  //! Will be looked up in the semantic pass.
   void next_name(flex_interface::text_ptr pt, const parse_location &copy) {
     this->location_next(copy);
     next_name_ = pt;
@@ -199,6 +246,8 @@ class section_config {
 
   job_config &parent_job() { return *NERVE_CHECK_PTR(parent_job_); }
   void parent_job(job_config *p) { parent_job_ = NERVE_CHECK_PTR(p); }
+
+  //@}
 
   //! \name Ordering
   //!
@@ -214,6 +263,9 @@ class section_config {
   section_config *job_next() const { return job_next_; }
   //@}
 
+  //! \name Locations
+  //@{
+
   //! The place where "next" was given.  This is necesasry because the semantic
   //! pass should report errors in a sensible place, not the end of the
   //! document.
@@ -224,10 +276,7 @@ class section_config {
   const parse_location &location_start() { return location_start_; }
   void location_start(const parse_location &copy) { location_start_ = copy; }
 
-  stages_type &stages() { return stages_; }
-
-  stage_iterator_type begin() { return stages_.begin(); }
-  stage_iterator_type end() { return stages_.end(); }
+  //@}
 
   private:
   stages_type stages_;
@@ -246,18 +295,32 @@ class section_config {
 };
 
 //! \ingroup grp_config
-class job_config {
+class job_config : boost::noncopyable {
   public:
+  typedef job_config * create_type;
+  typedef pooled::container<section_config::create_type>::vector sections_type;
+  typedef boost::indirect_iterator<sections_type::iterator> section_iterator_type;
 
-  typedef std::list<section_config> sections_type;
-  typedef sections_type::iterator section_iterator_type;
+  static create_type create() {
+    // return pooled::alloc<job_config>();
+    return new job_config;
+  }
+
+  static void destroy(create_type p) {
+    // return pooled::alloc<job_config>();
+    delete p;
+  }
 
   job_config()
   : job_first_(NULL),
     job_last_(NULL) {}
 
-  section_config &new_section() {
-    sections_.push_back(section_config());
+  ~job_config() {
+    std::for_each(sections().begin(), sections().end(), section_config::destroy);
+  }
+
+  section_config *new_section() {
+    sections_.push_back(NERVE_CHECK_PTR(section_config::create()));
     return sections_.back();
   }
 
@@ -267,8 +330,8 @@ class job_config {
 
   sections_type &sections() { return sections_; }
 
-  section_iterator_type begin() { return sections_.begin(); }
-  section_iterator_type end() { return sections_.end(); }
+  section_iterator_type begin() { return make_deref_iter(sections_.begin()); }
+  section_iterator_type end() { return make_deref_iter(sections_.end()); }
 
   //! The first section in this thread in pipeline order.
   void job_first(section_config *s) { job_first_ = NERVE_CHECK_PTR(s); }
@@ -285,31 +348,36 @@ class job_config {
 };
 
 //! \ingroup grp_config
-class pipeline_config {
+class pipeline_config : boost::noncopyable {
   public:
-  typedef std::list<job_config> jobs_type;
-  typedef jobs_type::iterator job_iterator_type;
+  typedef pooled::container<job_config::create_type>::vector jobs_type;
+  typedef boost::indirect_iterator<jobs_type::iterator> job_iterator_type;
 
   pipeline_config()
-  : pipeline_first_(NULL) {}
+  : pipeline_first_(NULL) { jobs().reserve(16); }
+
+  ~pipeline_config() {
+    std::for_each(jobs().begin(), jobs().end(), job_config::destroy);
+  }
 
   //! Start a new job.
-  job_config &new_job() {
-    jobs_.push_back(job_config());
+  job_config *new_job() {
+    jobs_.push_back(job_config::create());
     return jobs_.back();
   }
 
   jobs_type &jobs() { return jobs_; }
+  const jobs_type &jobs() const { return jobs_; }
 
-  job_iterator_type begin() { return jobs().begin(); }
-  job_iterator_type end() { return jobs().end(); }
+  job_iterator_type begin() { return make_deref_iter(jobs().begin()); }
+  job_iterator_type end() { return make_deref_iter(jobs().end()); }
 
   //! The globally first section (as opposed to the per-thread first).
   void pipeline_first(section_config *s) { pipeline_first_ = NERVE_CHECK_PTR(s); }
   section_config *pipeline_first() { return pipeline_first_; }
 
   //! Is there only a single section
-  bool mono_section() const { return jobs_.size() == 1 && jobs_.begin()->mono_section(); }
+  bool mono_section() const { return jobs().size() == 1 && make_deref_iter(jobs_.begin())->mono_section(); }
 
   private:
   section_config *pipeline_first_;

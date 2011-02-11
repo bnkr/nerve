@@ -7,19 +7,22 @@
 
 using config::parse_context;
 
-void parse_context::new_job() { current.reset(); current.job = &(output_.new_job()); }
+void parse_context::new_job() {
+  current.reset();
+  current.job = NERVE_CHECK_PTR(output_.new_job());
+}
 
 void parse_context::new_section() {
-  job_config &j = *NERVE_CHECK_PTR(current.job);
-  section_config &s = j.new_section();
-  s.parent_job(&j);
+  job_config *const j = NERVE_CHECK_PTR(current.job);
+  section_config &s = *NERVE_CHECK_PTR(j->new_section());
+  s.parent_job(j);
   s.location_start(this->current_location());
   current.section = &s;
   current.stage = NULL;
 }
 
 void parse_context::new_stage() {
-  current.stage = &NERVE_CHECK_PTR(current.section)->new_stage();
+  current.stage = NERVE_CHECK_PTR(current.section)->new_stage();
   this_stage().location(this->current_location());
 }
 

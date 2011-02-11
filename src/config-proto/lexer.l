@@ -4,6 +4,9 @@
 %option noyylineno
 %option noyywrap
 %option nodefault
+%option noyyalloc
+%option noyyrealloc
+%option noyyfree
 
 %x STRING
 

@@ -27,9 +27,9 @@ bbuild_exe(
   TARGET config-proto
   SOURCES
     main.cpp
-    lemon_interface.cpp
     config_parser.cpp
     parse_context.cpp
+    pooled.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS

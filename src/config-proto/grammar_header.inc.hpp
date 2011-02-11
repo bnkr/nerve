@@ -32,10 +32,6 @@
 #  define NDEBUG
 #endif
 
-
-// TODO:
-//   This only works with NDEBUG defined.
-
 #include TOKENS_FILE
 
 using config::flex_interface::make_text_ptr;
@@ -78,7 +74,7 @@ const error_data &get_last_error() { return last_error; }
 // shouldn't really be using it anyway).
 //
 // TODO:
-//   Shouldn't be using yytokenname.
+//   Shouldn't be using yytokenname.  It only works when ndebug is defined.
 #define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
 
 // TODO:

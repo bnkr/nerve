@@ -12,9 +12,11 @@
 #include "nerve_config.hpp"
 #include "parse_context.hpp"
 #include "../plugin-proto/asserts.hpp"
+#include "pooled.hpp"
 
 #include <cstring>
 #include <iostream>
+#include <boost/pool/pool_alloc.hpp>
 
 /***********************
  * Lexer Action Macros *
@@ -76,6 +78,7 @@ inline bool trace() { return enable_trace; }
 
 extern void yyset_in(FILE *);
 extern void yyset_debug(int);
+extern int yylex_destroy();
 
 namespace fi = ::config::flex_interface;
 
@@ -87,23 +90,33 @@ void fi::init(const config::flex_interface::params &p) {
   ::yyset_in(NERVE_CHECK_PTR(p.stream()));
 }
 
+void fi::destroy() {
+  ::yylex_destroy();
+}
+
+/**************************************
+ * Allocation implementation for flex *
+ **************************************/
+
+void *yyalloc(size_t bytes) { return pooled::tracked_byte_alloc(bytes); }
+void *yyrealloc(void *ptr, size_t bytes) { return pooled::tracked_byte_realloc(ptr, bytes); }
+void yyfree(void *ptr) { pooled::tracked_byte_free(ptr); }
+
 /************************
  * Token Data Managment *
  ************************/
 
-static std::allocator<char> char_alloc;
+static boost::fast_pool_allocator<char> char_alloc;
 
 void config::flex_interface::free_text(char *text) {
-  NERVE_ASSERT(text, "attempting to free null pointer");
-  // TODO: we should get rid of the need for a strlen, but it's very difficult.
-  char_alloc.deallocate(text, std::strlen(text));
+  pooled::tracked_byte_free(text);
 }
 
 //! Copy-allocate the string and assign it to the current token text.
 static void assign_token_text(const char *copy, size_t length) {
-  char *p = char_alloc.allocate(length);
-  std::strncpy(p, copy, length);
-  ::config::flex_interface::detail::current_token.text = p;
+  char *string = (char *) pooled::tracked_byte_alloc(length);
+  std::memcpy(string, copy, length);
+  ::config::flex_interface::detail::current_token.text = string;
 }
 
 /************************************

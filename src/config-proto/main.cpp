@@ -36,7 +36,7 @@ int parse_args(config_parser::params &p, config_parser::files_type &files, int a
   return true;
 }
 
-int main(int argc, char **argv) {
+int wrapped_main(int argc, char **argv) {
   config_parser::files_type files;
   files.reserve(16);
   config::config_parser::params p;
@@ -54,4 +54,9 @@ int main(int argc, char **argv) {
   make_pipeline(pipes);
 
   return EXIT_SUCCESS;
+}
+
+int main(int argc, char **argv) {
+  // So we don't have any accessable pointers.
+  return wrapped_main(argc, argv);
 }

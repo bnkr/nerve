@@ -61,6 +61,9 @@ namespace config {
     //! The flex_interface is static so it gets a free function.
     void init(const params &);
 
+    //! Clean up memory.
+    void destroy();
+
     //! Text of the last matched token.  Note: this won't work to get the token
     //! text of where the parse actually is, because the lookahead token
     //! overwrites it.

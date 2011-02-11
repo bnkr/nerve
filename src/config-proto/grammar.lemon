@@ -56,6 +56,18 @@
 // Dummy to stop unused var warnings.
 %destructor config { use_variable(yypminor); use_variable(context); }
 
+%token_destructor {
+  switch (yymajor) {
+  case T_IDENTIFIER_LIT:
+  case T_STRING_LIT:
+    config::flex_interface::free_text($$.text);
+    break;
+  default:
+    // no data allocated for any other token
+    break;
+  }
+}
+
 // Start synbol.
 config_file ::= config_seq . { }
 config_file ::= . { ERR("empty configuration"); }
@@ -139,11 +151,14 @@ section_conf ::= STAGE error . { ERR_EXPECTED("string value for field") }
  ************************/
 
 configure ::= configure_key empty_block .
-configure ::= configure_key LBRACE configure_confs RBRACE .
+configure ::= configure_key LBRACE configure_conf_seq RBRACE .
 
 configure_key ::= CONFIGURE IDENTIFIER_LIT .
 
-configure_confs ::= PANTS .
+configure_conf_seq ::= configure_conf .
+configure_conf_seq ::= configure_conf_seq configure_conf .
+
+configure_conf ::= IDENTIFIER_LIT string .
 
 /********
  * Util *
