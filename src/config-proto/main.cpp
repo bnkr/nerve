@@ -3,7 +3,6 @@
 
 #include "config_parser.hpp"
 #include "pipeline_configs.hpp"
-#include "make_pipeline.hpp"
 
 #include <iostream>
 #include <vector>
@@ -51,7 +50,7 @@ int wrapped_main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  make_pipeline(pipes);
+  config::dump_config_yaml(pipes);
 
   return EXIT_SUCCESS;
 }

@@ -36,7 +36,8 @@ class stage_config : boost::noncopyable {
     id_unset,
     id_plugin,
     id_sdl,
-    id_ffmpeg
+    id_ffmpeg,
+    id_volume
   };
 
   enum categories {
@@ -46,7 +47,8 @@ class stage_config : boost::noncopyable {
     cat_output,
     cat_input,
     cat_process,
-    cat_observe
+    cat_observe,
+    cat_unset
   };
 
   typedef stage_config * create_type;
@@ -71,6 +73,8 @@ class stage_config : boost::noncopyable {
       return "sdl";
     case id_ffmpeg:
       return "ffmpeg";
+    case id_volume:
+      return "volume";
     }
 
     NERVE_ABORT("what are you doing here?");
@@ -91,6 +95,8 @@ class stage_config : boost::noncopyable {
       return "process";
     case cat_observe:
       return "observe";
+    case cat_unset:
+      return "(undefined)";
     }
 
     NERVE_ABORT("what are you doing here?");
@@ -106,6 +112,8 @@ class stage_config : boost::noncopyable {
       return cat_input;
     case id_sdl:
       return cat_output;
+    case id_volume:
+      return cat_process;
     }
 
     NERVE_ABORT("what are you doing here?");
@@ -141,6 +149,10 @@ class stage_config : boost::noncopyable {
     else if (std::strcmp(name, "ffmpeg") == 0) {
       return stage_config::id_ffmpeg;
     }
+    else if (std::strcmp(name, "volume") == 0) {
+      return stage_config::id_volume;
+    }
+    // TODO: work out if it's loadable
     else {
       return stage_config::id_unset;
     }
@@ -461,6 +473,10 @@ class pipeline_config : boost::noncopyable {
   jobs_type jobs_;
 };
 
+
+//! \ingroup grp_config
+//! Outputs all the config stuff as basic yaml
+void dump_config_yaml(config::pipeline_config &pc);
 
 } // ns config
 

@@ -1,13 +1,3 @@
-Configuring Plugins
--------------------
-
-* create a storage
-  - a map would make most sense for the per-stage configuration
-  - the per field could be in a vector because we don't need sorting on it
-    (they'll just be passed stage->configure(field, value))
-* use action rules to add things to the storage
-* modify the pretty-printer to print the per-stage confs
-
 Test Framework
 --------------
 

@@ -29,6 +29,7 @@ bbuild_exe(
     main.cpp
     config_parser.cpp
     parse_context.cpp
+    dump_config_yaml.cpp
     pooled.cpp
   GENERATED_SOURCES
     ${parser_sources}

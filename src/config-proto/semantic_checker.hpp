@@ -249,6 +249,9 @@ struct semantic_checker {
       case stage_config::cat_observe:
         check_only_observe("an observe");
         break;
+      case stage_config::cat_unset:
+        NERVE_ABORT("category should not be unset at this point");
+        break;
       }
     }
 
