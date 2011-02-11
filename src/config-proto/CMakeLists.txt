@@ -29,6 +29,7 @@ bbuild_exe(
     main.cpp
     lemon_interface.cpp
     config_parser.cpp
+    parse_context.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS

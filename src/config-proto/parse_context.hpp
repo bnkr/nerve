@@ -5,13 +5,16 @@
 #define CONFIG_PARSE_CONTEXT_HPP_s4d4zw7e
 
 #include "error_reporter.hpp"
-#include "pipeline_configs.hpp"
+
 #include "../plugin-proto/asserts.hpp"
 
 #include <boost/utility.hpp>
 
 namespace config {
   class pipeline_config;
+  class stage_config;
+  class section_config;
+  class job_config;
 
   //! \ingroup grp_config
   //! Parsing context used by the lexer and parser.
@@ -32,39 +35,27 @@ namespace config {
 
     //@}
 
-    //! \name Parser actions
-    //! These maintain state within a parse.
+    //! \name Current targets
+    //!
+    //! Set up by the new_x functions, these are where we write data to.
     //@{
-
-    void new_job() { current.reset(); current.job = &(output_.new_job()); }
-
-    void new_section() {
-      job_config &j = *NERVE_CHECK_PTR(current.job);
-      section_config &s = j.new_section();
-      s.parent_job(&j);
-      s.location_start(this->current_location());
-      current.section = &s;
-      current.stage = NULL;
-    }
-
-    void new_stage() {
-      current.stage = &NERVE_CHECK_PTR(current.section)->new_stage();
-      this_stage().location(this->current_location());
-    }
-
-    void end_job() {
-      if (this_job().empty()) {
-        error_reporter().report("thread contains no sections");
-      }
-      current.reset();
-    }
-
-    void end_section() { current.stage = NULL; current.section = NULL; }
-    void end_stage() { current.stage = NULL; }
 
     stage_config &this_stage() { return *NERVE_CHECK_PTR(current.stage); }
     section_config &this_section() { return *NERVE_CHECK_PTR(current.section); }
     job_config &this_job() { return *NERVE_CHECK_PTR(current.job); }
+
+    //@}
+
+    //! \name Parser actions
+    //! These maintain state within a parse.
+    //@{
+
+    void new_job();
+    void new_section();
+    void new_stage();
+    void end_job();
+    void end_section();
+    void end_stage();
 
     //@}
 
@@ -73,41 +64,12 @@ namespace config {
     //@{
 
     typedef flex_interface::text_ptr text_ptr;
-
-    // Exception safety just in case.
-    struct scoped_new_stage {
-      scoped_new_stage(parse_context &pc) : pc_(pc) {
-        pc_.new_stage();
-      }
-
-      ~scoped_new_stage() {
-        pc_.end_stage();
-      }
-
-      parse_context &pc_;
-    };
-
-    void add_stage(text_ptr text) {
-      scoped_new_stage s(*this);
-      typedef stage_config::stage_ids id_type;
-      id_type id = stage_config::find_stage(text.get());
-      switch (id) {
-      case stage_config::id_unset:
-        reporter().report("not a valid stage id or not a loadable plugin: %s", text.get());
-        break;
-      case stage_config::id_plugin:
-        this_stage().path(text);
-        this_stage().type(id);
-        break;
-      default:
-        this_stage().type(id);
-        break;
-      }
-    }
+    void add_stage(text_ptr name_or_path);
 
     //@}
 
     private:
+
     pipeline_config &output_;
 
     // Differ depending on where we are in the parse.
