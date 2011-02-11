@@ -31,7 +31,7 @@
 %token_type { config::flex_interface::token_type }
 
 // In theory this will already be handled by the "error" rules.
-%parse_failure { context->reporter().report_fatal("unhandled syntax error"); }
+%parse_failure { err_failure(context); }
 
 %syntax_error {
   // TODO:

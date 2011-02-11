@@ -32,22 +32,24 @@
 #  define NDEBUG
 #endif
 
-#define ERR(...) context->reporter().report(__VA_ARGS__);
 
 // TODO:
 //   This only works with NDEBUG defined.
 
 #include TOKENS_FILE
 
-// token name needs to be in the macro because it's declared static (yeah yeah I
-// shouldn't really be using it anyway).
-#define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
+using config::flex_interface::make_text_ptr;
+using config::stage_config;
 
 template<class T> void use_variable(const T &) {}
 
+/***************
+ * Error state *
+ ***************/
+
 typedef ::config::flex_interface::token_type minor_type;
 
-// This data is only remotely useful if the token names are availab.e
+// This data is only remotely useful if the token names are available
 struct error_data {
   int token;
   minor_type data;
@@ -66,6 +68,23 @@ static void set_last_error(int major, minor_type minor) {
 }
 const error_data &get_last_error() { return last_error; }
 
+/********************
+ * Reporting Errors *
+ ********************/
+
+#define ERR(...) context->reporter().report(__VA_ARGS__);
+
+// token name needs to be in the macro because it's declared static (yeah yeah I
+// shouldn't really be using it anyway).
+//
+// TODO:
+//   Shouldn't be using yytokenname.
+#define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
+
+// TODO:
+//   Both of these should be in the parse context, and the token name stuff
+//   should be done by the flex interface.
+
 static void err_expected(const char *exp, config::parse_context *pc, const char *tok_name) {
   const char *val = 0;
   switch (get_last_error().token) {
@@ -80,9 +99,26 @@ static void err_expected(const char *exp, config::parse_context *pc, const char 
   NERVE_CHECK_PTR(pc)->reporter().report("expected %s but got %s", exp, val);
 }
 
-/*******************
- * Creating stages *
- *******************/
+//! Used in the parse failure routine (called when we couldn't get rid of the
+//! error token for some reason.
+static void err_failure(config::parse_context *pc) {
+  const char *val = NULL;
+  const char *what = "token";
+  switch (get_last_error().token) {
+  case T_IDENTIFIER_LIT:
+  case T_STRING_LIT:
+    val = get_last_error().data.text;
+    what = "string";
+    break;
+  case T_CONFIGURE:
+    val = "configure"; break;
+  case T_THREAD:
+    val = "thread"; break;
+  default:
+    val = "<oops>";
+  }
 
-using config::flex_interface::make_text_ptr;
-using config::stage_config;
+  config::error_reporter &rep = NERVE_CHECK_PTR(pc)->reporter();
+  rep.report_fatal("unhandled syntax error near %s %s", what, val);
+}
+
