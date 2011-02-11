@@ -45,12 +45,13 @@ ws    [\t \n\r]
   "{"      { LEXER_RETURN(LBRACE); }
   "}"      { LEXER_RETURN(RBRACE); }
 
-  "thread"   { LEXER_RETURN(THREAD); }
-  "section"  { LEXER_RETURN(SECTION); }
-  "stage"    { LEXER_RETURN(STAGE); }
+  "thread"    { LEXER_RETURN(THREAD); }
+  "section"   { LEXER_RETURN(SECTION); }
+  "stage"     { LEXER_RETURN(STAGE); }
+  "configure" { LEXER_RETURN(CONFIGURE); }
 
-  "next"     { LEXER_RETURN(NEXT); }
-  "name"     { LEXER_RETURN(NAME); }
+  "next" { LEXER_RETURN(NEXT); }
+  "name" { LEXER_RETURN(NAME); }
 }
 
   /****************

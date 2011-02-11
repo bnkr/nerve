@@ -64,6 +64,7 @@ config_seq ::= config . { }
 config_seq ::= config_seq config . { }
 
 config ::= thread .
+config ::= configure .
 
 /***********
  * Threads *
@@ -132,6 +133,17 @@ section_conf ::= error string(S) . {
 section_conf ::= NAME error . { ERR_EXPECTED("string value for field") }
 section_conf ::= NEXT error . { ERR_EXPECTED("string value for field") }
 section_conf ::= STAGE error . { ERR_EXPECTED("string value for field") }
+
+/************************
+ * Arbitrary configures *
+ ************************/
+
+configure ::= configure_key empty_block .
+configure ::= configure_key LBRACE configure_confs RBRACE .
+
+configure_key ::= CONFIGURE IDENTIFIER_LIT .
+
+configure_confs ::= PANTS .
 
 /********
  * Util *
