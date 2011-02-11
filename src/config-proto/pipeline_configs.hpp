@@ -23,10 +23,6 @@
 #include <boost/utility.hpp>
 #include <cstring>
 
-// TODO:
-//   The create/destroy methods should be pooled too, but it doesn't appear to
-//   work very well.
-
 namespace config {
   template<class Iterator>
   typename boost::indirect_iterator<Iterator> make_deref_iter(Iterator i) {
@@ -56,12 +52,10 @@ class stage_config : boost::noncopyable {
   typedef stage_config * create_type;
   static create_type create() {
     return pooled::alloc<stage_config>();
-    // return new stage_config;
   }
 
   static void destroy(create_type p) {
     pooled::free(p);
-    // delete p;
   }
 
   stage_config() : type_(id_unset) {}
@@ -213,13 +207,11 @@ class section_config : boost::noncopyable {
   static allocator_type section_alloc;
 
   static create_type create() {
-    // return section_alloc.allocate(1);
-    // return pooled::alloc<section_config>();
-    return new section_config;
+    return pooled::alloc<section_config>();
   }
 
   static void destroy(create_type p) {
-    delete p;
+    return pooled::free(p);
   }
 
   //@}
@@ -302,13 +294,11 @@ class job_config : boost::noncopyable {
   typedef boost::indirect_iterator<sections_type::iterator> section_iterator_type;
 
   static create_type create() {
-    // return pooled::alloc<job_config>();
-    return new job_config;
+    return pooled::alloc<job_config>();
   }
 
   static void destroy(create_type p) {
-    // return pooled::alloc<job_config>();
-    delete p;
+    pooled::free<job_config>(p);
   }
 
   job_config()

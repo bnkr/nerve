@@ -12,6 +12,8 @@
 #include <map>
 
 namespace pooled {
+  // struct pool_tag;
+
   template<class Contained>
   struct container {
     typedef boost::pool_allocator<Contained> contiguous_allocator_type;
@@ -31,13 +33,20 @@ namespace pooled {
     typedef typename std::map<Key, Value, compare_type, allocator_type> map;
   };
 
-  typedef std::basic_string<char, std::char_traits<char>, boost::fast_pool_allocator<char> > string;
+  typedef std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char> > string;
 
   template<class T>
-  T *alloc() { return boost::fast_pool_allocator<T>().allocate(1); }
+  T *alloc() {
+    T * const p = (T*) boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::malloc();
+    new (p) T;
+    return p;
+  }
 
   template<class T>
-  void free(T *ptr) { return boost::fast_pool_allocator<T>().deallocate(ptr, 1); }
+  void free(T *ptr) {
+    ptr->~T();
+    boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::free(ptr);
+  }
 
   //! Pooling which remembers how much was allocated.
   //@{
