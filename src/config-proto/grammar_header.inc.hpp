@@ -34,9 +34,8 @@
 
 #include TOKENS_FILE
 
-using config::flex_interface::make_text_ptr;
 using config::stage_config;
-typedef config::flex_interface::unique_ptr flex_ptr;
+typedef config::flex_interface::transfer_mem flex_mem;
 
 template<class T> void use_variable(const T &) {}
 

@@ -116,22 +116,26 @@ section_conf_seq ::= section_conf .
 section_conf_seq ::= section_conf_seq section_conf .
 
 section_conf ::= NAME string(S) . {
+  flex_mem p(S);
   if (context->this_section().name() != NULL) {
     ERR("'name' field already set");
   }
-  else{
-    context->this_section().name(make_text_ptr(S));
+  else {
+    context->this_section().name(p);
   }
 }
 section_conf ::= NEXT string(S) . {
+  flex_mem p(S);
   if (context->this_section().next_name() != NULL) {
     ERR("'next' field already set");
   }
   else {
-    context->this_section().next_name(make_text_ptr(S), context->reporter().location());
+    context->this_section().next_name(p, context->reporter().location());
   }
 }
-section_conf ::= STAGE string(S) . { context->add_stage(make_text_ptr(S)); }
+section_conf ::= STAGE string(S) . {
+  context->add_stage(S);
+}
 
 section_conf ::= error string(S) . {
   ERR_EXPECTED("'name', 'next', or 'stage'");
@@ -160,8 +164,8 @@ configure_conf_seq ::= configure_conf .
 configure_conf_seq ::= configure_conf_seq configure_conf .
 
 configure_conf ::= IDENTIFIER_LIT(FIELD) string(VALUE) . {
-  flex_ptr field(FIELD.text);
-  flex_ptr value(VALUE);
+  flex_mem field(FIELD.text);
+  flex_mem value(VALUE);
   context->this_configure_block().new_pair(field, value);
 }
 

@@ -22,15 +22,6 @@ namespace config {
   class parse_context : boost::noncopyable {
     public:
 
-    // TODO:
-    //   Usage of text_ptr is pretty much entirely pontless here.  This only
-    //   ever gives ownership to other things, so it'd be easier to pass a
-    //   scoped ptr by reference.  The configs might need to change it into a
-    //   shared pointer so it can be in containers.  We really need a non
-    //   copyable class "exclusive_ownership" which has a take_ownership and a
-    //   deleter method.
-    typedef flex_interface::text_ptr text_ptr;
-
     explicit parse_context(pipeline_config &pc)
     : output_(pc) {
     }
@@ -80,7 +71,7 @@ namespace config {
     //! Complete stage config creation.
     //@{
 
-    void add_stage(text_ptr name_or_path);
+    void add_stage(char *name_or_path);
 
     //@}
 

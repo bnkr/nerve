@@ -29,148 +29,90 @@ namespace config {
     return typename boost::indirect_iterator<Iterator>(i);
   }
 
-//! \ingroup grp_config
-class stage_config : boost::noncopyable {
-  public:
-  enum stage_ids {
-    id_unset,
-    id_plugin,
-    id_sdl,
-    id_ffmpeg,
-    id_volume
+  //! \ingroup grp_config
+  class stage_config : boost::noncopyable {
+    public:
+    enum plugin_ids {
+      id_unset,
+      id_sdl,
+      id_ffmpeg,
+      id_plugin,
+      id_volume
+    };
+
+    enum categories {
+      // Note that a separate type is necessary for the output despite it
+      // essentially being an observer because we need to know that one exists in
+      // the pipeline.
+      cat_output,
+      cat_input,
+      cat_process,
+      cat_observe,
+      cat_unset
+    };
+
+    typedef stage_config * create_type;
+    typedef enum plugin_ids plugin_id_type;
+    typedef enum categories category_type;
+    typedef flex_interface::unique_ptr unique_text_ptr;
+    typedef flex_interface::transfer_mem transfer_mem;
+
+    //! \name Construct/destruct
+    //@{
+
+    static create_type create() { return pooled::alloc<stage_config>(); }
+    static void destroy(create_type p) { pooled::free(p); }
+
+    stage_config() : plugin_id_(id_unset) {}
+
+    //@}
+
+    //! \name Enum to text
+    //@{
+
+    static const char *get_category_name(categories c);
+    static const char *get_plugin_id_name(plugin_id_type c);
+    static const char *get_stage_name(const stage_config &c);
+
+    //! Finds an identifier for the stage, returning id_plugin if it's a loadable
+    //! plugin, id_unset if it can't be found, or the id of a built-in stage.
+    static plugin_id_type get_plugin_id(const char *name);
+
+    //@}
+
+    //! The name of this stage's plugin (e.g sdl).  This takes loadable plugins
+    //! into account as well as internal ones.
+    const char *name() const { return get_stage_name(*this); }
+
+    //! What kind of stage it is (e.g process)
+    const char *category_name() const { return get_category_name(this->category()); }
+
+    //! Stage concept (e.g observer).
+    category_type category() const;
+
+    //! Location to load from (only when type == id_plugin)
+    const char *path() const { return path_.get(); }
+    void path(transfer_mem &pt) { path_ = pt.release_exclusive(); }
+
+    //! Numeric type for the internal stage or id_plugin for check path.
+    void plugin_id(plugin_id_type i) { plugin_id_ = i; }
+    plugin_id_type plugin_id() const { return plugin_id_; }
+
+    //! Is the stage built in?
+    bool internal() const {
+      NERVE_ASSERT(plugin_id() != id_unset, "id must be set before querying");
+      return plugin_id() != id_plugin;
+    }
+
+    //! Place this was declared.
+    const parse_location &location() const { return location_; }
+    void location(const parse_location &copy) { location_ = copy; }
+
+    private:
+    unique_text_ptr path_;
+    plugin_id_type plugin_id_;
+    parse_location location_;
   };
-
-  enum categories {
-    // Note that a separate type is necessary for the output despite it
-    // essentially being an observer because we need to know that one exists in
-    // the pipeline.
-    cat_output,
-    cat_input,
-    cat_process,
-    cat_observe,
-    cat_unset
-  };
-
-  typedef stage_config * create_type;
-  static create_type create() {
-    return pooled::alloc<stage_config>();
-  }
-
-  static void destroy(create_type p) {
-    pooled::free(p);
-  }
-
-  stage_config() : type_(id_unset) {}
-
-  //! The name of this stage's plugin (e.g sdl)
-  const char *name() const {
-    switch (this->type()) {
-    case id_unset:
-      NERVE_ABORT("don't call this until the path/id is done");
-    case id_plugin:
-      return NERVE_CHECK_PTR(this->path());
-    case id_sdl:
-      return "sdl";
-    case id_ffmpeg:
-      return "ffmpeg";
-    case id_volume:
-      return "volume";
-    }
-
-    NERVE_ABORT("what are you doing here?");
-  }
-
-  //! What kind of stage it is (e.g process)
-  const char *category_name() const {
-    return get_category_name(this->category());
-  }
-
-  inline static const char *get_category_name(categories c) {
-    switch (c) {
-    case cat_input:
-      return "input";
-    case cat_output:
-      return "output";
-    case cat_process:
-      return "process";
-    case cat_observe:
-      return "observe";
-    case cat_unset:
-      return "(undefined)";
-    }
-
-    NERVE_ABORT("what are you doing here?");
-  }
-
-  categories category() const {
-    switch (this->type()) {
-    case id_unset:
-      NERVE_ABORT("don't call this until the path/id is done");
-    case id_plugin:
-      NERVE_ABORT("not implemented: finding the category from a plugin path");
-    case id_ffmpeg:
-      return cat_input;
-    case id_sdl:
-      return cat_output;
-    case id_volume:
-      return cat_process;
-    }
-
-    NERVE_ABORT("what are you doing here?");
-  }
-
-  void path(const flex_interface::text_ptr &pt) { type(id_plugin); path_ = pt; }
-  void type(enum stage_ids i) { type_ = i; }
-
-  //! Is the stage to be loaded from a shared object.
-  bool file_based() const {
-    // TODO:
-    //   This kind of thing really indicates we need another object to put this
-    //   one in which can only be constructed when it's ready to be queried.
-    NERVE_ASSERT(type() != id_unset, "not initialised yet");
-    return type() == id_plugin;
-  }
-
-  const char *path() const { return path_.get(); }
-  stage_ids type() const { return type_; }
-
-  //! Place this was declared.
-  const parse_location &location() const { return location_; }
-  void location(const parse_location &copy) { location_ = copy; }
-
-  //! Finds an identifier for the stage, returning id_plugin if it's a loadable
-  //! plugin, id_unset if it can't be found, or the id of a built-in stage.
-  static stage_ids find_stage(const char *name) {
-    NERVE_ASSERT_PTR(name);
-
-    if (std::strcmp(name, "sdl") == 0) {
-      return stage_config::id_sdl;
-    }
-    else if (std::strcmp(name, "ffmpeg") == 0) {
-      return stage_config::id_ffmpeg;
-    }
-    else if (std::strcmp(name, "volume") == 0) {
-      return stage_config::id_volume;
-    }
-    // TODO: work out if it's loadable
-    else {
-      return stage_config::id_unset;
-    }
-  }
-
-  private:
-
-  // TODO:
-  //   In reality this is owned exclusively.  We should use
-  //   boost::checked_delete (or whatever's available for that).  I don't think
-  //   the lexing strings ever get stored elsewhere.  The original purpose of
-  //   text ptrs was so we could put them in a container, but that is nolonger
-  //   required.
-
-  flex_interface::text_ptr path_;
-  stage_ids type_;
-  parse_location location_;
-};
 
 struct job_config;
 
@@ -243,11 +185,11 @@ class section_config : boost::noncopyable {
   stage_iterator_type begin() { return make_deref_iter(stages_.begin()); }
   stage_iterator_type end() { return make_deref_iter(stages_.end()); }
 
-  void name(flex_interface::text_ptr pt) { name_ = pt; }
+  void name(flex_interface::transfer_mem &pt) { name_ = pt.release_exclusive(); }
   //! Will be looked up in the semantic pass.
-  void next_name(flex_interface::text_ptr pt, const parse_location &copy) {
+  void next_name(flex_interface::transfer_mem &pt, const parse_location &copy) {
     this->location_next(copy);
-    next_name_ = pt;
+    next_name_ = pt.release_exclusive();
   }
 
   bool job_last() const { return pipeline_next() == NULL; }
@@ -293,8 +235,8 @@ class section_config : boost::noncopyable {
   private:
   stages_type stages_;
 
-  flex_interface::text_ptr name_;
-  flex_interface::text_ptr next_name_;
+  flex_interface::unique_ptr name_;
+  flex_interface::unique_ptr next_name_;
 
   parse_location location_next_;
   parse_location location_start_;
@@ -363,6 +305,7 @@ class configure_block {
 
   typedef flex_interface::shared_ptr shared_ptr;
   typedef flex_interface::unique_ptr unique_ptr;
+  typedef flex_interface::transfer_mem transfer_mem;
   // This must be shared because it's going in a container.
   typedef std::pair<shared_ptr, shared_ptr> ptr_pair_type;
 
@@ -379,7 +322,7 @@ class configure_block {
   const char *name() const  { return name_.get(); }
   void name(shared_ptr p) { name_ = p; }
 
-  void new_pair(unique_ptr &field, unique_ptr &val) {
+  void new_pair(transfer_mem &field, transfer_mem &val) {
     pairs_.push_back(field_pair());
     pairs_.back().field(field.release_shared());
     pairs_.back().value(val.release_shared());
@@ -398,8 +341,9 @@ class configure_block {
 //! Container for the name { key-value } kind of config.
 class configure_block_container {
   public:
-  typedef flex_interface::unique_ptr unique_text_ptr;
-  typedef flex_interface::unique_ptr::shared_type shared_text_ptr;
+  typedef flex_interface::transfer_mem transfer_mem;
+  typedef transfer_mem::unique_type unique_text_ptr;
+  typedef transfer_mem::shared_type shared_text_ptr;
 
   //! Gives us comparisons for the map.
   struct lexer_string {
@@ -409,12 +353,13 @@ class configure_block_container {
       return std::strcmp(this->str(), rhs.str()) == 0;
     }
     const char *str() const { return s.get(); }
-    flex_interface::text_ptr s;
+
+    shared_text_ptr s;
   };
 
   typedef pooled::assoc<lexer_string, configure_block>::map blocks_type;
 
-  configure_block *new_configure_block(unique_text_ptr &name) {
+  configure_block *new_configure_block(transfer_mem &name) {
     shared_text_ptr p = name.release_shared();
     lexer_string s = p;
     blocks_[s].name(p);

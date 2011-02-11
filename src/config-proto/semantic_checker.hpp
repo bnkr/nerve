@@ -15,11 +15,9 @@
 //! Something we can put in a map.
 struct c_string {
   explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}
-
   bool operator<(const c_string &c) const { return std::strcmp(c.str_, this->str_) < 0; }
-
   const char *c_str() { return str_; }
-
+  private:
   const char *str_;
 };
 

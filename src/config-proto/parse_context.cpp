@@ -46,7 +46,7 @@ void parse_context::new_configure_block(char *name) {
   NERVE_ASSERT(current.configure == NULL, "shouldn't start a new configure until the onld one is done");
 
   config::pipeline_config::configure_blocks_type &blks = output_.configure_blocks();
-  config::flex_interface::unique_ptr ptr(name);
+  config::flex_interface::transfer_mem ptr(name);
   current.configure = NERVE_CHECK_PTR(blks.new_configure_block(ptr));
 }
 
@@ -69,20 +69,21 @@ namespace {
   };
 }
 
-void parse_context::add_stage(parse_context::text_ptr text) {
+void parse_context::add_stage(char *text) {
+  flex_interface::transfer_mem p(text);
   scoped_new_stage s(*this);
-  typedef stage_config::stage_ids id_type;
-  id_type id = stage_config::find_stage(text.get());
+  typedef stage_config::plugin_id_type id_type;
+  id_type id = stage_config::get_plugin_id(text);
   switch (id) {
   case stage_config::id_unset:
-    reporter().report("not a valid stage id or not a loadable plugin: %s", text.get());
+    reporter().report("not a valid stage id or not a loadable plugin: %s", text);
     break;
   case stage_config::id_plugin:
-    this_stage().path(text);
-    this_stage().type(id);
+    this_stage().path(p);
+    this_stage().plugin_id(id);
     break;
   default:
-    this_stage().type(id);
+    this_stage().plugin_id(id);
     break;
   }
 }

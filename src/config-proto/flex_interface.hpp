@@ -77,16 +77,6 @@ namespace config {
 
     //@}
 
-    // TODO:
-    //   These next bits should be replaced with the unique_ptr thing.
-
-    //! This is basically required because of no move construcrtors.
-    typedef boost::shared_ptr<char> text_ptr;
-
-    //! These are indended only for use by the parser.
-    inline text_ptr make_text_ptr(char *text) { return text_ptr(NERVE_CHECK_PTR(text), &free_text); }
-    inline text_ptr make_text_ptr(token_type tok) { return make_text_ptr(NERVE_CHECK_PTR(tok.text)); }
-
     //! \ingroup grp_config_lexer
     //! Always initialise with the correct deleter!
     // TODO:
@@ -95,8 +85,7 @@ namespace config {
     typedef boost::shared_ptr<char> shared_ptr;
 
     //! \ingroup grp_config_lexer
-    //! Exclusive ownership pointer.  It's passed by reference and can be taken
-    //! over if wanted but still does a checked delete.
+    //! Exclusive ownership pointer.
     class unique_ptr : boost::noncopyable {
       public:
 
@@ -104,20 +93,28 @@ namespace config {
       //! ownership pointer
       struct mover {
         friend class unique_ptr;
-
-        explicit mover(char *data) : d_(data) {}
+        explicit mover(char *data) : d_(NERVE_CHECK_PTR(data)) {}
 
         private:
-        char *take() { return d_; }
-        char *d_;
-      };
 
-      typedef void(*deleter_type)(char*);
-      typedef flex_interface::shared_ptr shared_type;
+        char *take() const {
+          char *tmp = d_;
+          d_ = NULL;
+          return tmp;
+        }
+
+        mutable char * d_;
+      };
 
       unique_ptr() : p_(NULL) {}
       unique_ptr(mover p) : p_(p.take()) {}
       explicit unique_ptr(char *p) : p_(p) {}
+
+      unique_ptr &operator=(mover p) {
+        NERVE_ASSERT(p_ == NULL, "unique_ptr must not be initialised twice");
+        p_ = p.take();
+        return *this;
+      }
 
       ~unique_ptr() {
         if (p_) {
@@ -125,8 +122,36 @@ namespace config {
         }
       }
 
-      deleter_type deleter() const { return &free_text; }
       char *get() const { return p_; }
+
+
+      private:
+      char *p_;
+    };
+
+    /*!
+     * \ingroup grp_config_lexer
+     *
+     * Used only for transfering ownership to something else.  If the pointer is
+     * not released, it is deleted anyway.  This object must be passed by
+     * reference, hence why it's not called a transfer_ptr.
+     *
+     * This stuff doesn't go in the unique_ptr because otherwise it's ambigous
+     * whether it's intended to transfer ownership or not and the holder of the
+     * unique pointer could have its pointer wiped unexpectedly.
+     */
+    class transfer_mem : boost::noncopyable {
+      public:
+      typedef void(*deleter_type)(char*);
+      typedef flex_interface::shared_ptr shared_type;
+      typedef flex_interface::unique_ptr unique_type;
+
+      explicit transfer_mem(char *p) : p_(NERVE_CHECK_PTR(p)) {}
+      ~transfer_mem() {
+        if (p_) {
+          deleter()(p_);
+        }
+      }
 
       shared_type release_shared() {
         NERVE_ASSERT(p_ != NULL, "ownership must not have been taken yet");
@@ -135,14 +160,14 @@ namespace config {
         return tmp;
       }
 
-      mover release_exclusive() {
+      unique_ptr::mover release_exclusive() {
         NERVE_ASSERT(p_ != NULL, "ownership must not have been taken yet");
         unique_ptr::mover p(p_);
         p_ = NULL;
         return p;
       }
 
-      char *get() { return p_; }
+      deleter_type deleter() const { return &free_text; }
 
       private:
       char *p_;
