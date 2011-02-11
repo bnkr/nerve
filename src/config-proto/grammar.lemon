@@ -36,8 +36,7 @@
 %syntax_error {
   // TODO:
   //   This isn't working properly because this routine doesn't get called until
-  //   there has been 3 tokens successfully shifted.  Unfortunately the "empty
-  //   code blcok" fuckup might have been obscuring some stuff here.
+  //   there has been 3 tokens successfully shifted.
   // std::cout << "syntax error routine" << std::endl;
 
   set_last_error(yymajor, TOKEN);
@@ -107,7 +106,7 @@ thread_conf ::= section . { }
 
 section ::= section_key LBRACE section_conf_seq RBRACE . {
   config::section_config &s = context->this_section();
-  // Note: we don't check next_name because it input state won't have one.
+  // Note: we don't check next_name because the input stage won't have one.
   if (s.name() == NULL) { ERR("section has no 'name' field"); }
   context->end_section();
 }

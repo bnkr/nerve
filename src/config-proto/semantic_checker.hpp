@@ -129,8 +129,9 @@ struct semantic_checker {
       }
     } while ((s = s->pipeline_next()) != NULL);
 
-    const bool end_on_output = visit_state.last_cat == stage_config::cat_output;
-    const bool end_on_observe = visit_state.last_cat == stage_config::cat_observe;
+    const stage_config::categories last_cat = NERVE_CHECK_PTR(visit_state.last_stage)->category();
+    const bool end_on_output = last_cat == stage_config::cat_output;
+    const bool end_on_observe = last_cat == stage_config::cat_observe;
 
     // ending on observe implies we hit an output at some point
     if (! (end_on_output || end_on_observe)) {
@@ -210,12 +211,15 @@ struct semantic_checker {
   // Stages //
 
   struct visit_visit_state {
-    visit_visit_state() : initial(true) {}
+    visit_visit_state() {
+      initial = true;
+      last_stage = NULL;
+      this_stage = NULL;
+    }
 
     bool initial;
     stage_config *last_stage;
     stage_config *this_stage;
-    stage_config::categories last_cat;
   };
 
   void visit_stage(job_config *, section_config *, stage_config *const stage) {
@@ -227,24 +231,28 @@ struct semantic_checker {
         );
       }
       visit_state.initial = false;
+      visit_state.last_stage = stage;
     }
     else {
       visit_state.this_stage = stage;
 
-      switch (visit_state.last_cat) {
+      switch (NERVE_CHECK_PTR(visit_state.last_stage)->category()) {
       case stage_config::cat_input:
         check_process_or_output("an input");
+        break;
       case stage_config::cat_process:
         check_process_or_output("a process");
+        break;
       case stage_config::cat_output:
         check_only_observe("an output");
+        break;
       case stage_config::cat_observe:
         check_only_observe("an observe");
+        break;
       }
     }
 
     visit_state.this_stage = NULL;
-    visit_state.last_cat = stage->category();
     visit_state.last_stage = stage;
   }
 
