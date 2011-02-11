@@ -55,6 +55,26 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
         }
 
         std::cout << "        location: " << ldelim << where << rdelim << std::endl;
+        std::cout << "        config: ";
+        if (stage->configs_given()) {
+          std::cout << std::endl;
+
+          typedef stage_config::configs_type configs_type;
+          typedef configs_type::pairs_type pairs_type;
+          typedef pairs_type::const_iterator iter_t;
+
+          configs_type &cf = *NERVE_CHECK_PTR(stage->configs());
+          pairs_type &pairs = cf.pairs();
+
+          for (iter_t conf = pairs.begin(); conf != pairs.end(); ++conf) {
+            const char *const key = conf->field();
+            const char *const value = conf->value();
+            std::cout << "        - [\"" << key << "\", \"" << value << "\"]";
+          }
+        }
+        else {
+          std::cout << "[]" << std::endl;
+        }
       }
     } while ((sec = sec->job_next()) != NULL);
 

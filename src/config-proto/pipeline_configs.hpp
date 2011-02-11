@@ -29,6 +29,8 @@ namespace config {
     return typename boost::indirect_iterator<Iterator>(i);
   }
 
+  struct configure_block;
+
   //! \ingroup grp_config
   class stage_config : boost::noncopyable {
     public:
@@ -56,6 +58,7 @@ namespace config {
     typedef enum categories category_type;
     typedef flex_interface::unique_ptr unique_text_ptr;
     typedef flex_interface::transfer_mem transfer_mem;
+    typedef configure_block configs_type;
 
     //! \name Construct/destruct
     //@{
@@ -108,10 +111,16 @@ namespace config {
     const parse_location &location() const { return location_; }
     void location(const parse_location &copy) { location_ = copy; }
 
+    //! The key=value configurations applied to this stage.
+    void configs(configs_type *c) { configs_ = c; }
+    configs_type *configs() { return configs_; }
+    bool configs_given() const { return configs_ != NULL; }
+
     private:
     unique_text_ptr path_;
     plugin_id_type plugin_id_;
     parse_location location_;
+    configs_type *configs_;
   };
 
 struct job_config;
