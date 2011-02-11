@@ -90,10 +90,6 @@ struct semantic_checker {
       for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
         NERVE_ASSERT(! sec->stages().empty(), "there must always be stages in a section");
         visit_section(&(*job), &(*sec));
-
-        for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
-          visit_stage(&(*job), &(*sec), &(*stage));
-        }
       }
     }
 
@@ -110,12 +106,11 @@ struct semantic_checker {
 
     confs.pipeline_first(this->no_prev);
 
-    // This might turn out to be unnecessary.  It gives us a way to iterate
-    // sections based on a job rather than iterating every section and checking
-    // the parent_job.
-    //
     section_config *s = NERVE_CHECK_PTR(confs.pipeline_first());
     do {
+      // This might turn out to be unnecessary.  It gives us a way to iterate
+      // sections based on a job rather than iterating every section and
+      // checking the parent_job.
       job_config &j = s->parent_job();
       if (j.job_first() == NULL) {
         NERVE_ASSERT(j.job_last() == NULL, "last section is null if we haven't assigned a first section yet");
@@ -127,7 +122,20 @@ struct semantic_checker {
         l->job_next(s);
         j.job_last(s);
       }
+
+      // Kill two birds and visit these in order.
+      for (stage_iter_t stage = s->begin(); stage != s->end(); ++stage) {
+        visit_stage(&(s->parent_job()), s, &(*stage));
+      }
     } while ((s = s->pipeline_next()) != NULL);
+
+    const bool end_on_output = visit_state.last_cat == stage_config::cat_output;
+    const bool end_on_observe = visit_state.last_cat == stage_config::cat_observe;
+
+    // ending on observe implies we hit an output at some point
+    if (! (end_on_output || end_on_observe)) {
+      rep.report("no output stage present");
+    }
   }
 
   // Sections //
@@ -201,22 +209,69 @@ struct semantic_checker {
 
   // Stages //
 
+  struct visit_visit_state {
+    visit_visit_state() : initial(true) {}
+
+    bool initial;
+    stage_config *last_stage;
+    stage_config *this_stage;
+    stage_config::categories last_cat;
+  };
+
   void visit_stage(job_config *const job, section_config *const sec, stage_config *const stage) {
-    // TODO:
-    //   Validate:
-    //
-    //   - observers before processes
-    //   - anything before input
-    //   - no input
-    //   - no output
-    //   - anything but processes before output
-    //   - anything but observers after output
-    //
-    //   To do this we need to know about stages.
-    //
-    //   Also, need to get the ordering right.  Sections need to be ordered
-    //   because otherwise the first time blocking a job would be waiting for
-    //   input from a section which is later in the list.
+    if (visit_state.initial) {
+      if (stage->category() != stage_config::cat_input) {
+        rep.lreport(
+          stage->location(), "first stage must be an input stage but its category is %s",
+          stage->category_name()
+        );
+      }
+      visit_state.initial = false;
+    }
+    else {
+      visit_state.this_stage = stage;
+
+      switch (visit_state.last_cat) {
+      case stage_config::cat_input:
+        check_process_or_output("an input");
+      case stage_config::cat_process:
+        check_process_or_output("a process");
+      case stage_config::cat_output:
+        check_only_observe("an output");
+      case stage_config::cat_observe:
+        check_only_observe("an observe");
+      }
+    }
+
+    visit_state.this_stage = NULL;
+    visit_state.last_cat = stage->category();
+    visit_state.last_stage = stage;
+  }
+
+  void check_process_or_output(const char *what) {
+    switch (visit_state.this_stage->category()) {
+    case stage_config::cat_output:
+    case stage_config::cat_process:
+      break;
+    default:
+      report_bad_order(
+        "only output and process stages may be directly after %s stage", what
+      );
+    }
+  }
+
+  void check_only_observe(const char *what) {
+    if (visit_state.this_stage->category() != stage_config::cat_observe) {
+      report_bad_order("only observe stages may be directly after %s stage", what);
+    }
+  }
+
+  void report_bad_order(const char *format, const char *what) {
+    rep.lreport(visit_state.this_stage->location(), format, what);
+    rep.lreport(
+      visit_state.last_stage->location(), "the %s stage ordered before is here",
+      visit_state.last_stage->category_name()
+    );
   }
 
   config::error_reporter &rep;
@@ -225,5 +280,7 @@ struct semantic_checker {
   config::section_config *no_prev;
 
   map_type names;
+
+  visit_visit_state visit_state;
 };
 #endif

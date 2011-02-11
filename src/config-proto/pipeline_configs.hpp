@@ -71,7 +71,11 @@ class stage_config {
 
   //! What kind of stage it is (e.g process)
   const char *category_name() const {
-    switch (this->category()) {
+    return get_category_name(this->category());
+  }
+
+  inline static const char *get_category_name(categories c) {
+    switch (c) {
     case cat_input:
       return "input";
     case cat_output:
