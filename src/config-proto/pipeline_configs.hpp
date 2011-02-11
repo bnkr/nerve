@@ -147,6 +147,14 @@ class stage_config : boost::noncopyable {
   }
 
   private:
+
+  // TODO:
+  //   In reality this is owned exclusively.  We should use
+  //   boost::checked_delete (or whatever's available for that).  I don't think
+  //   the lexing strings ever get stored elsewhere.  The original purpose of
+  //   text ptrs was so we could put them in a container, but that is nolonger
+  //   required.
+
   flex_interface::text_ptr path_;
   stage_ids type_;
   parse_location location_;
@@ -338,13 +346,85 @@ class job_config : boost::noncopyable {
 };
 
 //! \ingroup grp_config
+class configure_block {
+  public:
+
+  typedef flex_interface::shared_ptr shared_ptr;
+  typedef flex_interface::unique_ptr unique_ptr;
+  // This must be shared because it's going in a container.
+  typedef std::pair<shared_ptr, shared_ptr> ptr_pair_type;
+
+  struct field_pair : protected ptr_pair_type {
+    const char *field() const { return this->first.get(); }
+    const char *value() const { return this->second.get(); }
+
+    void field(shared_ptr p) { this->first = p; }
+    void value(shared_ptr p) { this->second = p; }
+  };
+
+  typedef pooled::container<field_pair>::vector pairs_type;
+
+  const char *name() const  { return name_.get(); }
+  void name(shared_ptr p) { name_ = p; }
+
+  void new_pair(unique_ptr &field, unique_ptr &val) {
+    pairs_.push_back(field_pair());
+    pairs_.back().field(field.release_shared());
+    pairs_.back().value(val.release_shared());
+  }
+
+  pairs_type &pairs() { return pairs_; }
+
+  // Must be shared because the same allocated data is used for the key of the
+  // map.
+  shared_ptr name_;
+  pairs_type pairs_;
+};
+
+//! \ingroup grp_config
+//!
+//! Container for the name { key-value } kind of config.
+class configure_block_container {
+  public:
+  typedef flex_interface::unique_ptr unique_text_ptr;
+  typedef flex_interface::unique_ptr::shared_type shared_text_ptr;
+
+  //! Gives us comparisons for the map.
+  struct lexer_string {
+    lexer_string(shared_text_ptr p) : s(p) {}
+
+    bool operator<(const lexer_string &rhs) const {
+      return std::strcmp(this->str(), rhs.str()) == 0;
+    }
+    const char *str() const { return s.get(); }
+    flex_interface::text_ptr s;
+  };
+
+  typedef pooled::assoc<lexer_string, configure_block>::map blocks_type;
+
+  configure_block *new_configure_block(unique_text_ptr &name) {
+    shared_text_ptr p = name.release_shared();
+    lexer_string s = p;
+    blocks_[s].name(p);
+    return &(blocks_[s]);
+  }
+
+  blocks_type &blocks() { return blocks_; }
+
+  private:
+
+  blocks_type blocks_;
+};
+
+//! \ingroup grp_config
 class pipeline_config : boost::noncopyable {
   public:
   typedef pooled::container<job_config::create_type>::vector jobs_type;
   typedef boost::indirect_iterator<jobs_type::iterator> job_iterator_type;
+  typedef configure_block_container configure_blocks_type;
 
   pipeline_config()
-  : pipeline_first_(NULL) { jobs().reserve(16); }
+  : pipeline_first_(NULL) { }
 
   ~pipeline_config() {
     std::for_each(jobs().begin(), jobs().end(), job_config::destroy);
@@ -355,6 +435,8 @@ class pipeline_config : boost::noncopyable {
     jobs_.push_back(job_config::create());
     return jobs_.back();
   }
+
+  configure_blocks_type &configure_blocks() { return configure_blocks_; }
 
   jobs_type &jobs() { return jobs_; }
   const jobs_type &jobs() const { return jobs_; }
@@ -367,10 +449,15 @@ class pipeline_config : boost::noncopyable {
   section_config *pipeline_first() { return pipeline_first_; }
 
   //! Is there only a single section
-  bool mono_section() const { return jobs().size() == 1 && make_deref_iter(jobs_.begin())->mono_section(); }
+  bool mono_section() const {
+    return
+      jobs().size() == 1
+      && make_deref_iter(jobs_.begin())->mono_section();
+  }
 
   private:
   section_config *pipeline_first_;
+  configure_blocks_type configure_blocks_;
   jobs_type jobs_;
 };
 

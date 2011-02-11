@@ -17,10 +17,6 @@
 // We can't use quote includes for compiler reasons so we need an -I.  Then the
 // inc file can use quote paths and dependencies are all correct.
 #include <grammar_header.inc.hpp>
-
-#define TRACE(code__)\
-  std::printf("%d: %s\n", __LINE__, #code__);\
-  code__;
 }
 
 // Only works as a pointer.
@@ -139,6 +135,7 @@ section_conf ::= STAGE string(S) . { context->add_stage(make_text_ptr(S)); }
 
 section_conf ::= error string(S) . {
   ERR_EXPECTED("'name', 'next', or 'stage'");
+  // TODO: is this necessary?
   config::flex_interface::free_text(S);
 }
 section_conf ::= NAME error . { ERR_EXPECTED("string value for field") }
@@ -149,15 +146,24 @@ section_conf ::= STAGE error . { ERR_EXPECTED("string value for field") }
  * Arbitrary configures *
  ************************/
 
-configure ::= configure_key empty_block .
-configure ::= configure_key LBRACE configure_conf_seq RBRACE .
+configure ::= configure_key empty_block . { context->end_configure_block(); }
+configure ::= configure_key LBRACE configure_conf_seq RBRACE . { context->end_configure_block(); }
 
-configure_key ::= CONFIGURE IDENTIFIER_LIT .
+configure_key ::= CONFIGURE IDENTIFIER_LIT(N) . {
+  // TODO:
+  //   It's possible we could know in advance whether there exist plugins with
+  //   particular names, even if they are not to be loaded.
+  context->new_configure_block(N.text);
+}
 
 configure_conf_seq ::= configure_conf .
 configure_conf_seq ::= configure_conf_seq configure_conf .
 
-configure_conf ::= IDENTIFIER_LIT string .
+configure_conf ::= IDENTIFIER_LIT(FIELD) string(VALUE) . {
+  flex_ptr field(FIELD.text);
+  flex_ptr value(VALUE);
+  context->this_configure_block().new_pair(field, value);
+}
 
 /********
  * Util *

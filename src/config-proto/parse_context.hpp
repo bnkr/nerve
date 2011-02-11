@@ -15,11 +15,22 @@ namespace config {
   class stage_config;
   class section_config;
   class job_config;
+  class configure_block;
 
   //! \ingroup grp_config
   //! Parsing context used by the lexer and parser.
   class parse_context : boost::noncopyable {
     public:
+
+    // TODO:
+    //   Usage of text_ptr is pretty much entirely pontless here.  This only
+    //   ever gives ownership to other things, so it'd be easier to pass a
+    //   scoped ptr by reference.  The configs might need to change it into a
+    //   shared pointer so it can be in containers.  We really need a non
+    //   copyable class "exclusive_ownership" which has a take_ownership and a
+    //   deleter method.
+    typedef flex_interface::text_ptr text_ptr;
+
     explicit parse_context(pipeline_config &pc)
     : output_(pc) {
     }
@@ -45,6 +56,7 @@ namespace config {
     stage_config &this_stage() { return *NERVE_CHECK_PTR(current.stage); }
     section_config &this_section() { return *NERVE_CHECK_PTR(current.section); }
     job_config &this_job() { return *NERVE_CHECK_PTR(current.job); }
+    configure_block &this_configure_block() { return *NERVE_CHECK_PTR(current.configure); }
 
     //@}
 
@@ -59,13 +71,15 @@ namespace config {
     void end_section();
     void end_stage();
 
+    void new_configure_block(char *);
+    void end_configure_block();
+
     //@}
 
     //! \name Stage Actions
     //! Complete stage config creation.
     //@{
 
-    typedef flex_interface::text_ptr text_ptr;
     void add_stage(text_ptr name_or_path);
 
     //@}
@@ -79,9 +93,10 @@ namespace config {
       job_config *job;
       section_config *section;
       stage_config *stage;
+      configure_block *configure;
 
       output_pointers() { reset(); }
-      void reset() { job = NULL; section = NULL; stage = NULL; }
+      void reset() { job = NULL; section = NULL; stage = NULL; configure = NULL; }
     } current;
 
     error_reporter reporter_;

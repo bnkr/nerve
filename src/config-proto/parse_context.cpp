@@ -28,15 +28,31 @@ void parse_context::new_stage() {
 
 void parse_context::end_job() {
   if (this_job().empty()) {
-    // TODO:
-    //   This doesn't appear to report the file location properly.
-    error_reporter().report("thread contains no sections");
+    this->reporter().report("thread contains no sections");
   }
   current.reset();
 }
 
-void parse_context::end_section() { current.stage = NULL; current.section = NULL; }
-void parse_context::end_stage() { current.stage = NULL; }
+void parse_context::end_section() {
+  current.stage = NULL;
+  current.section = NULL;
+}
+
+void parse_context::end_stage() {
+  current.stage = NULL;
+}
+
+void parse_context::new_configure_block(char *name) {
+  NERVE_ASSERT(current.configure == NULL, "shouldn't start a new configure until the onld one is done");
+
+  config::pipeline_config::configure_blocks_type &blks = output_.configure_blocks();
+  config::flex_interface::unique_ptr ptr(name);
+  current.configure = NERVE_CHECK_PTR(blks.new_configure_block(ptr));
+}
+
+void parse_context::end_configure_block() {
+  current.configure = NULL;
+}
 
 namespace {
   // Exception safety just in case.

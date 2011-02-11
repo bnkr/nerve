@@ -1,9 +1,12 @@
 Configuring Plugins
 -------------------
 
-* arbitrary configuration data -- we need to configure each plugin, so there
-  must be some kind of configure sdl { field = value } thing.  This data also
-  needs to be accessable to the rest of the program.
+* create a storage
+  - a map would make most sense for the per-stage configuration
+  - the per field could be in a vector because we don't need sorting on it
+    (they'll just be passed stage->configure(field, value))
+* use action rules to add things to the storage
+* modify the pretty-printer to print the per-stage confs
 
 Test Framework
 --------------

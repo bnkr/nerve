@@ -36,6 +36,7 @@
 
 using config::flex_interface::make_text_ptr;
 using config::stage_config;
+typedef config::flex_interface::unique_ptr flex_ptr;
 
 template<class T> void use_variable(const T &) {}
 
