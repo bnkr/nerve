@@ -43,19 +43,18 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
           std::cout << "      stages: " << std::endl;
         }
 
+        std::cout << "      - name: \"" << stage->name() << "\"" << std::endl;
+
         const char *where = ":internal";
         const char *ldelim = "";
         const char *rdelim = "";
-        if (stage->type() == stage_config::id_plugin) {
+        if (! stage->internal()) {
           where = stage->path();
           ldelim = "\"";
           rdelim = "\"";
         }
 
-        std::cout
-          << "      - [\"" << stage->name() << "\", "
-          << ldelim << where << rdelim << "]"
-          << std::endl;
+        std::cout << "        location: " << ldelim << where << rdelim << std::endl;
       }
     } while ((sec = sec->job_next()) != NULL);
 

@@ -28,6 +28,7 @@ bbuild_exe(
   SOURCES
     main.cpp
     config_parser.cpp
+    pipeline_configs.cpp
     parse_context.cpp
     dump_config_yaml.cpp
     pooled.cpp
