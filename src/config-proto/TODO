@@ -1,11 +1,3 @@
-Stage Validation
-----------------
-
-* types of stages
-* check types are ordered properly, and the always-required ones are there.
-* check in semantic or uasage?  Semantic is neater, of course.
-* modify pretty-printer with the various details
-
 Configuring Plugins
 -------------------
 
@@ -26,7 +18,8 @@ Integrate
 
 Requires working config-proto, and finished connectors in the pipeline bit.
 
-* modify the pretty-printer to declare each pipeline object
+* modify the pretty-printer to declare each pipeline object (i.e include
+  sequences and do it in the way I would really iterate it all)
 * add the real initialisation stuff to the pipeline objects (constructors,
   storage etc...)
 * use the gapless stuff to create working stages
