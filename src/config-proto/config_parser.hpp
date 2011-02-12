@@ -11,6 +11,7 @@
 #define CONFIG_CONFIG_PARSER_HPP_999mx4dk
 
 #include "../plugin-proto/asserts.hpp"
+#include "pooled.hpp"
 
 #include <vector>
 #include <boost/utility.hpp>
@@ -59,7 +60,7 @@ namespace config {
 
     config_parser(const params &p);
 
-    typedef std::vector<const char *> files_type;
+    typedef pooled::container<const char *>::vector files_type;
 
     bool parse(pipeline_config &output, const files_type &files);
     bool parse_file(parse_context &, const char *file);
