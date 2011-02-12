@@ -5,6 +5,7 @@
 #define PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 
 #include "pooled.hpp"
+#include "c_string.hpp"
 #include "pipeline_configs.hpp"
 #include "parse_context.hpp"
 
@@ -12,17 +13,14 @@
 
 #include <cstring>
 
-//! Something we can put in a map.
-struct c_string {
-  explicit c_string(const char *c) : str_(NERVE_CHECK_PTR(c)) {}
-  bool operator<(const c_string &c) const { return std::strcmp(c.str_, this->str_) < 0; }
-  const char *c_str() { return str_; }
-  private:
-  const char *str_;
-};
-
-//! Stores the state for the semantic and lets us avoid having one big nested
-//! loop uberalgorithm.  This is used exclusively by the config_parser.
+/*!
+ * \ingroup grp_config
+ *
+ * Stores the state for the semantic pass and lets us avoid having one big
+ * nested loop uberalgorithm.  This is used exclusively by the config_parser.
+ * Its purpose is to establish the section orderings and check the stage
+ * orderings.
+ */
 struct semantic_checker {
   // Quick way to track which names are declared and what jobs they're in.
   struct section_data {
@@ -47,13 +45,6 @@ struct semantic_checker {
     no_next(NULL),
     no_prev(NULL)
   {}
-
-  void check() {
-    register_names();
-    traverse();
-  }
-
-  private:
 
   //! Make a lookup table for section names.
   void register_names() {
@@ -81,13 +72,24 @@ struct semantic_checker {
     }
   }
 
-  //! Traverse the tree validating and semanticising each bit.
-  void traverse() {
+  //! The pipeline_next/prev bits in sections
+  void link_pipeline_order() {
     for (job_iter_t job = confs.begin(); job != confs.end(); ++job) {
       NERVE_ASSERT(! job->sections().empty(), "there must always be sections in a job");
+      job_config *const jp = &(*job);
       for (section_iter_t sec = job->begin(); sec != job->end(); ++sec) {
         NERVE_ASSERT(! sec->stages().empty(), "there must always be stages in a section");
-        visit_section(&(*job), &(*sec));
+
+        section_config *const sp = &(*sec);
+        if (check_section_next_name(sp)) {
+          link_sections(jp, sp);
+
+          // Needed later to find the first section in pipeline order.
+          if (sec->pipeline_previous() == NULL) {
+            // there can be something in no_prev under error conditions.
+            this->no_prev = sp;
+          }
+        }
       }
     }
 
@@ -103,7 +105,15 @@ struct semantic_checker {
     }
 
     confs.pipeline_first(this->no_prev);
+  }
 
+  //! Sets up sections' job ordering, validates stage type ordering, and assigns
+  //! the "configure" blocks to a stage.
+  //!
+  //! Linking jobs can't be done until we have the entire pipeline order
+  //! established because the section order is not random-access comparable.
+  //! Iow, to compare to sections' order, you have to iterate the whole pipeline.
+  void link_jobs_and_check_stage_order() {
     section_config *s = NERVE_CHECK_PTR(confs.pipeline_first());
     do {
       // This might turn out to be unnecessary.  It gives us a way to iterate
@@ -121,7 +131,10 @@ struct semantic_checker {
         j.job_last(s);
       }
 
-      // Kill two birds and visit these in order.
+      // Kill two birds and visit these in order.  Perhaps this could be done in
+      // the other loop, but it mens redesigning the stage checking all because
+      // we only know the "next section" pointer in that one.  This loop must be
+      // done anyway.
       for (stage_iter_t stage = s->begin(); stage != s->end(); ++stage) {
         visit_stage(&(s->parent_job()), s, &(*stage));
       }
@@ -137,19 +150,9 @@ struct semantic_checker {
     }
   }
 
+  private:
+
   // Sections //
-
-  void visit_section(job_config *const job, section_config *const sec) {
-    if (check_section_next_name(sec)) {
-      link_sections(job, sec);
-
-      // Needed later to find the first section in pipeline order.
-      if (sec->pipeline_previous() == NULL) {
-        // there can be something in no_prev under error conditions.
-        this->no_prev = sec;
-      }
-    }
-  }
 
   //! If false then don't validate more of the section after.
   bool check_section_next_name(section_config *const sec) {

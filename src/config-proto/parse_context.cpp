@@ -44,10 +44,14 @@ void parse_context::end_stage() {
 
 void parse_context::new_configure_block(char *name) {
   NERVE_ASSERT(current.configure == NULL, "shouldn't start a new configure until the onld one is done");
+  config::flex_interface::transfer_mem ptr(name);
 
   config::pipeline_config::configure_blocks_type &blks = output_.configure_blocks();
-  config::flex_interface::transfer_mem ptr(name);
-  current.configure = NERVE_CHECK_PTR(blks.new_configure_block(ptr));
+  if (blks.has(name)) {
+    this->reporter().report("%s has already been configured", name);
+    this->reporter().lreport(blks.get(name).location(), "%s previously configured here", name);
+  }
+  current.configure = NERVE_CHECK_PTR(blks.new_configure_block(ptr, current_location()));
 }
 
 void parse_context::end_configure_block() {

@@ -118,5 +118,7 @@ void config_parser::syntactic_pass(syntactic_context &syn) {
 
 void config_parser::semantic_pass(config::parse_context &ctx) {
   semantic_checker ch(ctx);
-  ch.check();
+  ch.register_names();
+  ch.link_pipeline_order();
+  ch.link_jobs_and_check_stage_order();
 }

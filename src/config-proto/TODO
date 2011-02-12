@@ -1,8 +1,7 @@
 Arbitrary Configs
 -----------------
 
-- match up config data to a particular stage using the semantic pass
-- print it out with the pretty printer
+- use the semantic pass to link a config to the configure block
 - the current design doesn't support differing config per-occurance of a stage.
   We need to change that.  Probably resurrect stage { ... }?  It's not going to
   matter for a while, but I need to find a sensible place to write it down!

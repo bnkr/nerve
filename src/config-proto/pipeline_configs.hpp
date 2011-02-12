@@ -15,13 +15,15 @@
 
 #include "parse_location.hpp"
 #include "flex_interface.hpp"
+#include "c_string.hpp"
 
 #include "../plugin-proto/asserts.hpp"
 #include "pooled.hpp"
 
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/utility.hpp>
-#include <cstring>
+#include <boost/bind.hpp>
+#include <algorithm>
 
 namespace config {
   template<class Iterator>
@@ -66,7 +68,7 @@ namespace config {
     static create_type create() { return pooled::alloc<stage_config>(); }
     static void destroy(create_type p) { pooled::free(p); }
 
-    stage_config() : plugin_id_(id_unset) {}
+    stage_config() : plugin_id_(id_unset), configs_(NULL) {}
 
     //@}
 
@@ -309,7 +311,7 @@ class job_config : boost::noncopyable {
 };
 
 //! \ingroup grp_config
-class configure_block {
+class configure_block : boost::noncopyable {
   public:
 
   typedef flex_interface::shared_ptr shared_ptr;
@@ -328,8 +330,14 @@ class configure_block {
 
   typedef pooled::container<field_pair>::vector pairs_type;
 
+  typedef configure_block * create_type;
+  static create_type create() { return pooled::alloc<configure_block>(); }
+  static void destroy(create_type p) { pooled::free(p); }
+
   const char *name() const  { return name_.get(); }
-  void name(shared_ptr p) { name_ = p; }
+  void name(transfer_mem &p) { name_ = p.release_exclusive(); }
+  void location(const parse_location &l) { location_ = l; }
+  const parse_location &location() { return location_; }
 
   void new_pair(transfer_mem &field, transfer_mem &val) {
     pairs_.push_back(field_pair());
@@ -339,43 +347,69 @@ class configure_block {
 
   pairs_type &pairs() { return pairs_; }
 
-  // Must be shared because the same allocated data is used for the key of the
-  // map.
-  shared_ptr name_;
+  unique_ptr name_;
   pairs_type pairs_;
+  parse_location location_;
 };
 
 //! \ingroup grp_config
 //!
 //! Container for the name { key-value } kind of config.
-class configure_block_container {
+class configure_block_container : boost::noncopyable {
   public:
+
+  // TODO:
+  //   It might turn out that this design is too messy.  It certainly uses more
+  //   memory than necesary because we don't actually need to hold the whole
+  //   name -> [k,v] mapping after we have got all the stages in.  It depends
+  //   how the stage creation happens so it's staying how it is for the moment.
+  //
+  //   The otherr reason it seems messy is that stages' "next" name is looked up
+  //   usign state in the sematntic pass.  That state should be in the syntax
+  //   pass (the parse context class prolly).  It would be consistent to do this
+  //   mapping in the same place too a nd then chuck the name mappings away
+  //   when we're done with them (ie straight before declareing pipeline
+  //   objects).
+
   typedef flex_interface::transfer_mem transfer_mem;
   typedef transfer_mem::unique_type unique_text_ptr;
   typedef transfer_mem::shared_type shared_text_ptr;
 
-  //! Gives us comparisons for the map.
-  struct lexer_string {
-    lexer_string(shared_text_ptr p) : s(p) {}
+  // TODO: This should prolly be a set since the string is in there anyway.
+  typedef pooled::assoc<c_string, configure_block::create_type>::map blocks_type;
+  typedef boost::remove_pointer<blocks_type::value_type::second_type>::type block_type;
 
-    bool operator<(const lexer_string &rhs) const {
-      return std::strcmp(this->str(), rhs.str()) == 0;
+  template<class Pair>
+  struct destroy_snd {
+    void operator()(Pair &p) const {
+      return configure_block::destroy(p.second);
     }
-    const char *str() const { return s.get(); }
-
-    shared_text_ptr s;
   };
 
-  typedef pooled::assoc<lexer_string, configure_block>::map blocks_type;
+  ~configure_block_container() {
+    std::for_each(
+      blocks().begin(), blocks().end(),
+      destroy_snd<blocks_type::value_type>()
+   );
+  }
 
-  configure_block *new_configure_block(transfer_mem &name) {
-    shared_text_ptr p = name.release_shared();
-    lexer_string s = p;
-    blocks_[s].name(p);
-    return &(blocks_[s]);
+  configure_block *new_configure_block(transfer_mem &name, const parse_location &copy) {
+    configure_block::create_type block = configure_block::create();
+    block->name(name);
+    block->location(copy);
+    blocks_[c_string(block->name())] = block;
+    return block;
+  }
+
+  bool has(const char *name) const { return blocks().count(c_string(name)) > 0; }
+
+  block_type &get(const char *name) {
+    NERVE_ASSERT(this->has(name), "can't use field accessors if field doesn't exist");
+    return *blocks_[c_string(name)];
   }
 
   blocks_type &blocks() { return blocks_; }
+  const blocks_type &blocks() const { return blocks_; }
 
   private:
 
