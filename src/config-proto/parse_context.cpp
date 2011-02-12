@@ -47,6 +47,13 @@ void parse_context::new_configure_block(char *name) {
   config::flex_interface::transfer_mem ptr(name);
 
   config::pipeline_config::configure_blocks_type &blks = output_.configure_blocks();
+  // TODO:
+  //   This will need to change somewhat to support multiple occurances of a
+  //   stage where both are configured differently.  Probably the best/only
+  //   thing to do is have "stage { id ffmpeg name something }" and when in
+  //   configure we do configure "ffmpeg.something { ... }". -- 12 Feb (dated
+  //   because I think it'll take some time before this problem becomes relevant
+  //   ^^).
   if (blks.has(name)) {
     this->reporter().report("%s has already been configured", name);
     this->reporter().lreport(blks.get(name)->location(), "%s previously configured here", name);

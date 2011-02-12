@@ -293,6 +293,11 @@ struct semantic_checker {
 
     blocks_type &blocks = confs.configure_blocks();
 
+    // TODO:
+    //   This doesn't work when there are multiple occurances of the same stage
+    //   and we want to configure them differently.  See also note in
+    //   parse_context's block adding bit.  -- Bunker, 12 Feb.
+
     if (blocks.has(NERVE_CHECK_PTR(st.name()))) {
       blocks_type::block_type *const block = blocks.get(st.name());
       st.configs(block);

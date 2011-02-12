@@ -1,26 +1,8 @@
-Arbitrary Configs
------------------
-
-- use the semantic pass to link a config to the configure block
-- the current design doesn't support differing config per-occurance of a stage.
-  We need to change that.  Probably resurrect stage { ... }?  It's not going to
-  matter for a while, but I need to find a sensible place to write it down!
-
-Test Framework
---------------
-
-- pretty printer must print job/section/sequence/stage in yaml or something
-  similar
-- option --dump-config
-- ruby lib to compare two outputs
-
 Integrate
 ---------
 
 Requires working config-proto, and finished connectors in the pipeline bit.
 
-* modify the pretty-printer to declare each pipeline object (i.e include
-  sequences and do it in the way I would really iterate it all)
 * add the real initialisation stuff to the pipeline objects (constructors,
   storage etc...)
 * use the gapless stuff to create working stages
