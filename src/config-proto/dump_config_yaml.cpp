@@ -28,11 +28,13 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
 
       section_config *const prev = sec->pipeline_previous();
       section_config *const next = sec->pipeline_next();
-      const char *from = prev ? prev->name() : "(start pipe)";
-      const char *to = next ? next->name() : "(end pipe)";
+      const char *from = prev ? prev->name() : ":start_pipe";
+      const char *to = next ? next->name() : ":end_pipe";
+      const char *to_delim = next ? "\"" : "";
+      const char *from_delim = prev ? "\"" : "";
 
-      std::cout << "    prev: \"" << from << "\"" << std::endl;
-      std::cout << "    next: \"" << to << "\"" << std::endl;
+      std::cout << "    prev: " << from_delim << from << from_delim << std::endl;
+      std::cout << "    next: " << to_delim << to << to_delim << std::endl;
       std::cout << "    sequences:" << std::endl;
 
       stage_config::categories last_cat = stage_config::cat_unset;
