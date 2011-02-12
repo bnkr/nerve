@@ -403,9 +403,9 @@ class configure_block_container : boost::noncopyable {
 
   bool has(const char *name) const { return blocks().count(c_string(name)) > 0; }
 
-  block_type &get(const char *name) {
+  block_type *get(const char *name) {
     NERVE_ASSERT(this->has(name), "can't use field accessors if field doesn't exist");
-    return *blocks_[c_string(name)];
+    return blocks_[c_string(name)];
   }
 
   blocks_type &blocks() { return blocks_; }

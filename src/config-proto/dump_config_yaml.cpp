@@ -69,7 +69,7 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
           for (iter_t conf = pairs.begin(); conf != pairs.end(); ++conf) {
             const char *const key = conf->field();
             const char *const value = conf->value();
-            std::cout << "        - [\"" << key << "\", \"" << value << "\"]";
+            std::cout << "        - [\"" << key << "\", \"" << value << "\"]" << std::endl;;
           }
         }
         else {

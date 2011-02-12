@@ -49,7 +49,7 @@ void parse_context::new_configure_block(char *name) {
   config::pipeline_config::configure_blocks_type &blks = output_.configure_blocks();
   if (blks.has(name)) {
     this->reporter().report("%s has already been configured", name);
-    this->reporter().lreport(blks.get(name).location(), "%s previously configured here", name);
+    this->reporter().lreport(blks.get(name)->location(), "%s previously configured here", name);
   }
   current.configure = NERVE_CHECK_PTR(blks.new_configure_block(ptr, current_location()));
 }

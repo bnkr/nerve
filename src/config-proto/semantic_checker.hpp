@@ -136,7 +136,8 @@ struct semantic_checker {
       // we only know the "next section" pointer in that one.  This loop must be
       // done anyway.
       for (stage_iter_t stage = s->begin(); stage != s->end(); ++stage) {
-        visit_stage(&(s->parent_job()), s, &(*stage));
+        check_stage_order_visit(&(s->parent_job()), s, &(*stage));
+        assign_configure_block(*stage);
       }
     } while ((s = s->pipeline_next()) != NULL);
 
@@ -223,7 +224,7 @@ struct semantic_checker {
     stage_config *this_stage;
   };
 
-  void visit_stage(job_config *, section_config *, stage_config *const stage) {
+  void check_stage_order_visit(job_config *, section_config *, stage_config *const stage) {
     if (visit_state.initial) {
       if (stage->category() != stage_config::cat_input) {
         rep.lreport(
@@ -284,6 +285,18 @@ struct semantic_checker {
       visit_state.last_stage->location(), "the %s stage ordered before is here",
       visit_state.last_stage->category_name()
     );
+  }
+
+  //! The configure "x { .. }" block assignment.
+  void assign_configure_block(stage_config &st) {
+    typedef config::pipeline_config::configure_blocks_type blocks_type;
+
+    blocks_type &blocks = confs.configure_blocks();
+
+    if (blocks.has(NERVE_CHECK_PTR(st.name()))) {
+      blocks_type::block_type *const block = blocks.get(st.name());
+      st.configs(block);
+    }
   }
 
   config::error_reporter &rep;
