@@ -1,4 +1,6 @@
-#include "cli.hpp"
+#include "parse.hpp"
+
+#include "../config_defines.hpp"
 
 #include <cstring>
 #include <cstdio>
@@ -8,16 +10,23 @@ using cli::settings;
 namespace cli {
   //! Holds all the parsing state and modifies the settings.
   struct cli_parser {
-    explicit cli_parser(settings &s) : s_(s) {}
+    explicit cli_parser(settings &s) : s_(s), status_(parse_ok) {}
 
-    typedef cli::parse_status status_type;
+    void parse(int argc, char **argv);
 
-    status_type parse(int argc, char **argv);
     bool strequal(const char *a, const char *b) { return std::strcmp(a, b) == 0; }
-    void cli_error(const char *format, ...);
 
+    void arg_error(const char *, const char *);
+    void arg_value_error(const char *, const char *, const char *);
+    void help();
+    void version();
+
+    cli::parse_status status() const { return status_; }
+
+
+    private:
     settings &s_;
-    status_type status_;
+    cli::parse_status status_;
   };
 }
 
@@ -38,16 +47,16 @@ using cli::cli_parser;
     s_.assign__.push_back(a);\
   }
 
-cli_parser::status_type cli_parser::parse(int argc, char **argv) {
+void cli_parser::parse(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     const char *const a = argv[i];
     if (strequal(a, "-help")) {
       help();
-      goto end;
+      return;
     }
     else if (strequal(a, "-version")) {
       version();
-      goto end;
+      return;
     }
     APPEND_OPT("-cfg", config_files_)
     BOOLEAN_OPT("-cfg-dump", dump_config_)
@@ -61,8 +70,6 @@ cli_parser::status_type cli_parser::parse(int argc, char **argv) {
     }
   }
 
-end:
-  return status_;
 }
 
 void cli_parser::help() {
@@ -81,31 +88,33 @@ void cli_parser::help() {
     "  -cfg-trace-parser  Trace the config parser (lots of output).\n"
     "\n"
     "Behavior:\n"
+    "  -state FILE      Where to store and load playlist state.\n"
     "  -socket FILE     Socket to use.\n"
     "  -log FILE        File to log to or - for stderr.  Some errors are\n"
     "                   always printed on stderr.\n"
     "\n"
   );
-
-  status_ = status_type(0);
+  version();
 }
 
 void cli_parser::version() {
   std::printf(
-    "Nerve daemon, version " NERVED_VERSION_STRING
+    "Nerve daemon, version " NERVED_VERSION
     "Copyright (C) James Webber 2008-2011\n"
     "Under a 3-clause BSD license.\n"
   );
+
+  status_ = cli::parse_exit;
 }
 
 void cli_parser::arg_error(const char *arg, const char *what) {
   std::fprintf(stderr, "nerve: %s: %s\n", arg, what);
-  status_ = status_type(1);
+  status_ = cli::parse_fail;
 }
 
 void cli_parser::arg_value_error(const char *arg, const char *val, const char *what) {
   std::fprintf(stderr, "nerve: %s '%s': %s\n", arg, val, what);
-  status_ = status_type(1);
+  status_ = cli::parse_fail;
 }
 
 cli::parse_status cli::parse(settings &s, int argc, char **argv) {

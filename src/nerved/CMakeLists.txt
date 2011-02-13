@@ -24,6 +24,8 @@ bbuild_exe(
     nerved
   SOURCES
     main.cpp
+    cli/settings.cpp
+    cli/parse.cpp
     config/config_parser.cpp
     config/pipeline_configs.cpp
     config/parse_context.cpp
@@ -34,6 +36,7 @@ bbuild_exe(
   CPPDEFS
     # Dependncy on this is handled by bbuild_parser.
     "TOKENS_FILE=\"${tokens_file}\""
+    "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
 )
 
