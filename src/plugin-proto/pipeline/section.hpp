@@ -14,42 +14,38 @@ namespace pipeline {
    * \ingroup grp_pipeline
    *
    * The section class contains multiple types of stages via the mono-typed
-   * sequence container and always communicates with other threads (excepting the
+   * sequence containers and always communicates with other threads (excepting the
    * input stage which might not).
    *
-   * Why the The section is necessary:
+   * The section's purpose is as follows:
    *
-   * - otherwise a job can't tell where thread communication boundaries are and
-   *   therefore can't ensure one block per iteration (which is necesasry to stop
-   *   deadlocks)
-   * - allow sequences to be specialised to each type of stage (which is necessary
-   *   to avoid unnecessary work and to deal with special stages without massive
-   *   hax)
-   * - we can't have sequences defining thread boundaries (which would solve the
-   *   first requirement) because of the second requirement
+   * - defines direct connection boundaries, i.e sections always talk to other
+   *   threads but sequences don't.  This is necessary to know or you can't
+   *   guarentee one wait per job iteration (which itself is necessary to
+   *   prevent deadlocks).
+   * - allows sequences to be specialised to each category of stage which is
+   *   necessary to avoid extra work, e.g progressive buffering on observer
+   *   stages.  It also means we can have a much tidier stage API.
    *
-   * This implementation of a section totally leaves any communication of packets
-   * to the sequences themselves (they'll use a "connector" abstraction).  This
-   * means we need no special handling for buffering stages or passing of data
-   * which is good because different stage types have different requirements on
-   * this.
+   * This implementation adds some overhead and complication, but it does appear
+   * to be the best solution.
+   *
+   * Communication between stages is abstract.  An alternative implementation
+   * method is to handle the connections (just the thread pipes) in this object
+   * and have direct returns (using packet_return) which is then put on the
+   * section's pipe.  This is not done for the following reasons:
+   *
+   * - thread pipe operations (such as the clear on abandon) couldn't be
+   *   enforced unless the event type is checked again here
+   * - if sequences give us their output packet then we nececssarily need to
+   *   handle their input packets too.  This means we need to deal with
+   *   progressive buffering which obviates specialised sequences (in effect it
+   *   moves the problem that the current section class solves up one level)
    *
    * The result is that for every sequence there is a virtual call to write
-   * output, but but we don't need to do a buffering/no-return check, which is
-   * particularly annoying for those sequences which never buffer and/or always
-   * return.  You'd also have to manage passing the packet on to the next
-   * sequence, which begins to duplicate the progressive buffer stuff wich the
-   * sequence already does and probably means we need a special +debuffer+
-   * method on sequences which is further duplication.  There's also the issue
-   * that we have to check the event type to decide whether to clear the output
-   * queue.
-   *
-   * It's a bit hard to see if the current method is faster, but it does seem
-   * tobe a lot neater.
-   *
-   * TODO:
-   *   It might turn out that the various extra checks done here are quicker,
-   *   but it's something we really need to measure.
+   * output, but but we don't need to do a buffering/no-return check or event
+   * check.  Furthermore, given that each sequence is polymorphic anyway, it
+   * might be that we can optimise out the polymorphic connector.
    */
   class section {
 
