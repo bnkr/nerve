@@ -43,6 +43,8 @@ bbuild_exe(
     "TOKENS_FILE=\"${tokens_file}\""
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
+  POSSIBLE_VARS
+    LEMON_EXE FLEX_EXE
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)
