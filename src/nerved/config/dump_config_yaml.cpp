@@ -2,7 +2,7 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 
 #include <map>
-#include "../plugin-proto/asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include "pipeline_configs.hpp"
 

@@ -10,8 +10,8 @@
 #ifndef CONFIG_CONFIG_PARSER_HPP_999mx4dk
 #define CONFIG_CONFIG_PARSER_HPP_999mx4dk
 
-#include "../plugin-proto/asserts.hpp"
-#include "pooled.hpp"
+#include "../util/asserts.hpp"
+#include "../util/pooled.hpp"
 
 #include <vector>
 #include <boost/utility.hpp>

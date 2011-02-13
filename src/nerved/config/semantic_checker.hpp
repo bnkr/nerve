@@ -4,12 +4,12 @@
 #ifndef PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 #define PIPELINE_SEMANTIC_CHECKER_HPP_isu3fngy
 
-#include "pooled.hpp"
-#include "c_string.hpp"
 #include "pipeline_configs.hpp"
 #include "parse_context.hpp"
 
-#include "../plugin-proto/asserts.hpp"
+#include "../util/pooled.hpp"
+#include "../util/c_string.hpp"
+#include "../util/asserts.hpp"
 
 #include <cstring>
 

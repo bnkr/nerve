@@ -1,0 +1,15 @@
+Architecture
+------------
+
+The daemon is quite modular.  The main() function is a good explanation of how
+the modules are set up and the entry points for each one.
+
+* util/ -- general or shared stuff
+* cli/ -- command line parser and settings storage
+* config/ -- configuration file parser and storage
+* output/ -- logging and error reporting
+* pipeline/ -- pipeline objects (stages, sequences, ...)
+* stages/ -- built-in stages
+* server/ -- client-serve communication bits
+* player/ -- running the pipeline, server, and player state; essentially a
+  post-setup main().

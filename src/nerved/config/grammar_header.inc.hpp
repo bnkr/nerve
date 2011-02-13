@@ -11,7 +11,7 @@
 #include "nerve_config.hpp"
 #include "parse_context.hpp"
 #include "pipeline_configs.hpp"
-#include "../plugin-proto/asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include <iostream>
 #include <cstdlib>

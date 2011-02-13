@@ -6,7 +6,7 @@
 
 #include "error_reporter.hpp"
 
-#include "../plugin-proto/asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include <boost/utility.hpp>
 

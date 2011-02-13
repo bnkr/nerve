@@ -1,8 +1,8 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
-#ifndef ASSERTS_HPP_45mln30x
-#define ASSERTS_HPP_45mln30x
+#ifndef UTIL_ASSERTS_HPP_45mln30x
+#define UTIL_ASSERTS_HPP_45mln30x
 #include <iostream>
 #include <cstdlib>
 
@@ -21,6 +21,7 @@ namespace asserts {
   }
 }
 
+//! \ingroup grp_asserts
 //! Abort with a sensible message.
 #define NERVE_ABORT(msg__)\
   do {\
@@ -29,6 +30,7 @@ namespace asserts {
   } while (false);
 
 
+//! \ingroup grp_asserts
 //! Assertion with message.
 #define NERVE_ASSERT(code__, msg__)\
   do {\
@@ -41,12 +43,15 @@ namespace asserts {
     }\
   } while(false);
 
+//! \ingroup grp_asserts
 //! Alias.
 #define NERVE_ASSERT_PTR(var__) NERVE_ASSERT(var__ != NULL, #var__ " must not be null")
 
+//! \ingroup grp_asserts
 //! Check the pointer is non-null and return it.
 #define NERVE_CHECK_PTR(expr__) (::asserts::detail::check_pointer(__LINE__, __FILE__, (expr__), #expr__))
 
+//! \ingroup grp_asserts
 //! Assertion with message but don't abort afterwards.
 #define NERVE_WASSERT(code__, msg__)\
   do {\

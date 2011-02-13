@@ -1,8 +1,8 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
-#ifndef CONFIG_POOLED_STL_HPP_33dhh4hs
-#define CONFIG_POOLED_STL_HPP_33dhh4hs
+#ifndef UTIL_POOLED_HPP_fdmqdjzd
+#define UTIL_POOLED_HPP_fdmqdjzd
 
 #include <boost/pool/pool_alloc.hpp>
 
@@ -14,6 +14,7 @@
 namespace pooled {
   // struct pool_tag;
 
+  //! \ingroup grp_pooled
   template<class Contained>
   struct container {
     typedef boost::pool_allocator<Contained> contiguous_allocator_type;
@@ -23,6 +24,7 @@ namespace pooled {
     typedef std::list<Contained, object_allocator_type> list;
   };
 
+  //! \ingroup grp_pooled
   template<class Key, class Value>
   struct assoc {
     typedef typename std::pair<Key,Value> pair_type;
@@ -33,8 +35,10 @@ namespace pooled {
     typedef typename std::map<Key, Value, compare_type, allocator_type> map;
   };
 
+  //! \ingroup grp_pooled
   typedef std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char> > string;
 
+  //! \ingroup grp_pooled
   template<class T>
   T *alloc() {
     T * const p = (T*) boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::malloc();
@@ -42,6 +46,7 @@ namespace pooled {
     return p;
   }
 
+  //! \ingroup grp_pooled
   template<class T>
   void free(T *ptr) {
     ptr->~T();
@@ -50,6 +55,8 @@ namespace pooled {
 
   //! Pooling which remembers how much was allocated.
   //@{
+  //! \ingroup grp_pooled
+
   void *tracked_byte_alloc(size_t);
   void tracked_byte_free(void *);
   void *tracked_byte_realloc(void *ptr, size_t bytes);

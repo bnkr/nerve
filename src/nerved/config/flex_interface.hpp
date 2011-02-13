@@ -9,7 +9,7 @@
 #ifndef CONFIG_FLEX_INTERFACE_HPP_8ovjfk6q
 #define CONFIG_FLEX_INTERFACE_HPP_8ovjfk6q
 
-#include "../plugin-proto/asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include <cstdio>
 #include <algorithm>

@@ -1,5 +1,5 @@
 #include "pooled.hpp"
-#include "../plugin-proto/asserts.hpp"
+#include "asserts.hpp"
 
 #include <algorithm> // max
 #include <cstring>

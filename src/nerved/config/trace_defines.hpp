@@ -7,8 +7,8 @@
  * Sets up all defines used for the project.
  */
 
-#ifndef NERVE_CONFIG_HPP_028x8tfz
-#define NERVE_CONFIG_HPP_028x8tfz
+#ifndef CONFIG_TRACE_DEFINES_HPP_4dbnc5cx
+#define CONFIG_TRACE_DEFINES_HPP_4dbnc5cx
 
 // Whether to enable tracing code in the lexer.
 #ifndef NERVE_LEXER_TRACE

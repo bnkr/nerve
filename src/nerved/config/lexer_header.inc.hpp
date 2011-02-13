@@ -11,12 +11,12 @@
 #include "flex_interface.hpp"
 #include "nerve_config.hpp"
 #include "parse_context.hpp"
-#include "../plugin-proto/asserts.hpp"
-#include "pooled.hpp"
+
+#include "../util/asserts.hpp"
+#include "../util/pooled.hpp"
 
 #include <cstring>
 #include <iostream>
-#include <boost/pool/pool_alloc.hpp>
 
 /***********************
  * Lexer Action Macros *

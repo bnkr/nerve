@@ -15,10 +15,10 @@
 
 #include "parse_location.hpp"
 #include "flex_interface.hpp"
-#include "c_string.hpp"
 
-#include "../plugin-proto/asserts.hpp"
-#include "pooled.hpp"
+#include "../util/c_string.hpp"
+#include "../util/asserts.hpp"
+#include "../util/pooled.hpp"
 
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/utility.hpp>

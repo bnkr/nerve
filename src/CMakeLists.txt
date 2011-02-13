@@ -7,5 +7,4 @@ add_subdirectory("nerve")
 add_subdirectory("nerved")
 add_subdirectory("gapless-proto")
 add_subdirectory("socket-proto")
-add_subdirectory("config-proto")
 

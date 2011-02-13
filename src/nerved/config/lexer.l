@@ -19,9 +19,7 @@
 
 // Defined by the build system courtesy bbuild_parser.
 #include TOKENS_FILE
-// We can't use quote includes for compiler reasons so we need an -I.  Then the
-// inc file can use quote paths and dependencies are all correct.
-#include <lexer_header.inc.hpp>
+#include "src-link/config/lexer_header.inc.hpp"
 
 %}
 

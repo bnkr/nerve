@@ -1,11 +1,40 @@
-set(NERVED_CONFIG_HPP_OUTPUT "${CMAKE_BINARY_DIR}/include/nerved_config.hpp")
-configure_file("${CMAKE_SOURCE_DIR}/build-aux/nerved_config.hpp.cmake" "${NERVED_CONFIG_HPP_OUTPUT}")
+# Copyright (C) 2011, James Webber.
+# Distributed under a 3-clause BSD license.  See COPYING.
+
+# TODO:
+#   This lot should be moved into the main directory.
+
+bbuild_parser(
+  SOURCES_VAR parser_sources
+  TOKENS_FILE_VAR tokens_file
+  LEMON "config/grammar.lemon"
+  FLEX  "config/lexer.l"
+  CXX_FILES
+  EXTRA_DEBUG
+)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(defs "NERVE_LEXER_TRACE=1" "NERVE_PARSER_TRACE=1")
+else()
+  set(defs)
+endif()
 
 bbuild_exe(
-  TARGET nerved
+  TARGET
+    nerved
   SOURCES
     main.cpp
-  LIBS ${BOOST_PROGRAM_OPTIONS_LIB} ${BOOST_SYSTEM_LIB}
+    config/config_parser.cpp
+    config/pipeline_configs.cpp
+    config/parse_context.cpp
+    config/dump_config_yaml.cpp
+    util/pooled.cpp
+  GENERATED_SOURCES
+    ${parser_sources}
+  CPPDEFS
+    # Dependncy on this is handled by bbuild_parser.
+    "TOKENS_FILE=\"${tokens_file}\""
+    ${defs}
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)

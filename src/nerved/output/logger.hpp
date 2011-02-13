@@ -1,0 +1,4 @@
+namespace output {
+  class logger {
+  };
+}

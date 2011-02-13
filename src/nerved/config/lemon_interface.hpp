@@ -10,8 +10,9 @@
 #define CONFIG_LEMON_PARSER_HPP_jncvazqg
 
 #include "flex_interface.hpp"
-#include "nerve_config.hpp"
-#include "pooled.hpp"
+
+#include "trace_defines.hpp"
+#include "../util/pooled.hpp"
 
 #include <boost/cstdint.hpp>
 

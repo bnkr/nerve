@@ -1,8 +1,9 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
-#ifndef CONFIG_C_STRING_HPP_i8ip7xsm
-#define CONFIG_C_STRING_HPP_i8ip7xsm
-#include "../plugin-proto/asserts.hpp"
+#ifndef UTIL_C_STRING_HPP_i8ip7xsm
+#define UTIL_C_STRING_HPP_i8ip7xsm
+
+#include "asserts.hpp"
 
 #include <cstring>
 

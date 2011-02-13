@@ -14,9 +14,8 @@
 %token_prefix T_
 
 %include {
-// We can't use quote includes for compiler reasons so we need an -I.  Then the
-// inc file can use quote paths and dependencies are all correct.
-#include <grammar_header.inc.hpp>
+// A synlink set up by bbuild_parser
+#include "src-link/config/grammar_header.inc.hpp"
 }
 
 // Only works as a pointer.
