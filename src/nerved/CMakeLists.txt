@@ -24,12 +24,17 @@ bbuild_exe(
     nerved
   SOURCES
     main.cpp
-    cli/settings.cpp
     cli/parse.cpp
+    cli/settings.cpp
+    output/configure.cpp
+    config/parse.cpp
     config/config_parser.cpp
     config/pipeline_configs.cpp
     config/parse_context.cpp
     config/dump_config_yaml.cpp
+    config/dump_config_yaml.cpp
+    pipeline/configure.cpp
+    player/run.cpp
     util/pooled.cpp
   GENERATED_SOURCES
     ${parser_sources}
