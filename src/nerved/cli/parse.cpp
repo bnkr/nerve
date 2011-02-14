@@ -12,53 +12,67 @@ using cli::settings;
 namespace cli {
   //! Holds all the parsing state and modifies the settings.
   struct cli_parser {
-    explicit cli_parser(settings &s) : s_(s), status_(parse_ok) {}
+    explicit cli_parser(settings &s, int argc, char **argv)
+    : s_(s), i_(1), argc_(argc), argv_(argv), status_(parse_ok) {}
 
-    void parse(int argc, char **argv);
+    void parse();
+
+    const char *current_arg() { return argv_[i_]; }
+    const char *get_value();
 
     bool strequal(const char *a, const char *b) { return std::strcmp(a, b) == 0; }
+    bool current_equal(const char *a) { return strequal(a, current_arg()); }
 
-    void arg_error(const char *, const char *);
-    void arg_value_error(const char *, const char *, const char *);
+    void arg_error(const char *);
+    void arg_value_error(const char *, const char *);
     void help();
     void version();
 
     cli::parse_status status() const { return status_; }
 
-
     private:
     settings &s_;
+    int i_;
+    int argc_;
+    char **argv_;
     cli::parse_status status_;
   };
 }
 
+/*******************
+ * Parse algorithm *
+ *******************/
+
 using cli::cli_parser;
 
 #define BOOLEAN_OPT(name__, assign__)\
-  else if (strequal(a, name__)) {\
+  else if (current_equal(name__)) {\
     s_.assign__ = true;\
   }\
 
 #define VALUE_OPT(name__, assign__)\
-  else if (strequal(a, name__)) {\
-    s_.assign__ = a;\
-    ++i;\
+  else if (current_equal(name__)) {\
+    const char *const v = get_value();\
+    if (v) {\
+      s_.assign__ = v;\
+    }\
   }
 
 #define APPEND_OPT(name__, assign__)\
-  else if (strequal(a, name__)) {\
-    s_.assign__.push_back(a);\
-    ++i;\
+  else if (current_equal(name__)) {\
+    const char *const v = get_value();\
+    if (v) {\
+      s_.assign__.push_back(v);\
+    }\
   }
 
-void cli_parser::parse(int argc, char **argv) {
-  for (int i = 1; i < argc; ++i) {
-    const char *const a = argv[i];
-    if (strequal(a, "-help")) {
+void cli_parser::parse() {
+  for (i_ = 1; i_ < argc_; ++i_) {
+    if (current_equal("-help")) {
       help();
       return;
     }
-    else if (strequal(a, "-version")) {
+    else if (current_equal("-version")) {
       version();
       return;
     }
@@ -70,7 +84,7 @@ void cli_parser::parse(int argc, char **argv) {
     VALUE_OPT("-socket", socket_)
     VALUE_OPT("-log", log_)
     else {
-      arg_error(a, "unrecognised argument");
+      arg_error("unrecognised argument");
     }
   }
 
@@ -103,7 +117,7 @@ void cli_parser::help() {
 
 void cli_parser::version() {
   std::printf(
-    "Nerve daemon, version " NERVED_VERSION
+    "Nerve daemon, version " NERVED_VERSION "\n"
     "Copyright (C) James Webber 2008-2011\n"
     "Under a 3-clause BSD license.\n"
   );
@@ -111,18 +125,34 @@ void cli_parser::version() {
   status_ = cli::parse_exit;
 }
 
-void cli_parser::arg_error(const char *arg, const char *what) {
-  std::fprintf(stderr, "nerve: %s: %s\n", arg, what);
+const char *cli_parser::get_value() {
+  int value_i = i_ + 1;
+  if (value_i >= argc_) {
+    arg_error("requires a value");
+    return NULL;
+  }
+  else {
+    ++i_;
+    return current_arg();
+  }
+}
+
+void cli_parser::arg_error(const char *what) {
+  std::fprintf(stderr, "nerve: %s: %s\n", current_arg(), what);
   status_ = cli::parse_fail;
 }
 
-void cli_parser::arg_value_error(const char *arg, const char *val, const char *what) {
-  std::fprintf(stderr, "nerve: %s '%s': %s\n", arg, val, what);
+void cli_parser::arg_value_error(const char *val, const char *what) {
+  std::fprintf(stderr, "nerve: %s '%s': %s\n", current_arg(), val, what);
   status_ = cli::parse_fail;
 }
+
+/*********************
+ * Parse entry point *
+ *********************/
 
 cli::parse_status cli::parse(settings &s, int argc, char **argv) {
-  cli_parser parser(s);
-  parser.parse(argc, argv);
+  cli_parser parser(s, argc, argv);
+  parser.parse();
   return parser.status();
 }
