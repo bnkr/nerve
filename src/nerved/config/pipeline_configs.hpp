@@ -379,19 +379,7 @@ class configure_block_container : boost::noncopyable {
   typedef pooled::assoc<c_string, configure_block::create_type>::map blocks_type;
   typedef boost::remove_pointer<blocks_type::value_type::second_type>::type block_type;
 
-  template<class Pair>
-  struct destroy_snd {
-    void operator()(Pair &p) const {
-      return configure_block::destroy(p.second);
-    }
-  };
-
-  ~configure_block_container() {
-    std::for_each(
-      blocks().begin(), blocks().end(),
-      destroy_snd<blocks_type::value_type>()
-   );
-  }
+  ~configure_block_container() { destroy_blocks(); }
 
   configure_block *new_configure_block(transfer_mem &name, const parse_location &copy) {
     configure_block::create_type block = configure_block::create();
@@ -411,8 +399,12 @@ class configure_block_container : boost::noncopyable {
   blocks_type &blocks() { return blocks_; }
   const blocks_type &blocks() const { return blocks_; }
 
-  private:
+  void clear() { destroy_blocks(); blocks().clear(); }
 
+  private:
+  void destroy_blocks();
+
+  private:
   blocks_type blocks_;
 };
 
@@ -454,6 +446,10 @@ class pipeline_config : boost::noncopyable {
       jobs().size() == 1
       && make_deref_iter(jobs_.begin())->mono_section();
   }
+
+  //! SHUT DOWN EVERYTHING!!!11
+  void madagascar();
+  void clear() { madagascar(); }
 
   private:
   section_config *pipeline_first_;

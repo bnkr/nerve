@@ -3,7 +3,11 @@
 
 #include "pipeline_configs.hpp"
 
-using config::stage_config;
+using namespace config;
+
+/****************
+ * Stage config *
+ ****************/
 
 const char *stage_config::get_category_name(stage_config::category_type c) {
   switch (c) {
@@ -75,4 +79,31 @@ stage_config::category_type stage_config::category() const {
   }
 
   NERVE_ABORT("what are you doing here?");
+}
+
+/********************
+ * Key-Value Blocks *
+ ********************/
+
+template<class Pair>
+struct destroy_snd {
+  void operator()(Pair &p) const {
+    return configure_block::destroy(p.second);
+  }
+};
+
+void configure_block_container::destroy_blocks() {
+  std::for_each(
+    blocks().begin(), blocks().end(),
+    destroy_snd<blocks_type::value_type>()
+  );
+}
+
+/*******************
+ * Pipeline Config *
+ *******************/
+
+void pipeline_config::madagascar() {
+  jobs().clear();
+  configure_blocks().clear();
 }
