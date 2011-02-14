@@ -109,8 +109,6 @@ void yyfree(void *ptr) {
  * Token Data Managment *
  ************************/
 
-static boost::fast_pool_allocator<char> char_alloc;
-
 void config::flex_interface::free_text(char *text) {
   pooled::tracked_byte_free(text);
 }
