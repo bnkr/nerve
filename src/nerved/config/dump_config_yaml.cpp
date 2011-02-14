@@ -13,8 +13,6 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
   typedef job_config::section_iterator_type     section_iter_t;
   typedef section_config::stage_iterator_type   stage_iter_t;
 
-  std::map<job_config *, int> job_index;
-
   std::cout << "---" << std::endl;
   int thread_num = 1;
   for (job_iter_t job = pc.begin(); job != pc.end(); ++job) {
