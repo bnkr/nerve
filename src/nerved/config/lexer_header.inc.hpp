@@ -126,7 +126,7 @@ static void assign_token_text(const char *copy, size_t length) {
  * Creating strings and identifiers *
  ************************************/
 
-static std::string buffer;
+static pooled::string buffer;
 
 static void string_append_escape() {
   NERVE_ASSERT(yytext[0] == '\\', "this must only be called when there is an escape char");
