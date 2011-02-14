@@ -27,6 +27,7 @@ bbuild_exe(
     cli/parse.cpp
     cli/settings.cpp
     output/configure.cpp
+    output/logger.cpp
     config/parse.cpp
     config/config_parser.cpp
     config/pipeline_configs.cpp
