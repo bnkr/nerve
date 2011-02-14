@@ -84,7 +84,10 @@ bool config_parser::parse_file(config::parse_context &context, const char *file)
     flex_interface::init(fp);
 
     syntactic_context syn(context, parse);
+    flex_interface::destroy();
+
     syntactic_pass(syn);
+
   }
 
   if (! context.reporter().error()) {

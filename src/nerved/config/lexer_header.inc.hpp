@@ -100,7 +100,10 @@ void fi::destroy() {
 
 void *yyalloc(size_t bytes) { return pooled::tracked_byte_alloc(bytes); }
 void *yyrealloc(void *ptr, size_t bytes) { return pooled::tracked_byte_realloc(ptr, bytes); }
-void yyfree(void *ptr) { pooled::tracked_byte_free(ptr); }
+void yyfree(void *ptr) {
+  NERVE_ASSERT(ptr != NULL, "null here means the lexer didn't get initialised");
+  pooled::tracked_byte_free(ptr);
+}
 
 /************************
  * Token Data Managment *

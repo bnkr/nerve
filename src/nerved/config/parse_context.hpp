@@ -26,7 +26,7 @@ namespace config {
     : output_(pc) {
     }
 
-    ~parse_context() { flex_interface::destroy(); }
+    ~parse_context() { }
 
     //! \name Attributes
     //@{
