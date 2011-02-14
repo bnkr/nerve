@@ -81,13 +81,12 @@ bool config_parser::parse_file(config::parse_context &context, const char *file)
       .trace(p_.trace_lexer())
       .stream(fh.get())
       .context(&context);
+
     flex_interface::init(fp);
 
     syntactic_context syn(context, parse);
-    flex_interface::destroy();
-
     syntactic_pass(syn);
-
+    flex_interface::destroy();
   }
 
   if (! context.reporter().error()) {
