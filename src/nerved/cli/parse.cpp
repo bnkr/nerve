@@ -40,11 +40,13 @@ using cli::cli_parser;
 #define VALUE_OPT(name__, assign__)\
   else if (strequal(a, name__)) {\
     s_.assign__ = a;\
+    ++i;\
   }
 
 #define APPEND_OPT(name__, assign__)\
   else if (strequal(a, name__)) {\
     s_.assign__.push_back(a);\
+    ++i;\
   }
 
 void cli_parser::parse(int argc, char **argv) {
