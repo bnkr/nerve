@@ -8,7 +8,7 @@
 #include "packet_return.hpp"
 #include "simple_stages.hpp"
 
-#include "../asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include <vector>
 #include <algorithm>

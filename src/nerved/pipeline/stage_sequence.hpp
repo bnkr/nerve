@@ -4,12 +4,13 @@
 #ifndef PIPELINE_STAGE_SEQUENCE_HPP_7dmcjdrb
 #define PIPELINE_STAGE_SEQUENCE_HPP_7dmcjdrb
 
-#include <algorithm>
-#include <boost/bind.hpp>
-
 #include "simple_stages.hpp"
 #include "packet.hpp"
-#include "../asserts.hpp"
+
+#include "../util/asserts.hpp"
+
+#include <algorithm>
+#include <boost/bind.hpp>
 
 namespace pipeline {
   /*!

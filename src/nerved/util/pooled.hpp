@@ -53,6 +53,26 @@ namespace pooled {
     boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::free(ptr);
   }
 
+  //! \ingroup grp_pooled
+  //! Calls free(T).  This is only necessary because there is no unique_ptr yet.
+  template<class T>
+  struct scoped_ptr {
+    public:
+
+    scoped_ptr() : p_(NULL) {}
+    scoped_ptr(T *p) : p_(p) {}
+
+    T &operator*() const { return *p_; }
+    T *operator->() const { return p_; }
+
+    T *get() const { return p_; }
+    T *release() { T *const p = p_; p_ = NULL; return p; }
+
+    ~scoped_ptr() { if (p_) free(p_); }
+
+    T *p_;
+  };
+
   //! Pooling which remembers how much was allocated.
   //@{
   //! \ingroup grp_pooled

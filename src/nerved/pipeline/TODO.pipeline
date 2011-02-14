@@ -18,15 +18,15 @@ Finishing Off
 * packet_return
   - don't like the name
   - header file is too small really
-* integrate the pipeline with the rest of the project
-  - see todos in config-proto (which is the base for that)
-  - the "plugin-proto" directory can be removed when the integration begins
+*
 
 Unsolved Problems
 -----------------
 
 These are both algorithmic so they can be done whenever.  I need to move this
 todo over to the integration part.
+
+The progressive buffer bit is necessary or the pipeline won't work properly.
 
 * section blocking check:
   - I'm pretty sure it matters whether we block on input and output, but at the

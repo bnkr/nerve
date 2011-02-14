@@ -21,6 +21,6 @@ namespace pipeline {
 
   //! \ingroup grp_pipeline
   //! Create the pipeline based on the config.
-  configure_status configure(pipeline_data &, const config::pipeline_config &, const cli::settings &);
+  configure_status configure(pipeline_data &, config::pipeline_config &, const cli::settings &);
 }
 #endif

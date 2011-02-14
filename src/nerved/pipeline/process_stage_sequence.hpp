@@ -8,7 +8,7 @@
 #include "progressive_buffer.hpp"
 #include "simple_stages.hpp"
 
-#include "../asserts.hpp"
+#include "../util/asserts.hpp"
 
 #include <vector>
 

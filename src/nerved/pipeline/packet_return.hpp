@@ -5,7 +5,8 @@
 #define PIPELINE_PACKET_RETURN_HPP_2ivoc82g
 
 #include <cstdlib>
-#include "../asserts.hpp"
+
+#include "../util/asserts.hpp"
 
 namespace pipeline {
 
