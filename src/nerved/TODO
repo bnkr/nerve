@@ -1,8 +1,8 @@
-Prototype Integration
-----------------------
+Output Usage
+-------------
 
-* make config compilable
-* config should use a general logging abstraction
+* use output in the config bit
+* add trace calls all over the place
 
 Pipeline Initialisation
 -----------------------
@@ -18,7 +18,6 @@ Socket and State
 Problems
 --------
 
-* logging output or similar -- view data in other words
 * player state (e.g playlist including restoring state data)
   - this is the integration of socket and pipeline
 * client communication (i.e saying when something has changed)
