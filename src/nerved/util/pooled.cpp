@@ -1,3 +1,6 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+
 #include "pooled.hpp"
 #include "asserts.hpp"
 

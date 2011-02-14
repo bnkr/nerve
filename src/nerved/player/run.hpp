@@ -1,3 +1,7 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+#ifndef PLAYER_RUN_HPP_9kudq4dy
+#define PLAYER_RUN_HPP_9kudq4dy
 namespace cli { class settings ; }
 namespace pipeline { class pipeline_data; }
 
@@ -12,3 +16,4 @@ namespace player {
   //! adds in the socket and player state.
   run_status run(pipeline::pipeline_data &, const cli::settings &);
 }
+#endif

@@ -1,3 +1,9 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+
+#ifndef CLI_SETTINGS_HPP_udliv6ow
+#define CLI_SETTINGS_HPP_udliv6ow
+
 #include "../config/config_parser.hpp"
 #include "../util/asserts.hpp"
 
@@ -49,3 +55,4 @@ namespace cli {
     const char *log_;
   };
 }
+#endif

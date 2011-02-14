@@ -1,3 +1,7 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+#ifndef CONFIG_PARSE_HPP_4qe18k20
+#define CONFIG_PARSE_HPP_4qe18k20
 #include "pipeline_configs.hpp"
 
 namespace cli { class settings; }
@@ -13,3 +17,4 @@ namespace config {
   //! point to the config module.
   parse_status parse(pipeline_config &, const cli::settings &);
 }
+#endif
