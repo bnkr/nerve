@@ -3,7 +3,6 @@
 
 #ifndef OUTPUT_CONFIGURE_HPP_tdxzgh0a
 #define OUTPUT_CONFIGURE_HPP_tdxzgh0a
-#include "logger.hpp"
 
 namespace cli { class settings; }
 
@@ -15,6 +14,6 @@ namespace output {
 
   //! \ingroup grp_output
   //! Called by main to configure the output settings.
-  configure_status configure(logger &, const cli::settings &);
+  configure_status configure(const cli::settings &);
 };
 #endif

@@ -2,11 +2,15 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "configure.hpp"
 
+#include "logging.hpp"
 #include "../cli/settings.hpp"
 
 #include <iostream>
 
-output::configure_status output::configure(output::logger &lg, const cli::settings &s) {
-  std::cout << "output::configure not implemented" << std::endl;
-  return configure_fail;
+output::configure_status output::configure(const cli::settings &s) {
+  // TODO:
+  //   Very incomplete, obviously.
+  detail::log_data &ld = detail::get_data();
+  ld.console(stderr);
+  return configure_ok;
 }

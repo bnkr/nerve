@@ -20,8 +20,7 @@ int main(int argc, char **argv) {
     break;
   }
 
-  output::logger log;
-  switch (output::configure(log, settings)) {
+  switch (output::configure(settings)) {
   case output::configure_fail:
     return EXIT_FAILURE;
   case output::configure_ok:
