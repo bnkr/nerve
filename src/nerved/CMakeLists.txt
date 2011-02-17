@@ -37,6 +37,7 @@ bbuild_exe(
     pipeline/configure.cpp
     player/run.cpp
     util/pooled.cpp
+    btrace/crash_detector.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS
