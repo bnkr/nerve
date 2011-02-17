@@ -51,6 +51,9 @@ using namespace config;
 //   * at various points the container and contained can be invalid
 //   * more difficult to add polymorphic objects (you need lots of create
 //     functions)
+//   * polymorphic creation is a candiate for being abstracted to the objects
+//     anwyay
+//   * object allocation could come from vectors in the main objects
 //
 //   Other method:
 //
@@ -177,8 +180,13 @@ stage_sequence *configure_sequence(pipeline::section &sec, stage_config::categor
 }
 
 void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
-  pipeline::simple_stage *const stage = create_stage(stage_conf);
-  transfer_mem ptr(stage);
+  // Passing the stage_conf here breaks the encapsulation we had in the rest of
+  // this configure function, but the only other way is a huge switch statement
+  // and billions of downcasts.
+  //
+  // TODO:
+  //   Perhaps we could have stage_creator sc(stage_conf); seq.create_stage(sc);
+  pipeline::simple_stage *const stage = seq.create_stage(stage_conf);
 
   if (stage_conf.configs_given()) {
     typedef stage_config::configs_type configs_type;
@@ -193,56 +201,5 @@ void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
       const char *const value = conf->value();
       stage->configure(key, value);
     }
-  }
-
-  // TODO:
-  //   It's possilble this should be abstracted anyway.  The amount of headers
-  //   is huge!  Perhaps each sequence should deal with stages in its own way?
-  //   It will be hard to keep configure() as the only join between pipeline and
-  //   config though.
-
-
-  // TODO:
-  //   This is horrible!
-  switch (stage_conf.category()) {
-  case stage_config::cat_process:
-    reinterpret_cast<process_stage_sequence*>(&seq)->add_process(reinterpret_cast<process_stage*>(ptr));
-    break;
-  case stage_config::cat_observe:
-    // TODO:
-    //   The add_x convention is different from what we've been using in the
-    //   rest of the funcition (create_x).
-    seq.add_observe(reinterpret_cast<observer_stage*>(ptr));
-    break;
-  case stage_config::cat_input:
-    seq.add_input(reinterpret_cast<input_stage*>(ptr));
-    break;
-  case stage_config::cat_output:
-    seq.add_output(reinterpret_cast<output_stage*>(ptr));
-    break;
-  }
-}
-
-pipeline::simple_stage *create_stage(stage_config &stage_conf) {
-  if (stage_conf.internal()) {
-    switch (stage_conf.stage_id()) {
-    case stage_config::id_unset:
-    case stage_config::id_plugin:
-      NERVE_ABORT("id of unset or plugin should be impossible");
-      break;
-    case stage_config::id_ffmpeg:
-      return pooled::alloc<ffmpeg_input_stage>();
-    case stage_config::id_sdl:
-      return pooled::alloc<sdl_output_stage>();
-    }
-  }
-  else {
-    // TODO:
-    //   This one's interesting because we must have already loaded the stage
-    //   (to some extent) in order to know what category it is in.  That's
-    //   necessary in order to deal with the order of categories which I quite
-    //   like having in the semantic pass.
-    const char *const where = NERVE_CHECK_PTR(stage_conf.path());
-    return NULL;
   }
 }
