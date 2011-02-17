@@ -7,19 +7,27 @@
 #include "simple_stages.hpp"
 
 namespace pipeline {
+  class packet;
 
+  //! \ingroup grp_pipeline
+  //! Polymoprphic outputtter which is intended to abstract the thread and local
+  //! pipes.
   class outputter {
-    virtual void write(packet) = 0;
+    public:
+    virtual void write(packet *) = 0;
+    virtual ~outputter() {}
   };
 
-  class local_outputter  : outputter {
-    local_pipe p_;
-    void write(packet);
+  //! \ingroup grp_pipeline
+  class local_outputter : public outputter {
+    public:
+    void write(packet*);
   };
 
-  class thread_outputter : outputter {
-    thread_pipe p_;
-    void write(packet);
+  //! \ingroup grp_pipeline
+  class thread_outputter : public outputter {
+    public:
+    void write(packet *);
   };
 
   /*!
@@ -27,27 +35,25 @@ namespace pipeline {
    * Specialised outputting stage.
    */
   class output_stage : public observer_stage {
-    void output(pkt, outputter) = 0;
-    void reconfigure(pkt) = 0;
+    public:
+    virtual void output(packet *, outputter *) = 0;
+    virtual void reconfigure(packet *) = 0;
 
-    // A pipe to the input thread.  This can be local or threaded.
-    outputter input_events_;
+    outputter *input_events_;
 
+    // Fullfills the 'reconfigure' event.  Somebody has to check it.  If we do
+    // it here then it avoids type checking of all stages.  Additionally, it
+    // means we can later have a reconfgiure event which a configuration chaning
+    // stage could deal with.
     void observe(packet *pkt) {
-      // fullfills the 'reconfigure' event.  Somebody has to check it.  If we do
-      // it here then it avoids type checking of all stages.  Additionally, it
-      // means we can later have a reconfgiure event which a configuration chaning
-      // stage could deal with.
-
       // TODO:
       //   Perhaps better in a hypothetical output seqeuence.
+      // if (pkt.configuration != last_configuration) {
+      //   this->reconfigure(pkt);
+      // }
 
-      if (pkt.configuration != last_configuration) {
-        this->reconfigure(pkt);
-      }
-
-      // hmmm...
-      this->real_observe(pkt);
+      // Prolly this should pass a specialised event interface.
+      this->output(pkt, input_events_);
     }
   };
 
