@@ -18,76 +18,10 @@
 using namespace pipeline;
 using namespace config;
 
-// TODO:
-//   In general, this is messy.  It requires a stateful interface on the
-//   pipeline objects, and lots of indirect alloaction (array of allocated
-//   pointers, iow).  We also can't do much optimisation because the counts of
-//   objects aren't available.
-//
-//   The first would ideally be solved by creating all the objects in a stateful
-//   list and then giving them to the pipeline.  This seems to be too much work
-//   for nerve which is, after all, not a library.
-//
-//   It's harder to dismiss holding pointers.  We already know the full counts
-//   for every type.  Solving this means that memory ownership is much harder.
-//
-//   One solution is to have owned arrays of each type in the pipeline data,
-//   which we access indices of.  This means there is still some arrays of
-//   pointers.  This partially solves the statefulness issues too (or a similar
-//   solution could if we stored an array of arrays).
-//
-//   Another is to hae the arrays in the pipeline objects.  That makes ownership
-//   easier, but it's just as stateful.  Also some objects are polymorphic and
-//   can only be held by pointer.
-//
-//   What we have now:
-//
-//     data = container.create # stores data
-//     data.modify(config)
-//     container.validate
-//
-//   * nature of allocation is abstracted
-//   * hence ownership is irrelevant
-//   * at various points the container and contained can be invalid
-//   * more difficult to add polymorphic objects (you need lots of create
-//     functions)
-//   * polymorphic creation is a candiate for being abstracted to the objects
-//     anwyay
-//   * object allocation could come from vectors in the main objects
-//
-//   Other method:
-//
-//     data = allocate
-//     data.modify(config)
-//     container.add(data) # also validates
-//
-//   * pointer ownership must be transfered
-//   * validaity is guaranteed
-//
-//   Total method:
-//
-//     init_data = allocate
-//     init_data.modify(config)
-//     contained = alloacte(init_data)
-//     container_init_data << contained
-//     ...
-//     container = allocate(init_data)
-//
-//   * lots of pointer ownership transfer
-//   * long code
-//   * validity is guaranteed
-//   * objects are only ever constructed valid
-//
-//
-
 namespace {
   void configure_section(pipeline::job &job, section_config &sec_conf);
   void configure_stage(pipeline::stage_sequence &seq, stage_config &stage_conf);
   void configure_sequences(pipeline::section &sec, section_config &sec_conf);
-
-  stage_sequence *configure_sequence(pipeline::section &sec, stage_config::category_type c);
-
-  pipeline::simple_stage *create_stage(stage_config &stage_conf);
 }
 
 configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &cli) {
