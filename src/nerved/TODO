@@ -7,9 +7,10 @@ Output Usage
 Pipeline Initialisation
 -----------------------
 
-* implement the pipeline::configure function
 * fix the progressive buffer stack thing
-* do connectors (note that some of the code for that is still in plugin-proto)
+* connector configuration
+* connector objects
+  - note that some of the code for that is still in plugin-proto
 * write some info on the conventions used for pipeline initialisation (perhaps
   in the spec?)  Include pointer validity constraints.
 
