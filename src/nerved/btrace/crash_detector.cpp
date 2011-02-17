@@ -412,7 +412,7 @@ crash_backtrace::crash_backtrace() {
   //   more advanced data.  Using DWARF, we should be able to get even further
   //   (although I don't know whether we might need dlinfo as well).
 
-  strings_ = ::backtrace_symbols(bt.addresses(), rbt.size());
+  strings_ = ::backtrace_symbols(rbt.addresses(), rbt.size());
   if (strings_ == NULL) {
     throw std::bad_alloc();
   }

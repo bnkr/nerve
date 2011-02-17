@@ -1,2 +1,4 @@
 Debug info:
 - http://stackoverflow.com/questions/45954/python-libdwarf-module
+
+Libbfd is unacceptable becuase it's GPL.
