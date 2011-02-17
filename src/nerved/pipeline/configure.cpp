@@ -115,7 +115,7 @@ void configure_section(pipeline::job &job, section_config &sec_conf) {
   section_config *const prev = sec_conf.pipeline_previous();
   section_config *const next = sec_conf.pipeline_next();
 
-  pipeline::section *const sec = job.create_section();
+  pipeline::section &sec = *job.create_section();
 
   // TODO:
   //   This doesn't work because the section is not supposed to know about the
@@ -131,14 +131,14 @@ void configure_section(pipeline::job &job, section_config &sec_conf) {
     sec.in_connector(x);
   }
   else {
-    sec->in_connector(start_terminator);
+    sec.in_connector(start_terminator);
   }
 
   if (next) {
-    sec->out_connector(x);
+    sec.out_connector(x);
   }
   else {
-    sec->in_connector(start_terminator);
+    sec.in_connector(start_terminator);
   }
 
   configure_sequences(sec, sec_conf);
@@ -146,10 +146,6 @@ void configure_section(pipeline::job &job, section_config &sec_conf) {
 
 void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
   stage_config::categories last_cat = stage_config::cat_unset;
-
-  // TODO:
-  //   This needs to be re-done in order to properly support the differing
-  //   types.  The traversal must go a lot like that in the semantic_pass.
 
   pipeline::stage_sequence *sequence = NULL;
   typedef section_config::stage_iterator_type   stage_iter_t;
