@@ -157,26 +157,11 @@ void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
     const stage_config::category_type this_cat = stage_conf->category();
 
     if (this_cat != last_cat) {
-      sequence = configure_sequence(sec, this_cat);
+      sequence = sec.create_sequence(this_cat);
     }
 
     configure_stage(*sequence, *stage_conf);
   }
-}
-
-stage_sequence *configure_sequence(pipeline::section &sec, stage_config::categories_type c) {
-  switch (c) {
-  case stage_config::cat_process:
-    return pooled::alloc<process_stage_sequence>();
-  case stage_config::cat_observe:
-    return pooled::alloc<observer_stage_sequence>();
-  case stage_config::cat_input:
-    return pooled::alloc<input_stage_sequence>();
-  case stage_config::cat_output:
-    return pooled::alloc<output_stage_sequence>();
-  }
-
-  NERVE_ABORT("how did you get here?");
 }
 
 void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
