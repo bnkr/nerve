@@ -19,12 +19,14 @@ using namespace pipeline;
 using namespace config;
 
 namespace {
-  void configure_section(pipeline::job &job, section_config &sec_conf);
   void configure_stage(pipeline::stage_sequence &seq, stage_config &stage_conf);
   void configure_sequences(pipeline::section &sec, section_config &sec_conf);
 }
 
-configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &cli) {
+// TODO: only to help it compile while designing
+typedef int connection;
+
+configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &) {
   typedef pipeline_config::job_iterator_type    job_iter_t;
   typedef job_config::section_iterator_type     section_iter_t;
 
@@ -32,9 +34,19 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
     pipeline::job &job = *NERVE_CHECK_PTR(pd.create_job());
 
     section_config *sec_conf = job_conf->job_first();
+    section *prev_sec = NULL;
     do {
       NERVE_ASSERT(&(*job_conf) == &(sec_conf->parent_job()), "link order shouldn't go into another job_conf");
-      configure_section(job, *sec_conf);
+
+      section_config *const prev = sec_conf->pipeline_previous();
+      section_config *const next = sec_conf->pipeline_next();
+
+      connection *const in = prev ? prev_sec->output_pipe() : pd.start_terminator();
+      connection *const out = next ? pd.create_pipe() : pd.end_terminator();
+
+      prev_sec = job.create_section(in, out);
+
+      configure_sequences(*prev_sec, *sec_conf);
     } while ((sec_conf = sec_conf->job_next()) != NULL);
   }
 
@@ -42,40 +54,6 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   pc.clear();
 
   return configure_ok;
-}
-
-//! Add a new section to the job complete with contained sequences etc.
-void configure_section(pipeline::job &job, section_config &sec_conf) {
-  section_config *const prev = sec_conf.pipeline_previous();
-  section_config *const next = sec_conf.pipeline_next();
-
-  pipeline::section &sec = *job.create_section();
-
-  // TODO:
-  //   This doesn't work because the section is not supposed to know about the
-  //   connectors.  That said, it might be easier for that to be the case.  The
-  //   create_sequence method would do the piping for us.
-  //
-  //   It might even be possible for the create_section method to do the
-  //   thread_pipe bits for sections.  That design seems appealing to me because
-  //   it keeps this part down to strictly iteration.  It might mean that the
-  //   create_x methods end up having some kind of state.
-
-  if (prev) {
-    sec.in_connector(x);
-  }
-  else {
-    sec.in_connector(start_terminator);
-  }
-
-  if (next) {
-    sec.out_connector(x);
-  }
-  else {
-    sec.in_connector(start_terminator);
-  }
-
-  configure_sequences(sec, sec_conf);
 }
 
 void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
