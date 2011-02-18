@@ -81,6 +81,9 @@ pretty_backtrace::pretty_backtrace() {
     current.object_address_ = info.dli_fbase;
     current.symbol_address_ = info.dli_saddr;
 
+    // TODO:
+    //   I'm pretty sure these c-strings I am storing are stored on the stack.
+
     if (info.dli_fname) {
       if (info.dli_fname[0] == '\0') {
         // This seems to be the case.
