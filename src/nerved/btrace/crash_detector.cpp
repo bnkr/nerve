@@ -383,8 +383,10 @@ void console_logger::log(const crash_data &d) {
     typedef pretty_backtrace::iterator iter_t;
 
     for (iter_t i = d.backtrace().begin(); i != d.backtrace().end(); ++i) {
-      std::cerr << "* " << i->symbol() << std::endl;
-      std::cerr << "  " << i->file() << ":" << i->line() << std::endl;
+      std::cerr << "* in " << i->symbol() << std::endl;
+      std::cerr << "  defined " << i->symbol_file() << ":" << i->symbol_line() << std::endl;
+      std::cerr << "  mapped " << i->object() << " at " << i->object_address() << std::endl;
+      std::cerr << "  called " << i->call_file() << ":" << i->call_line() << std::endl;
     }
   }
   else {

@@ -1,10 +1,17 @@
 // Copyright (c) 2008-2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
-#include <execinfo.h>
-#include <cstdlib>
-
 #include "backtrace.hpp"
+#include "demangle.hpp"
+
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <boost/bind.hpp>
+#include <execinfo.h>
+#include <dlfcn.h>
+
+using namespace btrace;
 
 /*****************
  * Raw backtrace *
@@ -16,8 +23,8 @@ raw_backtrace::raw_backtrace() {
   {
     int max_size = 128;
     do {
-       addrs_.reset(new (void*)[max_size]);;
-       got = ::backtrace(addr_, max_size);
+       addrs_.reset(new void*[max_size]);;
+       got = ::backtrace(addrs_.get(), max_size);
        max_size += 128;
     } while (got == max_size);
   }
@@ -34,24 +41,50 @@ raw_backtrace::raw_backtrace() {
  * Pretty backtrace *
  ********************/
 
+static const char unknown_file[] = "file unknown";
+static const char unknown_function[] = "file unknown";
+
 pretty_backtrace::pretty_backtrace() {
   raw_backtrace rbt;
-  execinfo_init();
 
-  // TODO:
-  //   This is the most basic and least useful trace.  Using dlinfo we can get
-  //   more advanced data.  Using DWARF, we should be able to get even further
-  //   (although I don't know whether we might need dlinfo as well).
+  stack_.assign(rbt.size(), pretty_backtrace::call());
 
-  strings_ = ::backtrace_symbols(rbt.addresses(), rbt.size());
-  if (strings_ == NULL) {
-    throw std::bad_alloc();
+  size_t index = 0;
+  raw_backtrace::iterator e = rbt.end();
+  for (raw_backtrace::iterator i = rbt.begin(); i != e; ++i) {
+    // this points to somewhere in the function that will be returned to
+    const void *const return_pointer = *i;
+
+    call &current = stack_[index++];
+
+    Dl_info info;
+    int ret = ::dladdr(return_pointer, &info);
+    if (ret == 0) {
+      continue;
+    }
+
+    current.object_address_ = info.dli_fbase;
+
+    if (info.dli_fname) {
+      current.object_ = info.dli_fname;
+    }
+
+    if (info.dli_saddr) {
+      current.symbol_address_ = info.dli_saddr;
+    }
+
+    if (info.dli_sname) {
+      current.symbol_ = btrace::demangle_name(info.dli_sname);
+    }
+
+    // TODO:
+    //   Now use dwarf to find the location of return_pointer.
   }
-  size_ = backtrace_size - offset_;
 }
 
-bool pretty_backtrace::empty() const { return false; }
+pretty_backtrace::~pretty_backtrace() {
+  std::for_each(stack_.begin(), stack_.end(), boost::bind(&pretty_backtrace::clean_stack, this, _1));
+}
 
-pretty_backtrace::iterator pretty_backtrace::begin() const { return NULL;  }
-pretty_backtrace::iterator pretty_backtrace::end() const { return NULL; }
-
+void pretty_backtrace::clean_stack(call &c) {
+}

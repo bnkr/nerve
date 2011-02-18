@@ -5,6 +5,11 @@
 #define BTRACE_BACKTRACE_HPP_i4ayhxj5
 
 #include <boost/scoped_array.hpp>
+#include <boost/utility.hpp>
+
+#include <vector>
+#include <string>
+#include <cstdlib>
 
 namespace btrace {
   /*!
@@ -41,32 +46,62 @@ namespace btrace {
     public:
 
     struct call {
-      // TODO:
-      //   This will prolly change to accomodate whatever data we can extract
-      //   from the data.
+      //! Name of the elf object (or whatever)
+      const char *object() const { return object_; }
+      //! Where the object is mapped.
+      const void *object_address() const { return object_address_; }
 
       //! Demangled symbol name.  Symbol is null at the position of error.
-      const char *symbol() const { return symbol_; }
-      //! File containing symbol
-      const char *file() const { return file_; }
-      //! Line of call.
-      int line() const { return line_; }
+      const char *symbol() const { return symbol_.c_str(); }
+      //! Location of the symbol acording to the linker.
+      const void *symbol_address() const { return symbol_address_; }
 
-      const char *file_;
-      int line_;
-      const char *symbol_;
+      // TODO:
+      //   Not sure about the locations.  Does call mean where this was called
+      //   or where we left that function?
+
+      //! Location where the symbol is defined.
+      const char *symbol_file() const { return symbol_file_; }
+      //! Line of definition.
+      int symbol_line() const { return symbol_line_; }
+
+      //! Location where the symbol was called
+      const char *call_file() const { return call_file_; }
+      //! Line of call.
+      int call_line() const { return call_line_; }
+
+      const char *object_;
+      const void *object_address_;
+
+      std::string symbol_;
+      const void *symbol_address_;
+      const char *symbol_file_;
+      int symbol_line_;
+
+      const char *call_file_;
+      int call_line_;
+
     };
 
-    typedef call const * iterator;
+    typedef std::vector<call> stack_type;
+    typedef stack_type::const_iterator iterator;
 
     pretty_backtrace();
+    ~pretty_backtrace();
 
     //! Some platforms can't find a backtrace.
-    bool empty() const;
+    bool empty() const { return stack().empty(); }
 
     //! Call stack with the most recent call first.
-    iterator begin() const;
-    iterator end() const;
+    iterator begin() const { return stack_.begin(); }
+    iterator end() const { return stack().end(); }
+
+    const stack_type &stack() const { return stack_; }
+    stack_type &stack() { return stack_; }
+
+    private:
+    void clean_stack(call &);
+    stack_type stack_;
   };
 }
 
