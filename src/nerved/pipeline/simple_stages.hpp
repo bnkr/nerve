@@ -24,6 +24,9 @@ namespace pipeline {
     virtual void abandon() = 0;
     virtual void flush() = 0;
     virtual void finish() = 0;
+    //! Recieve a key and a value configuration which was read from the config
+    //! file.
+    virtual void configure(const char *, const char *);
   };
 
   /*!

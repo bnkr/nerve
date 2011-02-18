@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <boost/bind.hpp>
 
+namespace config { class stage_config; }
+
 namespace pipeline {
   /*!
    * \ingroup grp_pipeline
@@ -34,6 +36,11 @@ namespace pipeline {
     //! Note: see docs for class section to explain why outputted packets is
     //! done with the connector abstraction.
     virtual step_state sequence_step() = 0;
+
+    // TODO:
+    //   Later I should remove the config object to increase modularity.  No
+    //   other part of the pipeline depends on the config except this.
+    virtual simple_stage *create_stage(::config::stage_config &);
 
     protected:
 

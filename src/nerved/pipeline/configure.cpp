@@ -23,9 +23,6 @@ namespace {
   void configure_sequences(pipeline::section &sec, section_config &sec_conf);
 }
 
-// TODO: only to help it compile while designing
-typedef int connection;
-
 configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &) {
   typedef pipeline_config::job_iterator_type    job_iter_t;
   typedef job_config::section_iterator_type     section_iter_t;
@@ -41,8 +38,8 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       section_config *const prev = sec_conf->pipeline_previous();
       section_config *const next = sec_conf->pipeline_next();
 
-      connection *const in = prev ? prev_sec->output_pipe() : pd.start_terminator();
-      connection *const out = next ? pd.create_pipe() : pd.end_terminator();
+      connector *const in = prev ? prev_sec->output_pipe() : pd.start_terminator();
+      connector *const out = next ? pd.create_pipe() : pd.end_terminator();
 
       prev_sec = job.create_section(in, out);
 

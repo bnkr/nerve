@@ -9,6 +9,9 @@
 #include <vector>
 
 namespace pipeline {
+  struct section;
+  struct connector;
+
   /*!
    * \ingroup grp_pipeline
    *
@@ -17,8 +20,9 @@ namespace pipeline {
    */
   class job {
     public:
-
     typedef std::vector<section> sections_type;
+
+    section *create_section(connector *, connector *);
 
     void job_thread() {
 forever:

@@ -5,6 +5,7 @@
 #define PIPELINE_SECTION_HPP_1auycg4v
 
 #include "stage_sequence.hpp"
+#include "connectors.hpp"
 
 #include <vector>
 #include <boost/type_traits/remove_pointer.hpp>
@@ -48,7 +49,6 @@ namespace pipeline {
    * might be that we can optimise out the polymorphic connector.
    */
   class section {
-
     public:
     typedef std::vector<stage_sequence*> sequences_type;
     typedef boost::remove_pointer<sequences_type::value_type>::type sequence_type;
@@ -61,6 +61,16 @@ namespace pipeline {
       NERVE_ASSERT(! sequences().empty(), "sequence list must be initialised before this");
       reset_start();
     }
+
+    // TODO:
+    //   Ideally this should be in some special shared code between config and
+    //   pipeline.
+    typedef config::stage_config::category_type category_type;
+
+    stage_sequence *create_sequence(category_type t);
+
+    connector *output_pipe();
+    connector *input_pipe();
 
     bool would_block() {
       return
