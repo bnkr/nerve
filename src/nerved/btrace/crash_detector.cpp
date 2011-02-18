@@ -142,7 +142,7 @@ detail::crash_static::crash_static() : init_count_(0), stack_mem_(0) {
 
 void detail::crash_static::static_init() {
   if (init_count_ == 0) {
-    const size_t size = 4096;
+    const size_t size = 4 * 4096;
     stack_t new_stack;
     new_stack.ss_flags = 0;
     new_stack.ss_sp = this->stack_mem_ = std::malloc(size);
@@ -360,30 +360,55 @@ void print_call(const ::btrace::pretty_backtrace::call &c) {
   bool need_indent = false;
   std::cerr << "*";
 
-  if (c.call_file()) {
-    std::cerr << " at " << c.call_file() << ":" << c.call_line() << std::endl;
+  if (c.symbol() || c.symbol_address()) {
     need_indent = true;
+    std::cerr << " within ";
+
+    if (c.symbol()) {
+      std::cerr << c.symbol() << " [" << c.symbol_address() << "]" << std::endl;
+    }
+    else {
+      std::cerr << "at " << c.symbol_address() << std::endl;
+    }
   }
 
-  if (c.symbol()) {
-    if (need_indent) std::cerr << " ";
-    need_indent = true;
-    std::cerr << " in " << c.symbol() << std::endl;
-  }
-
+  // This is actually not useful because chances are the call location is in a
+  // very similar place to the definition of the function.
   if (c.symbol_file()) {
     if (need_indent) std::cerr << " ";
     need_indent = true;
-    std::cerr << " defined " << c.symbol_file() << ":" << c.symbol_line() << std::endl;
+    std::cerr << " defined at " << c.call_file() << " " << c.call_line() << std::endl;
   }
 
-  if (c.object()) {
+  if (c.call_file() || c.call_address()) {
     if (need_indent) std::cerr << " ";
     need_indent = true;
-    std::cerr << " object " << c.object() << " mapped at " << c.object_address() << std::endl;
+
+    if (c.call_file()) {
+      std::cerr << " at " << c.call_file() << ":" << c.call_line() << std::endl;
+    }
+    else {
+      std::cerr << " at " << c.call_address() << std::endl;
+    }
+  }
+
+  if (c.object() || c.object_address()) {
+    if (need_indent) std::cerr << " ";
+    need_indent = true;
+    std::cerr << " within ";
+
+    if (c.object()) {
+      std::cerr << c.object() << " [" << c.object_address() << "]" << std::endl;
+    }
+    else {
+      std::cerr << "at " << c.object_address() << std::endl;
+    }
+  }
+
+  if (! need_indent) {
+    std::cerr << " mysterious depths" << std::endl;
   }
 }
-
 
 void console_logger::log(const crash_data &d) {
   std::cerr << "** SIGNAL CAUGHT **" << std::endl;
@@ -422,9 +447,8 @@ void signal_handler(int sig, siginfo_t *inf, void *) {
   crash_data dt(inf, cb);
 
   crash_detector *const d = detail::crash_data.detector(sig);
-  if (d) {
-    d->logger()->log(dt);
-  }
+  assert(d != NULL);
+  d->logger()->log(dt);
 
   raise(sig);
 }

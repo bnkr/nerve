@@ -81,11 +81,14 @@ pretty_backtrace::pretty_backtrace() {
     current.object_address_ = info.dli_fbase;
     current.symbol_address_ = info.dli_saddr;
 
-    // fprintf(stderr, "obj addr: %x\n", current.object_address_);
-    // fprintf(stderr, "sym addr: %x\n", current.symbol_address_);
     if (info.dli_fname) {
-      // fprintf(stderr, "fname: %s\n", info.dli_fname);
-      current.object_ = info.dli_fname;
+      if (info.dli_fname[0] == '\0') {
+        // This seems to be the case.
+        current.object_ = "<kernel>";
+      }
+      else {
+        current.object_ = info.dli_fname;
+      }
     }
     else {
       assert(current.object() == NULL);
