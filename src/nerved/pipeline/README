@@ -1,0 +1,14 @@
+A full explanation of the multi-threaded pipeline design is available in doc.
+
+In addition, the pipeline module contains the means to initialise the pipeline,
+and the bridge between the config module and the pipeline module.  The bridge is
+the configure() function.
+
+Apart from some exceptions (at the time of writing only create_stage), only the
+configure function interacts with both the pipeline and the config.  This
+exception should be removed at some point.
+
+Creation of pipeline objects is done by the create_x functions.  This abstracts
+memory managment and storage.  Each create_x must ensure that pointers are not
+invalidated by subsequent operations either on the returned object or on the
+existing pipeline object.
