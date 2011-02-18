@@ -1,6 +1,7 @@
-// Copyright (C) 2008-2011, James Webber.
+// Copyright (c) 2008-2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "crash_detector.hpp"
+#include "backtrace.hpp"
 
 #include "arch.hpp"
 
@@ -8,8 +9,6 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
-
-#include <execinfo.h>
 
 using namespace btrace;
 
@@ -232,7 +231,8 @@ static const char * const sig_table[] =
 #endif
 
 const char *detail::get_signal_name(int s) {
-  if (s >= sizeof(sig_table)) {
+  assert(s > 0);
+  if ((size_t) s >= sizeof(sig_table)) {
     return NULL;
   }
   else {
@@ -351,79 +351,6 @@ bool crash_data::memory_fault() const {
   }
 }
 
-/*************
- * Backtrace *
- *************/
-
-namespace btrace {
-  //! \ingroup grp_crash
-  //! Uses various hax and horrible imporable methods to retrive a list of the
-  //! instruction addresses on the stack.  The most recent call is *last* in the
-  //! list and will be the calling function (not any function of raw_backtrace).
-  class raw_backtrace {
-    public:
-    typedef void const *const *addresses_type;
-
-    raw_backtrace();
-
-    addresses_type addresses() const { return addr_; }
-    size_t size() { return size_; }
-
-    typedef addresses_type iterator;
-
-    iterator begin() const { return addresses(); }
-    iterator end() const { return (addresses() + this->size()); }
-
-    addresses_type addresses() const { return addrs_.get(); }
-    size_t size() { return size_; }
-
-    private:
-    size_t size_;
-    boost::scoped_array<void*> addrs_;
-  };
-}
-
-raw_backtrace::raw_backtrace() {
-  int got = 0;
-  // Keep increasing allocation until we can fit the entire stack in there.
-  {
-    int max_size = 128;
-    do {
-       addrs_.reset(new (void*)[max_size]);;
-       got = ::backtrace(addr_, max_size);
-       max_size += 128;
-    } while (got == max_size);
-  }
-
-  if (got < 1) {
-    size_ = 0;
-  }
-  else {
-    size_ = got - 1;
-  }
-}
-
-crash_backtrace::crash_backtrace() {
-  raw_backtrace rbt;
-  execinfo_init();
-
-  // TODO:
-  //   This is the most basic and least useful trace.  Using dlinfo we can get
-  //   more advanced data.  Using DWARF, we should be able to get even further
-  //   (although I don't know whether we might need dlinfo as well).
-
-  strings_ = ::backtrace_symbols(rbt.addresses(), rbt.size());
-  if (strings_ == NULL) {
-    throw std::bad_alloc();
-  }
-  size_ = backtrace_size - offset_;
-}
-
-bool crash_backtrace::empty() const { return false; }
-
-crash_backtrace::iterator crash_backtrace::begin() const { return NULL;  }
-crash_backtrace::iterator crash_backtrace::end() const { return NULL; }
-
 /******************
  * Signal Handler *
  ******************/
@@ -453,7 +380,7 @@ void console_logger::log(const crash_data &d) {
   if (! d.backtrace().empty()) {
     std::cerr << "Backtrace:" << std::endl;
 
-    typedef crash_backtrace::iterator iter_t;
+    typedef pretty_backtrace::iterator iter_t;
 
     for (iter_t i = d.backtrace().begin(); i != d.backtrace().end(); ++i) {
       std::cerr << "* " << i->symbol() << std::endl;
@@ -466,7 +393,7 @@ void console_logger::log(const crash_data &d) {
 }
 
 void signal_handler(int sig, siginfo_t *inf, void *) {
-  crash_backtrace cb;
+  pretty_backtrace cb;
   crash_data dt(inf, cb);
 
   crash_detector *const d = detail::crash_data.detector(sig);

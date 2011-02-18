@@ -38,6 +38,7 @@ bbuild_exe(
     player/run.cpp
     util/pooled.cpp
     btrace/crash_detector.cpp
+    btrace/backtrace.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS

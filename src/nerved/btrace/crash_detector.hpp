@@ -20,39 +20,7 @@ namespace btrace {
     const char *get_signal_name(int);
   }
 
-  /*!
-   * \ingroup grp_crash
-   * Used to create and store a backtrace.
-   */
-  class crash_backtrace : boost::noncopyable {
-    public:
-
-    struct call {
-      // TODO:
-      //   This will prolly change to accomodate whatever data we can extract
-      //   from the data.
-
-      //! Demangled symbol name.  Symbol is null at the position of error.
-      const char *symbol() const { return symbol_; }
-      //! File containing symbol
-      const char *file() const { return file_; }
-      //! Line of call.
-      int line() const { return line_; }
-
-      const char *file_;
-      int line_;
-      const char *symbol_;
-    };
-
-    typedef call const * iterator;
-
-    //! Some platforms can't find a backtrace.
-    bool empty() const;
-
-    //! Call stack with the most recent call first.
-    iterator begin() const;
-    iterator end() const;
-  };
+  struct pretty_backtrace;
 
   //! \ingroup grp_crash
   //! What happened in a crash.  This is passed to the logger.  Do not query the
@@ -60,7 +28,10 @@ namespace btrace {
   //! you get nonsense values.
   class crash_data {
     public:
-    explicit crash_data(siginfo_t *inf, crash_backtrace &bt) : bt_(bt), inf_(inf) {}
+    explicit crash_data(siginfo_t *inf, pretty_backtrace &bt)
+    : inf_(inf),
+      bt_(bt)
+    {}
 
     //! Causing signal
     int signal() const { return inf_->si_signo; }
@@ -68,7 +39,7 @@ namespace btrace {
     const char *signal_name() const { return detail::get_signal_name(this->signal()); }
 
     //! Reason for sending of the signal.
-    int code() const { inf_->si_code; }
+    int code() const { return inf_->si_code; }
     //! Text representing code.
     const char *code_name() const;
 
@@ -83,14 +54,14 @@ namespace btrace {
     bool memory_fault() const;
     //! What memory caused the problem.  This is the address supplied by
     //! sigaction.  It might not be the same as the top of the backtrace.
-    const void *address() const { inf_->si_addr; }
+    const void *address() const { return inf_->si_addr; }
 
     //! Many platforms won't be able to produce a backtrace.
-    const crash_backtrace &backtrace() const { return bt_; }
+    const pretty_backtrace &backtrace() const { return bt_; }
 
     private:
     siginfo_t *inf_;
-    crash_backtrace &bt_;
+    pretty_backtrace &bt_;
   };
 
   //! \ingroup grp_crash
