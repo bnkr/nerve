@@ -41,13 +41,26 @@ raw_backtrace::raw_backtrace() {
  * Pretty backtrace *
  ********************/
 
-static const char unknown_file[] = "file unknown";
-static const char unknown_function[] = "file unknown";
+pretty_backtrace::call::call() {
+  object_ = NULL;
+  object_address_ = 0;
+
+  symbol_address_ = 0;
+  symbol_file_ = NULL;
+  symbol_line_ = 0;
+
+  call_file_ = NULL;
+  call_line_ = 0;
+}
+
+#include <cstdio>
 
 pretty_backtrace::pretty_backtrace() {
   raw_backtrace rbt;
 
   stack_.assign(rbt.size(), pretty_backtrace::call());
+
+  // fprintf(stderr, "calling baccktrace...\n");
 
   size_t index = 0;
   raw_backtrace::iterator e = rbt.end();
@@ -55,7 +68,9 @@ pretty_backtrace::pretty_backtrace() {
     // this points to somewhere in the function that will be returned to
     const void *const return_pointer = *i;
 
+    // fprintf(stderr, "** elemnt %d **\n", index);
     call &current = stack_[index++];
+    current.call_address_ = return_pointer;
 
     Dl_info info;
     int ret = ::dladdr(return_pointer, &info);
@@ -64,23 +79,32 @@ pretty_backtrace::pretty_backtrace() {
     }
 
     current.object_address_ = info.dli_fbase;
+    current.symbol_address_ = info.dli_saddr;
 
+    // fprintf(stderr, "obj addr: %x\n", current.object_address_);
+    // fprintf(stderr, "sym addr: %x\n", current.symbol_address_);
     if (info.dli_fname) {
+      // fprintf(stderr, "fname: %s\n", info.dli_fname);
       current.object_ = info.dli_fname;
     }
-
-    if (info.dli_saddr) {
-      current.symbol_address_ = info.dli_saddr;
+    else {
+      assert(current.object() == NULL);
     }
 
     if (info.dli_sname) {
+      // fprintf(stderr, "sname: %s\n", info.dli_sname);
       current.symbol_ = btrace::demangle_name(info.dli_sname);
+    }
+    else {
+      assert(current.symbol() == NULL);
     }
 
     // TODO:
     //   Now use dwarf to find the location of return_pointer and of
     //   symbol_address.
   }
+
+  assert(stack_.size() == rbt.size());
 }
 
 pretty_backtrace::~pretty_backtrace() {

@@ -4,6 +4,7 @@
 #include "demangle.hpp"
 
 #include <cxxabi.h>
+#include <cassert>
 
 //! This memory is on the heap and must be freed
 char *detail::cxxabi_demangle(const char *name) {
@@ -12,7 +13,7 @@ char *detail::cxxabi_demangle(const char *name) {
   char *ret = ::abi::__cxa_demangle(name, NULL, NULL, &status);
   switch (status) {
   case 0:
-    return ret;
+    break;
   case -1:
     throw std::bad_alloc();
   case -2: // not a mangled name; it's already demangled or it's a C name.

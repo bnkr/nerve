@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cerrno>
 #include <cstring>
+#include <algorithm>
 
 using namespace btrace;
 
@@ -355,6 +356,35 @@ bool crash_data::memory_fault() const {
  * Signal Handler *
  ******************/
 
+void print_call(const ::btrace::pretty_backtrace::call &c) {
+  bool need_indent = false;
+  std::cerr << "*";
+
+  if (c.call_file()) {
+    std::cerr << " at " << c.call_file() << ":" << c.call_line() << std::endl;
+    need_indent = true;
+  }
+
+  if (c.symbol()) {
+    if (need_indent) std::cerr << " ";
+    need_indent = true;
+    std::cerr << " in " << c.symbol() << std::endl;
+  }
+
+  if (c.symbol_file()) {
+    if (need_indent) std::cerr << " ";
+    need_indent = true;
+    std::cerr << " defined " << c.symbol_file() << ":" << c.symbol_line() << std::endl;
+  }
+
+  if (c.object()) {
+    if (need_indent) std::cerr << " ";
+    need_indent = true;
+    std::cerr << " object " << c.object() << " mapped at " << c.object_address() << std::endl;
+  }
+}
+
+
 void console_logger::log(const crash_data &d) {
   std::cerr << "** SIGNAL CAUGHT **" << std::endl;
   const char *sn = d.signal_name();
@@ -362,14 +392,8 @@ void console_logger::log(const crash_data &d) {
   sn = sn ? sn : "unknown signal";
   cn = cn ? cn : "unknown reason";
   std::cerr << "Signal: " << sn << " (" << d.signal() << ")" << std::endl;
-  // TODO:
-  //   This does not ever seem to report sensible values.
   std::cerr << "Reason: " << cn  << " (" << d.code() << ")" << std::endl;
   if (d.memory_fault()) {
-    // TODO:
-    //   This does not seem to work properly.  E.g access to 0x00 doesn't appear
-    //   here.  Perhaps it means address of instruction?  In which case we need
-    //   to mess with the ucontext.
     std::cerr << "Address: " << d.address() << std::endl;
   }
 
@@ -379,22 +403,21 @@ void console_logger::log(const crash_data &d) {
 
   if (! d.backtrace().empty()) {
     std::cerr << "Backtrace:" << std::endl;
-
-    typedef pretty_backtrace::iterator iter_t;
-
-    for (iter_t i = d.backtrace().begin(); i != d.backtrace().end(); ++i) {
-      std::cerr << "* in " << i->symbol() << std::endl;
-      std::cerr << "  defined " << i->symbol_file() << ":" << i->symbol_line() << std::endl;
-      std::cerr << "  mapped " << i->object() << " at " << i->object_address() << std::endl;
-      std::cerr << "  called " << i->call_file() << ":" << i->call_line() << std::endl;
-    }
+    std::for_each(d.backtrace().begin(), d.backtrace().end(), &print_call);
   }
   else {
     std::cerr << "Backtrace: unavailable." << std::endl;
   }
+
+  std::cerr << "\nNow calling default signal handler." << std::endl;
 }
 
 void signal_handler(int sig, siginfo_t *inf, void *) {
+  // Seems to be the only reliable way to re-raise the signal do it (but I
+  // should use sigaction, really).  Then I should restore my funky error
+  // handler (just in case the default doesn't quit).
+  signal(sig, SIG_DFL);
+
   pretty_backtrace cb;
   crash_data dt(inf, cb);
 
@@ -403,10 +426,6 @@ void signal_handler(int sig, siginfo_t *inf, void *) {
     d->logger()->log(dt);
   }
 
-  // Seems to be the only reliable way to re-raise the signal do it (but I
-  // should use sigaction, really).  Then I should restore my funky error
-  // handler (just in case the default doesn't quit).
-  signal(sig, SIG_DFL);
   raise(sig);
 }
 

@@ -7,6 +7,7 @@
 #include <boost/scoped_array.hpp>
 #include <boost/utility.hpp>
 
+#include <iostream>
 #include <vector>
 #include <string>
 #include <cstdlib>
@@ -19,7 +20,7 @@ namespace btrace {
    * instruction addresses on the stack.  The most recent call is *last* in the
    * list and will be the calling function (not any function of raw_backtrace).
    */
-  class raw_backtrace {
+  class raw_backtrace : boost::noncopyable {
     public:
     typedef void const *const *addresses_type;
 
@@ -46,25 +47,25 @@ namespace btrace {
     public:
 
     struct call {
+      call();
+
       //! Name of the elf object (or whatever)
       const char *object() const { return object_; }
       //! Where the object is mapped.
       const void *object_address() const { return object_address_; }
 
       //! Demangled symbol name.  Symbol is null at the position of error.
-      const char *symbol() const { return symbol_.c_str(); }
+      const char *symbol() const { return symbol_.empty() ? NULL : symbol_.c_str(); }
       //! Location of the symbol acording to the linker.
       const void *symbol_address() const { return symbol_address_; }
-
-      // TODO:
-      //   Not sure about the locations.  Does call mean where this was called
-      //   or where we left that function?
 
       //! Location where the symbol is defined.
       const char *symbol_file() const { return symbol_file_; }
       //! Line of definition.
       int symbol_line() const { return symbol_line_; }
 
+      //! Instruction address where the symbol was called
+      const void *call_address() const { return call_address_; }
       //! Location where the symbol was called
       const char *call_file() const { return call_file_; }
       //! Line of call.
@@ -78,9 +79,9 @@ namespace btrace {
       const char *symbol_file_;
       int symbol_line_;
 
+      const void *call_address_;
       const char *call_file_;
       int call_line_;
-
     };
 
     typedef std::vector<call> stack_type;
