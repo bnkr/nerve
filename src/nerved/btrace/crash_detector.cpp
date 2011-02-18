@@ -5,6 +5,7 @@
 
 #include "arch.hpp"
 
+#include <boost/cstdint.hpp>
 #include <iostream>
 #include <cstdlib>
 #include <cerrno>
@@ -377,19 +378,30 @@ void print_call(const ::btrace::pretty_backtrace::call &c) {
   if (c.symbol_file()) {
     if (need_indent) std::cerr << " ";
     need_indent = true;
-    std::cerr << " defined at " << c.call_file() << " " << c.call_line() << std::endl;
+    std::cerr << " defined at " << c.call_file() << ":" << c.call_line() << std::endl;
   }
 
   if (c.call_file() || c.call_address()) {
     if (need_indent) std::cerr << " ";
     need_indent = true;
 
+    std::cerr << " at ";
+
     if (c.call_file()) {
-      std::cerr << " at " << c.call_file() << ":" << c.call_line() << std::endl;
+      std::cerr << c.call_file() << ":" << c.call_line() << " at ";
     }
-    else {
-      std::cerr << " at " << c.call_address() << std::endl;
+
+    std::cerr << c.call_address();
+
+    if (c.symbol_address()) {
+      const ptrdiff_t diff =
+        reinterpret_cast<const uint8_t*>(c.call_address()) -
+        reinterpret_cast<const uint8_t*>(c.symbol_address());
+
+      std::cerr << " [" << c.symbol_address() << " + 0x" << std::hex << diff << "]"<< std::dec;
     }
+
+    std::cerr << std::endl;
   }
 
   if (c.object() || c.object_address()) {
@@ -401,7 +413,7 @@ void print_call(const ::btrace::pretty_backtrace::call &c) {
       std::cerr << c.object() << " [" << c.object_address() << "]" << std::endl;
     }
     else {
-      std::cerr << "at " << c.object_address() << std::endl;
+      std::cerr << "object at " << c.object_address() << std::endl;
     }
   }
 
