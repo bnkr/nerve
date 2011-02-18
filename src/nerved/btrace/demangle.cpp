@@ -11,30 +11,21 @@ char *detail::cxxabi_demangle(const char *name) {
   int status;
   char *ret = ::abi::__cxa_demangle(name, NULL, NULL, &status);
   switch (status) {
-    case 0:
-      break;
-    case -1:
-      throw std::bad_alloc();
-    case -2: // not a mangled name; it's already demangled or it's a C name.
-      {
-        const std::size_t name_length = std::strlen(name);
-        ret = (char *) std::malloc(name_length + 1);
-        if (! ret) throw std::bad_alloc();
-        std::strcpy(ret, name);
-      }
-      break;
-    case -3: // invalid argument
-      {
-        const char *msg = ": not demangleable";
-        const std::size_t name_length = std::strlen(name);
-        const std::size_t message_length = name_length + std::strlen(msg);
-        ret = (char *) std::malloc(message_length + 1);
-        if (! ret) throw std::bad_alloc();
-        std::strcpy(ret, name);
-        std::strcat(ret + name_length, msg);
-        ret[message_length] = '\0';
-      }
-      break;
+  case 0:
+    return ret;
+  case -1:
+    throw std::bad_alloc();
+  case -2: // not a mangled name; it's already demangled or it's a C name.
+    {
+      const std::size_t name_length = std::strlen(name);
+      ret = (char *) std::malloc(name_length + 1);
+      if (! ret) throw std::bad_alloc();
+      std::strcpy(ret, name);
+    }
+    break;
+  case -3: // invalid argument
+    ret = NULL;
+    break;
   }
 
   return ret;
@@ -51,10 +42,17 @@ namespace {
 
     private:
     T *p_;
-};
+  };
+}
 
-
-std::string demangle(const char *m) {
-  malloc_ptr p = detail::cxxabi_demangle(m);
-  return std::string(p);
+std::string btrace::demangle_name(const char *m) {
+  malloc_ptr<char> p = detail::cxxabi_demangle(m);
+  if (p.get() == NULL) {
+    std::string s(m);
+    s += " <not demangleable>";
+    return s;
+  }
+  else {
+    return std::string(p.get());
+  }
 }

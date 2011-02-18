@@ -4,6 +4,7 @@
 #ifndef BTRACE_DEMANGLE_HPP_3liirznl
 #define BTRACE_DEMANGLE_HPP_3liirznl
 
+#include <string>
 #include <typeinfo>
 
 namespace btrace {
@@ -44,7 +45,7 @@ namespace btrace {
      *   size of the buffer. In either case, the new buffer size will be stored
      *   in *n.
      */
-    char *demangle_cxxabi(const char *name);
+    char *cxxabi_demangle(const char *name);
   }
 
   //! \ingroup grp_demangle

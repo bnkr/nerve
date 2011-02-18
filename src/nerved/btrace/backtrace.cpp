@@ -78,7 +78,8 @@ pretty_backtrace::pretty_backtrace() {
     }
 
     // TODO:
-    //   Now use dwarf to find the location of return_pointer.
+    //   Now use dwarf to find the location of return_pointer and of
+    //   symbol_address.
   }
 }
 
