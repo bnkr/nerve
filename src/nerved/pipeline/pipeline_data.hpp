@@ -18,7 +18,7 @@ namespace pipeline {
     connector *start_terminator();
     connector *end_terminator();
 
-    //! Gets a new pipe from
+    //! Gets a new pipe to connect multi-threaded sections.
     connector *create_pipe();
 
     //! Check and finish the pipeline objects after configuration.

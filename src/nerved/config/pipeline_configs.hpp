@@ -16,6 +16,7 @@
 #include "parse_location.hpp"
 #include "flex_interface.hpp"
 
+#include "../pipeline/stage_data.hpp" // plugin ids, categories etc
 #include "../util/c_string.hpp"
 #include "../util/asserts.hpp"
 #include "../util/pooled.hpp"
@@ -34,30 +35,19 @@ namespace config {
   struct configure_block;
 
   //! \ingroup grp_config
+  //! Alias for stage categories.
+  namespace stage_cat = ::pipeline::stage_cat;
+  //! \ingroup grp_config
+  //! Alias for stage built-in stages which we'll use to decide whether to load
+  //! from a file or from built-in.
+  namespace plug_id = ::pipeline::built_stages;
+
+  //! \ingroup grp_config
   class stage_config : boost::noncopyable {
     public:
-    enum plugin_ids {
-      id_unset,
-      id_sdl,
-      id_ffmpeg,
-      id_plugin,
-      id_volume
-    };
-
-    enum categories {
-      // Note that a separate type is necessary for the output despite it
-      // essentially being an observer because we need to know that one exists in
-      // the pipeline.
-      cat_output,
-      cat_input,
-      cat_process,
-      cat_observe,
-      cat_unset
-    };
-
     typedef stage_config * create_type;
-    typedef enum plugin_ids plugin_id_type;
-    typedef enum categories category_type;
+    typedef ::pipeline::built_stage_id_type plugin_id_type;
+    typedef ::pipeline::stage_category_type category_type;
     typedef flex_interface::unique_ptr unique_text_ptr;
     typedef flex_interface::transfer_mem transfer_mem;
     typedef configure_block configs_type;
@@ -68,14 +58,14 @@ namespace config {
     static create_type create() { return pooled::alloc<stage_config>(); }
     static void destroy(create_type p) { pooled::free(p); }
 
-    stage_config() : plugin_id_(id_unset), configs_(NULL) {}
+    stage_config() : plugin_id_(plug_id::unset), configs_(NULL) {}
 
     //@}
 
     //! \name Enum to text
     //@{
 
-    static const char *get_category_name(categories c);
+    inline static const char *get_category_name(category_type c) { return ::pipeline::get_category_name(c); }
     static const char *get_plugin_id_name(plugin_id_type c);
     static const char *get_stage_name(const stage_config &c);
 
@@ -105,8 +95,8 @@ namespace config {
 
     //! Is the stage built in?
     bool internal() const {
-      NERVE_ASSERT(plugin_id() != id_unset, "id must be set before querying");
-      return plugin_id() != id_plugin;
+      NERVE_ASSERT(plugin_id() != plug_id::unset, "id must be set before querying");
+      return plugin_id() != plug_id::plugin;
     }
 
     //! Place this was declared.

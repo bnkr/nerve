@@ -35,7 +35,7 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
       std::cout << "    next: " << to_delim << to << to_delim << std::endl;
       std::cout << "    sequences:" << std::endl;
 
-      stage_config::categories last_cat = stage_config::cat_unset;
+      stage_config::category_type last_cat = stage_cat::unset;
 
       for (stage_iter_t stage = sec->begin(); stage != sec->end(); ++stage) {
         if (stage->category() != last_cat) {

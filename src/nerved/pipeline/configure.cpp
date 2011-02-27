@@ -18,6 +18,8 @@
 using namespace pipeline;
 using namespace config;
 
+namespace stage_cat = config::stage_cat;
+
 static void configure_stage(pipeline::stage_sequence &seq, stage_config &stage_conf);
 static void configure_sequences(pipeline::section &sec, section_config &sec_conf);
 
@@ -52,7 +54,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 }
 
 void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
-  stage_config::categories last_cat = stage_config::cat_unset;
+  stage_config::category_type last_cat = ::stage_cat::unset;
 
   pipeline::stage_sequence *sequence = NULL;
   typedef section_config::stage_iterator_type   stage_iter_t;

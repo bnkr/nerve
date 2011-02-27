@@ -5,6 +5,7 @@
 #define PIPELINE_SECTION_HPP_1auycg4v
 
 #include "stage_sequence.hpp"
+#include "stage_data.hpp"
 #include "connectors.hpp"
 
 #include <vector>
@@ -65,7 +66,7 @@ namespace pipeline {
     // TODO:
     //   Ideally this should be in some special shared code between config and
     //   pipeline.
-    typedef config::stage_config::category_type category_type;
+    typedef stage_category_type category_type;
 
     stage_sequence *create_sequence(category_type t);
 

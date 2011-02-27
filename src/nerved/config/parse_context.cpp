@@ -86,10 +86,10 @@ void parse_context::add_stage(char *text) {
   typedef stage_config::plugin_id_type id_type;
   id_type id = stage_config::get_plugin_id(text);
   switch (id) {
-  case stage_config::id_unset:
+  case plug_id::unset:
     reporter().report("not a valid stage id or not a loadable plugin: %s", text);
     break;
-  case stage_config::id_plugin:
+  case plug_id::plugin:
     this_stage().path(p);
     this_stage().plugin_id(id);
     break;
