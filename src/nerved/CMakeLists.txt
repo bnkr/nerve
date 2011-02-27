@@ -19,6 +19,14 @@ else()
   set(defs)
 endif()
 
+binfo_find_lib(
+  VAR DL_LIB
+  VAR_DOC "Interface to the dynamic linker"
+  TASK nerved
+  TASK_DOC "Used under debug configurations to get nicer backtraces."
+  NAME dl
+)
+
 bbuild_exe(
   TARGET
     nerved
@@ -46,8 +54,10 @@ bbuild_exe(
     "TOKENS_FILE=\"${tokens_file}\""
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
+  LIBS
+    ${DL_LIB}
   POSSIBLE_VARS
-    LEMON_EXE FLEX_EXE
+    LEMON_EXE FLEX_EXE DL_LIB
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)
@@ -56,5 +66,13 @@ if (MINGW)
   #   This might get fixed by bbuild's dll features?
   set_property(
     TARGET "nerved" APPEND PROPERTY LINK_FLAGS "-Wl,--enable-auto-import"
+  )
+endif()
+
+# Make this debug-conditional.
+set(backtraces 1)
+if (GNUCXX AND backtraces)
+  set_property(
+    TARGET "nerved" APPEND PROPERTY LINK_FLAGS "-rdynamic"
   )
 endif()
