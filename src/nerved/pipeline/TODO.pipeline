@@ -1,53 +1,8 @@
-Connectors
-----------
-
-* restore the pipe junction thing
-* remove the existing junction (because we don't have thread pipe junctions any
-  more)
-* make the connector header from specification-bits
-* specififcation-bits can be removed
-* move the spec to doc (as pipeline-spec.txt or something)
-* make connectors compilable
-* link it all up with ../para.hpp and other bits
-* remove headers we aren't using any more
-
-Finishing Off
---------------
-
-* make output stage compile (requires connectors)
-* packet_return
-  - don't like the name
-  - header file is too small really
-*
-
-Unsolved Problems
+Poor Construction
 -----------------
 
-These are both algorithmic so they can be done whenever.  I need to move this
-todo over to the integration part.
+Currently, we construct bit by bit.  Ideally we should construct each in one go.
+This means that every pipeline object has a data object.  The data object is
+passed as const to the pipeline object and then we don't have any statefulness.
+This mostly a change to the configure function.
 
-The progressive buffer bit is necessary or the pipeline won't work properly.
-
-* section blocking check:
-  - I'm pretty sure it matters whether we block on input and output, but at the
-    moment we only check input...
-  - I think this is an algorithmic detail because the swection just asks if it's
-    OK to continue
-  - It might not be though beause the sequence itself causes a delay in waiting
-    for the output to block.
-  - what is the condition for an output block when the input doesn't block?  A,
-    B, C, D.  A, D in thread 1. B, C in thread 2.  A, B, C outputs are totally
-    full. B blocks, A blocks, C never runs neither does D.  This is solvable
-    pretty easily by the current method; we just check output blockingness too.
-    Only problem is try not to get into an infinite loop... I'm pretty sure it
-    can't happen because we always block once... actually that example seems
-    weird.. I still think it can happen so we may as well be safe though.
-  - need to document why this can happen.
-* stacked progressive buffering:
-  - we store an iterator to the last stage/seqeuence to buffer
-  - suppose a stage/seq notifies that it's buffering
-  - and then another one does
-  - buffering finishes, we overwrote the other buffering object so another input
-    packet gets written
-  - best option is a stack of buffering iterators
-  - said stack only needs to equal the length of the sequences/stages

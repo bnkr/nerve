@@ -15,44 +15,24 @@ namespace pipeline {
   /*!
    * \ingroup grp_pipeline
    *
-   *  Maps onto a thread, contains sections, and ensures we don't block too many
+   * Maps onto a thread, contains sections, and ensures we don't block too many
    * times in a thread (which causes deadlocks).
    */
   class job {
     public:
+    // TODO:
+    //   almost certainly must change to avoid copy and to make sure that
+    //   create_x pointers don't invalidate by a subsequent create.
     typedef std::vector<section> sections_type;
 
+    //! Returned pointer must remain valid.
     section *create_section(connector *, connector *);
 
-    void job_thread() {
-forever:
-      typedef sections_type::iterator iter_type;
-      bool blocked_already = false;
-      for (iter_type s = sections().begin(); s != sections().end(); ++s) {
-        // Fullfills the "jobs mustn't block twice" requirement.
-        //
-        // TODO:
-        //   The mechanism and purpose is not well defined.  Especially we might
-        //   care if blocking on input or output.  It might be that we do it
-        //   based on the return from section_step and let the messy details of
-        //   that be totally transparent.
-        //
-        if (s->would_block()) {
-          if (blocked_already) {
-            // Continue instead of break to avoid a bias towards sections at the
-            // start of the job.
-            continue;
-          }
-          else {
-            blocked_already = true;
-          }
-        }
+    //! Called after all the "create" whatsits have been done.
+    void finalise();
 
-        s->section_step();
-      }
-
-      goto forever;
-    }
+    //! Main method for a thread.
+    void job_thread();
 
     private:
     sections_type &sections() { return sections_;  }

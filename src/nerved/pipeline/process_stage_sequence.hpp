@@ -25,9 +25,8 @@ namespace pipeline {
     typedef std::vector<process_stage*> stages_type;
 
     // TODO:
-    //   This arrangement means that the stages must have been initialised
-    //   already.  Might have to renege on that particular obligation and have
-    //   some kind of initialise method.
+    //   This needs to be changed a bit because we add stages later.  There must
+    //   be a finalise method.
     process_stage_sequence()
     : data_loop_(stages_) {
     }

@@ -4,6 +4,8 @@
 #ifndef PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 #define PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 
+#include <vector>
+
 namespace pipeline {
   struct job;
   struct connector;
@@ -23,6 +25,9 @@ namespace pipeline {
 
     //! Check and finish the pipeline objects after configuration.
     void finalise();
+
+    private:
+    std::vector<job*> jobs_;
   };
 }
 

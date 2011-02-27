@@ -54,24 +54,31 @@ namespace pipeline {
     typedef std::vector<stage_sequence*> sequences_type;
     typedef boost::remove_pointer<sequences_type::value_type>::type sequence_type;
 
-    explicit section(sequences_type &seq) : sequences_(seq) {
-      // TODO:
-      //   This requirement might have to be lifted.  We'd have some kind of
-      //   "prepare" method.  The stages might turn out to need this anyway, and
-      //   it could help us do things like reconfigure at runtime.
-      NERVE_ASSERT(! sequences().empty(), "sequence list must be initialised before this");
-      reset_start();
-    }
-
-    // TODO:
-    //   Ideally this should be in some special shared code between config and
-    //   pipeline.
     typedef stage_category_type category_type;
 
+    //! \name Initialisation etc.
+    //@{
+
+    explicit section() {}
+
+    connector *input_pipe() { return in_pipe_; }
+    connector *output_pipe() { return out_pipe_; }
+
+    void input_pipe(connector *i) { in_pipe_ = i; }
+    void output_pipe(connector *o) { out_pipe_ = o; }
+
+    //! Create a new sequence in this section which is valid for the given
+    //! stage category.  Pointers must remain valid.
     stage_sequence *create_sequence(category_type t);
 
-    connector *output_pipe();
-    connector *input_pipe();
+    //! Called post-initialisation to ready everything for running.  Iow no more
+    //! sequences to add.
+    void finalise();
+
+    //@}
+
+    //! \name Operation
+    //@{
 
     bool would_block() {
       return
@@ -89,30 +96,10 @@ namespace pipeline {
         false;
     }
 
-    void section_step() {
-      bool do_reset = true;
-      typedef sequence_type::state state;
+    //! Operational part.
+    void section_step();
 
-      for (iterator_type s = start(); s != this->sequences().end(); ++s) {
-        // See class docs for why this is the least bad solution.
-        sequence_type::step_state ret = NERVE_CHECK_PTR(*s)->sequence_step();
-
-        if (ret == state::buffering) {
-          // TODO:
-          //   If there are multiple sequences doing buffering, then we ignore one
-          //   of them here.
-          start(s);
-          do_reset = false;
-        }
-        else {
-          NERVE_ASSERT(ret == state::complete, "there are no other possibilities");
-        }
-      }
-
-      if (do_reset) {
-        reset_start();
-      }
-    }
+    //@}
 
     private:
     sequences_type &sequences() { return sequences_; }
@@ -126,7 +113,10 @@ namespace pipeline {
     iterator_type start() { return start_; }
 
     iterator_type start_;
-    sequences_type &sequences_;
+    sequences_type sequences_;
+
+    connector *in_pipe_;
+    connector *out_pipe_;
   };
 }
 #endif

@@ -40,7 +40,10 @@ namespace pipeline {
     // TODO:
     //   Later I should remove the config object to increase modularity.  No
     //   other part of the pipeline depends on the config except this.
-    virtual simple_stage *create_stage(::config::stage_config &);
+    virtual simple_stage *create_stage(::config::stage_config &) = 0;
+
+    //! Prepare to run; set up initial state etc.
+    virtual void finalise() = 0;
 
     protected:
 
