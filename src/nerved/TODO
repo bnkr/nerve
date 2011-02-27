@@ -1,24 +1,38 @@
 Output Usage
--------------
+------------
 
-* use output in the config bit
-* add trace calls all over the place
+* use output in the config logging part
+* add trace output calls all over the place
 
-Pipeline Initialisation
------------------------
+Non-Connector Object Creates
+----------------------------
+
+* implement the create functions as they appear (they all return null right now)
+
+Connector Creates
+-----------------
+
+* objects themselves
+* stuff from para (it's still in the old prototype)
+
+Pipeline Algorithms
+-------------------
 
 * fix the progressive buffer stack thing
-* connector configuration
-* connector objects
-  - note that some of the code for that is still in plugin-proto
-* write some info on the conventions used for pipeline initialisation (perhaps
-  in the spec?)  Include pointer validity constraints.
+* check the section block check mess (but it's prolly pretty hard to organise
+  without having working output)
 
 Socket and State
 -----------------
 
 * design player state
 * implement basic socket communication
+
+Plugins
+-------
+
+* implement input and output stages
+* properly deal with the design for loading built and shared object plugins
 
 Problems
 --------
@@ -40,3 +54,5 @@ Problems
   - this is the integration of pipeline and config
 * method of debugging the pipeline without being threaded (it's not even
   compiled yet so it's bound to have bugs!)
+  - a helper program to load, run, and benchmark a plugin.  Perhaps a special
+    mode of nerve?

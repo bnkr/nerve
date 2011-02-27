@@ -1,19 +1,19 @@
 Main Todo
 =========
 
-Prototypes
-----------
+Integration
+-----------
 
-This todo is just here to say "check the x-proto/ directories".  I'll start
-using this file when those are all done.
+This todo is just here to say "check the src directories".  I'll start using
+this file when those are all done.
 
-Status (as of 14th Feb 2011):
+Status (as of 27th Feb 2011):
 
-* config-proto (finished and integrateed)
-* gapless-proto (finished; supplies code for i/o and a bit for gaplessness)
-* plugin-proto (make compilable enough to use in integration)
-* socket-proto (no work done yet on any kind of protocol and communication with
-  the pipeline is a bit hazy)
+* config: integrated
+* pipeline: connectors to do
+* server: not integrated (see socket-proto)
+* plugins: not prototyped
+* outputs: integration started-ish; see gapless-proto and nerved/stages
 
 New prototypes:
 

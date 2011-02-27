@@ -40,9 +40,14 @@ bbuild_exe(
     config/config_parser.cpp
     config/pipeline_configs.cpp
     config/parse_context.cpp
+    config/semantic_checker.cpp
     config/dump_config_yaml.cpp
     config/dump_config_yaml.cpp
     pipeline/configure.cpp
+    pipeline/job.cpp
+    pipeline/section.cpp
+    pipeline/pipeline_data.cpp
+    pipeline/stage_data.cpp
     player/run.cpp
     util/pooled.cpp
     btrace/crash_detector.cpp
