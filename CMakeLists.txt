@@ -101,16 +101,6 @@ add_subdirectory("test")
 ## Building Documentation ##
 ############################
 
-# add_doxygen_directives(
-#   TARGET doxygen
-#   INPUTS "src/"
-#   ARGS_VAR ad_args
-#   DOCS_MIRROR "${CMAKE_SOURCE_DIR}/doc"
-#   DEFAULT_DOXYFILE "${CMAKE_SOURCE_DIR}/Doxyfile.default"
-#   INSTALL ${WANT_DOCS}
-# )
-# add_doxygen(${ad_args})
-
 ##################
 ## Packaging ##
 ##################

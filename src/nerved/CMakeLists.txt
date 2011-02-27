@@ -77,3 +77,11 @@ if (GNUCXX AND backtraces)
     TARGET "nerved" APPEND PROPERTY LINK_FLAGS "-rdynamic"
   )
 endif()
+
+bdoc_doxygen(
+  FORMATS html
+  TARGET doxygen_nerved
+  INPUT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}"
+  DOXYFILE "${CMAKE_SOURCE_DIR}/Doxyfile.default"
+  NO_DEFAULT_INSTALL
+)
