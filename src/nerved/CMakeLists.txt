@@ -47,6 +47,7 @@ bbuild_exe(
     util/pooled.cpp
     btrace/crash_detector.cpp
     btrace/backtrace.cpp
+    btrace/demangle.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS

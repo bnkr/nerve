@@ -5,9 +5,11 @@
 
 #include <cxxabi.h>
 #include <cassert>
+#include <cstring>
+#include <cstdlib>
 
 //! This memory is on the heap and must be freed
-char *detail::cxxabi_demangle(const char *name) {
+char *btrace::detail::cxxabi_demangle(const char *name) {
   assert(name != NULL);
   int status;
   char *ret = ::abi::__cxa_demangle(name, NULL, NULL, &status);
