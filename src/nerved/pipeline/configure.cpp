@@ -18,10 +18,8 @@
 using namespace pipeline;
 using namespace config;
 
-namespace {
-  void configure_stage(pipeline::stage_sequence &seq, stage_config &stage_conf);
-  void configure_sequences(pipeline::section &sec, section_config &sec_conf);
-}
+static void configure_stage(pipeline::stage_sequence &seq, stage_config &stage_conf);
+static void configure_sequences(pipeline::section &sec, section_config &sec_conf);
 
 configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &) {
   typedef pipeline_config::job_iterator_type    job_iter_t;
