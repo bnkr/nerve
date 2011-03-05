@@ -52,7 +52,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
       configure_sequences(*sec_to_configure, cc);
       loop_state.last_sec = sec_to_configure;
-    } while ((loop_state.cur_conf = loop_state.cur_conf->job_next()) != NULL);
+    } while ((loop_state.cur_conf = NERVE_CHECK_PTR(loop_state.cur_conf)->job_next()) != NULL);
   }
 
   pd.finalise();
@@ -73,7 +73,7 @@ void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
       sequence = sec.create_sequence(this_cat);
     }
 
-    configure_stage(*sequence, *stage_conf);
+    configure_stage(*NERVE_CHECK_PTR(sequence), *stage_conf);
   }
 }
 
@@ -84,7 +84,7 @@ void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
   //
   // TODO:
   //   Perhaps we could have stage_creator sc(stage_conf); seq.create_stage(sc);
-  pipeline::simple_stage *const stage = seq.create_stage(stage_conf);
+  pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf));
 
   if (stage_conf.configs_given()) {
     typedef stage_config::configs_type configs_type;
