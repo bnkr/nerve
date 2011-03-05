@@ -3,6 +3,8 @@
 
 #include "pipeline_configs.hpp"
 
+#include <cstring>
+
 using namespace config;
 
 /****************

@@ -1,13 +1,13 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
 
-#include "stage_data.hpp"
+#include "information.hpp"
 
 #include "../util/asserts.hpp"
 
-using namespace pipeline;
+using namespace stages;
 
-const char *pipeline::get_category_name(pipeline::stage_category_type c) {
+const char *stages::get_category_name(stages::category_type c) {
   switch (c) {
   case stage_cat::input:
     return "input";
@@ -18,6 +18,15 @@ const char *pipeline::get_category_name(pipeline::stage_category_type c) {
   case stage_cat::observe:
     return "observe";
   case stage_cat::unset:
+    return "(undefined)";
+  }
+
+  NERVE_ABORT("what are you doing here?");
+}
+
+const char *stages::get_plugin_name(stages::plugin_id_type p) {
+  switch (p) {
+  case plug_id::unset:
     return "(undefined)";
   }
 

@@ -5,9 +5,9 @@
 #define PIPELINE_SECTION_HPP_1auycg4v
 
 #include "stage_sequence.hpp"
-#include "stage_data.hpp"
 #include "connectors.hpp"
 
+#include "../stages/information.hpp"
 #include "../util/indirect.hpp"
 #include <boost/type_traits/remove_pointer.hpp>
 
@@ -66,8 +66,6 @@ namespace pipeline {
 
     typedef boost::remove_pointer<sequences_type::value_type>::type sequence_type;
 
-    typedef stage_category_type category_type;
-
     //! \name Initialisation etc.
     //@{
 
@@ -81,7 +79,7 @@ namespace pipeline {
 
     //! Create a new sequence in this section which is valid for the given
     //! stage category.  Pointers must remain valid.
-    stage_sequence *create_sequence(category_type t);
+    stage_sequence *create_sequence(stages::category_type t);
 
     //! Called post-initialisation to ready everything for running.  Iow no more
     //! sequences to add.

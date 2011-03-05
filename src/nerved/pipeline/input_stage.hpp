@@ -4,6 +4,8 @@
 #ifndef PIPELINE_INPUT_STAGE_HPP_tfebw7wn
 #define PIPELINE_INPUT_STAGE_HPP_tfebw7wn
 
+#include "simple_stages.hpp"
+
 namespace pipeline {
   struct packet;
 
@@ -17,7 +19,7 @@ namespace pipeline {
    * sequence will always have the input at its start (usually there will be a
    * specialised stage sequence to deal with input).
    */
-  class input_stage {
+  class input_stage : public simple_stage {
     void pause();
     void skip(void *where);
     void load(void *file);

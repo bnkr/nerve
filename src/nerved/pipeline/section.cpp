@@ -23,7 +23,9 @@ namespace {
     return p;
   }
 
-  stage_sequence *alloc_and_construct(stage_category_type c) {
+  stage_sequence *alloc_and_construct(stages::category_type c) {
+    namespace stage_cat = ::stages::stage_cat;
+
     switch (c) {
     case stage_cat::observe:
       return alloc_and_cons_type<observer_stage_sequence>();
@@ -45,7 +47,7 @@ namespace {
   }
 }
 
-stage_sequence *section::create_sequence(stage_category_type c) {
+stage_sequence *section::create_sequence(stages::category_type c) {
   stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(c));
   NERVE_NIMPL("assign section's connectors to new sequence");
   return s;

@@ -15,8 +15,8 @@
 
 #include "parse_location.hpp"
 #include "flex_interface.hpp"
+#include "../stages/information.hpp" // plugin ids, categories etc
 
-#include "../pipeline/stage_data.hpp" // plugin ids, categories etc
 #include "../util/c_string.hpp"
 #include "../util/asserts.hpp"
 #include "../util/pooled.hpp"
@@ -39,18 +39,18 @@ namespace config {
 
   //! \ingroup grp_config
   //! Alias for stage categories.
-  namespace stage_cat = ::pipeline::stage_cat;
+  namespace stage_cat = ::stages::stage_cat;
   //! \ingroup grp_config
   //! Alias for stage built-in stages which we'll use to decide whether to load
   //! from a file or from built-in.
-  namespace plug_id = ::pipeline::built_stages;
+  namespace plug_id = ::stages::plug_id;
 
   //! \ingroup grp_config
   class stage_config : boost::noncopyable {
     public:
     typedef stage_config * create_type;
-    typedef ::pipeline::built_stage_id_type plugin_id_type;
-    typedef ::pipeline::stage_category_type category_type;
+    typedef ::stages::plugin_id_type plugin_id_type;
+    typedef ::stages::category_type category_type;
     typedef flex_interface::unique_ptr unique_text_ptr;
     typedef flex_interface::transfer_mem transfer_mem;
     typedef configure_block configs_type;
@@ -68,7 +68,7 @@ namespace config {
     //! \name Enum to text
     //@{
 
-    inline static const char *get_category_name(category_type c) { return ::pipeline::get_category_name(c); }
+    inline static const char *get_category_name(category_type c) { return ::stages::get_category_name(c); }
     static const char *get_plugin_id_name(plugin_id_type c);
     static const char *get_stage_name(const stage_config &c);
 

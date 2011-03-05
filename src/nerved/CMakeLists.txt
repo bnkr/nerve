@@ -55,10 +55,10 @@ bbuild_exe(
     pipeline/job.cpp
     pipeline/section.cpp
     pipeline/pipeline_data.cpp
-    pipeline/stage_data.cpp
     pipeline/process_stage_sequence.cpp
     pipeline/input_stage_sequence.cpp
     pipeline/progressive_buffer.cpp
+    stages/information.cpp
     player/run.cpp
     util/pooled.cpp
     btrace/crash_detector.cpp

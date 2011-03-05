@@ -2,14 +2,42 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "input_stage_sequence.hpp"
 
+#include "../config/pipeline_configs.hpp"
+#include "../stages/built_in_stages.hpp"
+
 using namespace pipeline;
 
-simple_stage *input_stage_sequence::create_stage(config::stage_config &cfg) {
-  NERVE_ASSERT(is_ == NULL, "must not create an input stage twice");
-  NERVE_NIMPL("input stage's stage addition");
-  return NULL;
+namespace {
+  template<class T>
+  T *do_alloc() { return (T*) pooled::tracked_byte_alloc(sizeof(T)); }
 }
 
+
+simple_stage *input_stage_sequence::create_stage(config::stage_config &cfg) {
+  namespace plug_id = stages::plug_id;
+
+  NERVE_ASSERT(is_ == NULL, "must not create an input stage twice");
+  NERVE_NIMPL("input stage's stage addition");
+
+  simple_stage *ret = NULL;
+
+  switch (cfg.plugin_id()) {
+  case plug_id::ffmpeg:
+    ret = do_alloc<stages::ffmpeg>();
+    break;
+  case plug_id::plugin:
+    NERVE_ABORT("don't know how to deal with a plugin");
+    break;
+  case plug_id::unset:
+    NERVE_ABORT("unset stage id is impossible");
+    break;
+  case plug_id::sdl:
+  case plug_id::volume:
+    NERVE_ABORT("this type of stage cannot be handled by this sequence");
+  }
+
+  return NERVE_CHECK_PTR(ret);
+}
 
 stage_sequence::step_state input_stage_sequence::sequence_step() {
   packet *p = NERVE_CHECK_PTR(read_input());
