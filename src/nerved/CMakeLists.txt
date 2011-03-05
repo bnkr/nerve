@@ -27,6 +27,14 @@ binfo_find_lib(
   NAME dl
 )
 
+binfo_find_lib(
+  VAR BOOST_SYSTEM_LIB
+  VAR_DOC "boost.system library"
+  TASK nerved
+  TASK_DOC "Boost's error checking library used by boost.asio and possilbly other bits."
+  NAMES boost_system-mt boost_system
+)
+
 bbuild_exe(
   TARGET
     nerved
@@ -63,9 +71,9 @@ bbuild_exe(
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
   LIBS
-    ${DL_LIB}
+    ${DL_LIB} ${BOOST_SYSTEM_LIB}
   POSSIBLE_VARS
-    LEMON_EXE FLEX_EXE DL_LIB
+    LEMON_EXE FLEX_EXE DL_LIB BOOST_SYSTEM_LIB
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)
@@ -77,7 +85,7 @@ if (MINGW)
   )
 endif()
 
-# Make this debug-conditional.
+# Make this debug-conditional.  It necessary for btace doing dll lookups.
 set(backtraces 1)
 if (GNUCXX AND backtraces)
   set_property(
