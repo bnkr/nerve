@@ -30,7 +30,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   for (job_iter_t job_conf = pc.begin(); job_conf != pc.end(); ++job_conf) {
     pipeline::job &job = *NERVE_CHECK_PTR(pd.create_job());
 
-    section_config *sec_conf = job_conf->job_first();
+    section_config *sec_conf = NERVE_CHECK_PTR(job_conf->job_first());
     section *prev_sec = NULL;
     do {
       NERVE_ASSERT(&(*job_conf) == &(sec_conf->parent_job()), "link order shouldn't go into another job_conf");
@@ -38,10 +38,10 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       section_config *const prev = sec_conf->pipeline_previous();
       section_config *const next = sec_conf->pipeline_next();
 
-      connector *const in = prev ? prev_sec->output_pipe() : pd.start_terminator();
+      connector *const in = prev ? NERVE_CHECK_PTR(prev_sec)->output_pipe() : pd.start_terminator();
       connector *const out = next ? pd.create_pipe() : pd.end_terminator();
 
-      prev_sec = job.create_section(in, out);
+      prev_sec = NERVE_CHECK_PTR(job.create_section(in, out));
 
       configure_sequences(*prev_sec, *sec_conf);
     } while ((sec_conf = sec_conf->job_next()) != NULL);
