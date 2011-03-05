@@ -1,34 +1,62 @@
-Output Usage
-------------
+Socket and State
+----------------
+
+This is becoming very important because of the way the socket server must
+interract with the pipeline.  It has implications on how the terminators are to
+work at the very least.
+
+* design player state
+  - simple enough if it goes in the server
+* communication between the pipeline (e.g output timestamps) and the server
+* communication between the server and the pipeline (e.g load a file)
+* socket protocol, i.e. actual client/server communication
+* threading
+  - can the server be seen as a plugin?
+
+Pipeline Creation
+-----------------
+
+The current assert failure is at the input stage creation, but there are earlier
+messups due to the connectors.  It might be difficult to organise the bits that
+aren't connectors without doing the connectors first.
+
+.connectors
+* create_pipe
+* start_terminator
+* end_terminator
+* pipe_junction
+* assigning connectors to sections
+* passing section pipes to sequences
+  - currently they hold a pipe junction by value... there seems to be no option
+    but to hold pointers to pipes
+
+.creates
+* create_stage (in every sequence type)
+* initialising a stage based on a built-in implementation
+* initialising a stage based on a loadable plugin
+* allocation of any stage
+* storage of stages using indirect_owned<vector>.
+  - it is common code so it should really be abstracted; copy what's in the
+    progressive buffer
+
+Logging Output
+--------------
+
+This doesn't really become useful until track changing etc. is done.  So we need
+the playlist state, socket server, and input handling done at the very least.
 
 * use output in the config logging part
 * add trace output calls all over the place
 
-Sequences Creates
------------------
-
-* implement the virtual functions of each stage sequence (as per compiler
-  errors)
-
-Connector Creates
------------------
-
-* object definitions
-* the create_pipe / x_terminator funtions in pipeline_data
-* stuff from para (it's still in the old prototype)
-
 Pipeline Algorithms
 -------------------
+
+This is required for correct operation, but isn't testable anyway until we have
+real output.
 
 * fix the progressive buffer stack thing (section and progressive_buffer)
 * check the section block check mess (but it's prolly pretty hard to organise
   without having working output)
-
-Socket and State
------------------
-
-* design player state
-* implement basic socket communication
 
 Plugins
 -------
@@ -58,3 +86,6 @@ Problems
   compiled yet so it's bound to have bugs!)
   - a helper program to load, run, and benchmark a plugin.  Perhaps a special
     mode of nerve?
+* gradual initialisation of pipeline objects creates lots of messyness, but it's
+  difficult to see exactly how we'd improve on it without doing massive amounts
+  of allocation and indirect pointer storage
