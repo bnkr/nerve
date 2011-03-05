@@ -6,6 +6,7 @@
 
 #include "simple_stages.hpp"
 #include "packet.hpp"
+#include "pipe_junction.hpp"
 
 #include "../util/asserts.hpp"
 
@@ -79,24 +80,26 @@ namespace pipeline {
       write_output_wipe(pkt);
     }
 
-    // TODO:
-    //   This is probably ok but let's leave it until the connectors are totally
-    //   done.
-    packet *read_input();
-    // TODO:
-    //   Connectors are still a bit unsure in this situation.  It might be that
-    //   we can return data from sequence_step.  I think not though, because
-    //   that entails havign a +debuffer+ method on the sequence as well or
-    //   having various checks to see if data is actually returned or not.  All
-    //   depends on how connectors are done, so let's sort it out later.
-    void write_output(packet *);
-    // TODO:
-    //   Should replace the entire output queue with the packet.  This is unsure
-    //   now because we don't know exactly how connectors are going to work.
-    void write_output_wipe(packet*);
+    //! Input/output convenience
+    //@{
+
+    //! The input/output pipe for this sequence.
+    pipe_junction &junction() { return junction_; }
+
+    packet *read_input() { return junction_.read_input(); }
+    void write_output(packet *p) { junction_.write_output(p); }
+    void write_output_wipe(packet *p) { junction_.write_output_wipe(p); }
+
+    //@}
 
     private:
 
+    // TODO:
+    //   Not 100% sure this will be here by value.  Depends on how the
+    //   create_sequence assigns.  It is definitely certain that we need some
+    //   special considerations because of the way the object is initialised
+    //   gradually.
+    pipe_junction junction_;
   };
 }
 

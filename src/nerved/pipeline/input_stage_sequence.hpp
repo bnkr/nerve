@@ -7,6 +7,8 @@
 #include "stage_sequence.hpp"
 #include "input_stage.hpp"
 
+#include "../util/asserts.hpp"
+
 namespace pipeline {
   /*!
    * \ingroup grp_pipeline
@@ -19,7 +21,7 @@ namespace pipeline {
     public:
 
     simple_stage *create_stage(config::stage_config &) {
-      std::cerr << __FUNCTION__ << ": not implemented: returning null" << std::endl;
+      NERVE_NIMPL("input stage's stage addition");
       return NULL;
     }
 
@@ -48,8 +50,13 @@ namespace pipeline {
     // TODO:
     //   Calls load on the input stage with details of what to load.  Not
     //   entirely sure on that yet so let's leave it.
-    void load_event();
-    void skip_event();
+    void load_event() {
+      NERVE_NIMPL("load file event");
+    }
+
+    void skip_event() {
+      NERVE_NIMPL("skip to timestamp event");
+    }
 
     private:
     input_stage *is_;

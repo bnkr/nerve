@@ -60,4 +60,13 @@ namespace asserts {
     }\
   } while(false);
 
+//! \ingroup grp_asserts
+//! Something is not implemented
+#define NERVE_NIMPL(what__)\
+  do {\
+    std::cerr << __FILE__ << ":" << __LINE__ << ": warning: " << std::endl;\
+    std::cerr << "  in " << __PRETTY_FUNCTION__ << std::endl;\
+    std::cerr << "  not implemented: " << what__ << std::endl;\
+  } while (false);
+
 #endif

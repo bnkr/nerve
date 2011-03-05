@@ -25,8 +25,12 @@ namespace pipeline {
 
     typedef event::id event_type;
 
-    event_type event() const;
-    bool non_data() const;
+    event_type event() const { return event_; }
+    bool non_data() const { return event_ != event::data; }
+
+    private:
+
+    event_type event_;
   };
 }
 
