@@ -21,13 +21,6 @@ namespace pipeline {
     public:
     typedef std::vector<observer_stage*> stages_type;
 
-    struct observe_caller {
-      typedef void result_type;
-      void operator()(observer_stage *s, packet *p) {
-        s->observe(p);
-      }
-    };
-
     stage_sequence::step_state sequence_step() {
       packet *p = read_input();
 
