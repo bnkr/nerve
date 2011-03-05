@@ -4,21 +4,23 @@ Output Usage
 * use output in the config logging part
 * add trace output calls all over the place
 
-Non-Connector Object Creates
-----------------------------
+Sequences Creates
+-----------------
 
-* implement the create functions as they appear (they all return null right now)
+* implement the virtual functions of each stage sequence (as per compiler
+  errors)
 
 Connector Creates
 -----------------
 
-* objects themselves
+* object definitions
+* the create_pipe / x_terminator funtions in pipeline_data
 * stuff from para (it's still in the old prototype)
 
 Pipeline Algorithms
 -------------------
 
-* fix the progressive buffer stack thing
+* fix the progressive buffer stack thing (section and progressive_buffer)
 * check the section block check mess (but it's prolly pretty hard to organise
   without having working output)
 
