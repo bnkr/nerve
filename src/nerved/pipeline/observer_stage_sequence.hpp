@@ -7,6 +7,8 @@
 #include "simple_stages.hpp"
 #include "stage_sequence.hpp"
 
+#include "../util/asserts.hpp"
+
 #include <algorithm>
 #include <boost/bind.hpp>
 #include <vector>
@@ -41,7 +43,7 @@ namespace pipeline {
     }
 
     simple_stage *create_stage(config::stage_config &cfg) {
-      std::cerr << __FUNCTION__ << ": not implemented: returning null" << std::endl;
+      NERVE_NIMPL("creating a stage in an observer sequence");
       return NULL;
     }
 

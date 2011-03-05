@@ -17,22 +17,25 @@ void process_stage_sequence::finalise() {
 stage_sequence::step_state process_stage_sequence::sequence_step() {
   typedef stage_sequence::state state;
 
-  // TODO:
-  //   We must check for non-data events first to reduce latency.  Otherwise a
-  //   buffering stage will continue to do work while there is an abandon event
-  //   on the queue.  That said, it's tricky to do because some events (such as
-  //   a flush) needs to stay in order.
-  packet *p = NERVE_CHECK_PTR(read_input());
-  switch (p->event()) {
-  case packet::event::data:
+  if (data_loop_.buffering()) {
+    // We must check for wipe events first to reduce latency.  Otherwise a
+    // buffering stage will continue to do work while there is an abandon event
+    // on the queue.
+    packet *p = junction().read_input_wipe();
+    if (p) {
+      NERVE_ASSERT(p->event() == packet::event::abandon, "only 'abandon' packets cause wipes");
+      data_loop_.abandon_reset();
+      this->non_data_step(stages(), p);
+      return state::complete;
+    }
+    else {
+      data_loop_.step();
+      return data_loop_.buffering() ? state::buffering : state::complete;
+    }
+  }
+  else {
     data_loop_.step();
     return data_loop_.buffering() ? state::buffering : state::complete;
-  case packet::event::abandon:
-    data_loop_.abandon_reset();
-    // fallthrough
-  default:
-    this->non_data_step(stages(), p);
-    return state::complete;
   }
 }
 

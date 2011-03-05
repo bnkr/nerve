@@ -16,6 +16,11 @@ namespace pipeline {
     // TODO:
     //   All this is really uncertain because the connectors are not creatable
     //   yet.  Assume it'll change.
+    //
+    //   Looks like there must be pointers stored in here.  It might also be a
+    //   by-value class.  Another alternative is to have a pipe_handler class
+    //   which has these methods and a pipe_junction which actually carries the
+    //   pipes.
 
     //! Get a packet from the input connection.
     packet *read_input() {
@@ -23,9 +28,12 @@ namespace pipeline {
       return NULL;
     }
 
-    //! This is O(1) because a priority packet will always wipe the queue.
-    //! Returns null if no nuke packet.
-    packet *read_nuke_packet();
+    //! Read a packet which caused a wipe.  This is O(1) because a priority
+    //! packet will always wipe the queue.  Returns null if no wiping packet.
+    packet *read_input_wipe() {
+      NERVE_NIMPL("reading a wipe packet");
+      return NULL;
+    }
 
     //! Push onto the output queue.
     void write_output(packet *p) {
