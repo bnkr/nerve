@@ -48,6 +48,8 @@ bbuild_exe(
     pipeline/section.cpp
     pipeline/pipeline_data.cpp
     pipeline/stage_data.cpp
+    pipeline/process_stage_sequence.cpp
+    pipeline/progressive_buffer.cpp
     player/run.cpp
     util/pooled.cpp
     btrace/crash_detector.cpp

@@ -7,137 +7,108 @@
 #include "packet.hpp"
 #include "packet_return.hpp"
 #include "simple_stages.hpp"
+#include "pipe_junction.hpp"
 
 #include "../util/asserts.hpp"
+#include "../util/indirect.hpp"
 
-#include <vector>
 #include <algorithm>
-
 #include <boost/bind.hpp>
 #include <boost/type_traits/remove_pointer.hpp>
 
 namespace pipeline {
   struct process_stage;
 
-/*!
- * \ingroup grp_pipeline
- *
- * Algorithm object for the following goals:
- *
- * - enforces the constant delay rule
- * - stages can produce any number of packets
- * - buffers don't expand (i.e if something is debuffering then no more input is
- *   added)
- *
- * The drawback is that there is overhead for stages which will only ever return
- * one or less packet.
- */
-class progressive_buffer {
-  public:
+  /*!
+   * \ingroup grp_pipeline
+   *
+   * Algorithm object for the following goals:
+   *
+   * - enforces the constant delay rule
+   * - stages can produce any number of packets
+   * - buffers don't expand (i.e if something is debuffering then no more input is
+   *   added)
+   *
+   * The drawback is that there is overhead for stages which will only ever return
+   * one or less packet.
+   */
+  class progressive_buffer {
+    public:
+    typedef packet_return stage_value_type;
 
-  typedef std::vector<process_stage*> stages_type;
-  typedef stages_type::iterator iterator_type;
-  typedef boost::remove_pointer<stages_type::value_type>::type stage_type;
+    //! A matching destructor for allocation done in create_stage (which is
+    //! necesary because the stages can be differing sizes).
+    struct tracked_destructor {
+      void operator()(process_stage *p) { pooled::tracked_byte_free(p); }
+    };
 
-  typedef packet_return stage_value_type;
+    typedef pooled::container<process_stage*>::vector vector_type;
+    typedef ::indirect_owned<vector_type, tracked_destructor> stages_type;
 
-  // TODO:
-  //   Deal with the input/output pipes.  Need to pass a junction (or whatever
-  //   will be used).
-  progressive_buffer(stages_type &stages)
-  : stages_(stages)
-  { }
+    typedef stages_type::value_type stage_type;
+    typedef stages_type::iterator iterator_type;
 
-  //! Call when the stage list is fully set up.
-  void reset_start() { start(this->stages().begin()); };
+    /*!
+     * Note: the pipe_junction is used so that a) this object is not coupled to
+     * the sequence object, and b) so that the pipe stuff and be protected.
+     */
+    progressive_buffer(pipe_junction &junc)
+    : junc_(junc) {}
 
-  // This resets the progressive buffer (not the stages) for When the stages
-  // themselves will be abandoned.  This means all the buffers will be empty, so
-  // we need to go to the start again.
-  void abandon_reset() { this->reset_start(); }
+    /*!
+     * Prepare the initial state.  This is a bit messy due to initialisation
+     * outside of a constructor, but we can't really get around it because the
+     * stage sequence isn't initialised by its constructor.  We can solve this
+     * until the other has been solved.
+     *
+     * TODO:
+     *   Might be necessary to mess with the connectors here.
+     */
+    void finalise() { this->reset_start(); }
 
-  // Is there a buffering stage here?
-  bool buffering() { return this->start() != this->stages().begin(); }
+    //! This resets the progressive buffer (not the stages) for When the stages
+    //! themselves will be abandoned.  This means all the buffers will be empty, so
+    //! we need to go to the start again.
+    void abandon_reset() { this->reset_start(); }
 
-  // Perform an iteration of the stages where no stage is visited twice (but
-  // some might be unvisited).  Pulls data from the input queue only when
-  // necessary.
-  void step() {
-    packet *input;
-    iterator_type real_start = start_;
+    //! Is there a buffering stage here?
+    bool buffering() { return this->start() != this->stages().begin(); }
 
-    if (this->buffering()) {
-      ++real_start;
-      input = this->debuffer_input();
-    }
-    else {
-      input = this->read_input();
-    }
+    /*!
+     * Perform an iteration of the stages where no stage is visited twice (but
+     * some might be unvisited).  Pulls data from the input queue only when
+     * necessary.
+     */
+    void step();
 
-    const iterator_type end = stages().end();
+    //! Stored stages.  Stages are stored here so we can control the iterators.
+    stages_type &stages() { return stages_; }
 
-    for (iterator_type s = real_start; s != end; ++s) {
-      NERVE_ASSERT(! input->non_data(), "can't be doing a data loop on non-data");
-      const stage_value_type ret = NERVE_CHECK_PTR(*s)->process(input);
+    private:
 
-      NERVE_ASSERT(! (ret.empty() && ret.buffering()), "empty xor buffering");
-      if (ret.empty()) {
-        return;
-      }
-      else if (ret.buffering()) {
-        // Simply assigning this every time we meet a buffering stage means we
-        // end up debuffering the latest stage which has stuff to debuffer.
-        //
-        // TODO:
-        //   This means we ignore any stage earlier in the sequence which is
-        //   buffering and therefore buffers expand when we push more data!  We
-        //   must use a stack to reduce our bufferingness.
-        start(s);
-      }
+    //! Iterator state
+    //@{
+    iterator_type start() const { return start_; }
+    void start(iterator_type i) { start_ = i; }
+    void reset_start() { start(this->stages().begin()); };
+    //@}
 
-      input = ret.packet();
-    }
+    //! Input/output
+    //@{
 
-    // It is nicer to do the connection work here because otherwise the section
-    // or sequence have to keep checking to see whether we returned anything.
-    this->write_output(input);
-  }
+    //! Also resets buffering stage next time if necessary.
+    packet *debuffer_input();
+    packet *read_input() { return junc_.read_input(); }
+    void write_output(packet *p) { junc_.write_output(p); }
 
-  private:
+    //@}
 
-  iterator_type start() const;
-  void start(iterator_type) const;
-
-  // TODO:
-  //   Unspecified for now.  May become a simple return -- we have to see how
-  //   the sequence works out.
-  packet *read_input();
-  void write_output(packet *p);
-
-  // packet *pipe_input() { return pipes_.in().read(); }
-  // void pipe_input(packet *p) { return pipes_.out().write(p); }
-
-  //! Also resets buffering stage next time if necessary.
-  packet *debuffer_input() {
-    const stage_value_type ret = NERVE_CHECK_PTR(*this->start())->debuffer();
-
-    NERVE_ASSERT(! ret.empty(), "empty data from a buffering stage is forbidden");
-
-    if (! ret.buffering()) {
-      reset_start();
-    }
-
-    return ret.packet();
-  }
-
-  stages_type &stages() { return stages_; }
-  // junction &pipes() { return pipes_; }
-
-  stages_type &stages_;
-  // junction pipes_;
-  iterator_type start_;
-};
+    pipe_junction &junc_;
+    stages_type stages_;
+    iterator_type start_;
+  };
 
 } //ns pipeline
+
 
 #endif

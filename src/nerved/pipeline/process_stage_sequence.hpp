@@ -8,10 +8,6 @@
 #include "progressive_buffer.hpp"
 #include "simple_stages.hpp"
 
-#include "../util/asserts.hpp"
-
-#include <vector>
-
 namespace pipeline {
   /*!
    * \ingroup grp_pipeline
@@ -22,58 +18,27 @@ namespace pipeline {
   class process_stage_sequence : public stage_sequence {
     public:
 
-    typedef std::vector<process_stage*> stages_type;
+    typedef progressive_buffer progressive_buffer_type;
 
+    // This is a little messy because it's using values which are not complete
+    // yet.  At this point the progressive buffer can really be seen as part of
+    // this object, so I don't think it's worth fixing it.  At least not until
+    // the connectors are completely sorted out.
     process_stage_sequence()
-    : data_loop_(stages_) {
-    }
+    : data_loop_(this->junction()) { }
 
-    simple_stage *create_stage(config::stage_config &cfg) {
-      std::cerr << __FUNCTION__ << ": not implemented: returning null" << std::endl;
-      return NULL;
-    }
+    simple_stage *create_stage(config::stage_config &cfg);
 
-    void finalise() { data_loop_.reset_start(); }
+    void finalise();
 
-    // Constant delay is guaranteed by the use of the progressive buffering loop.
-    stage_sequence::step_state sequence_step() {
-      // Checking for non-data only is necessary to discover non-data events as
-      // quickly as possible.  Otherwise a buffering stage will delay the input
-      // connector operation.
-      //
-      // TODO:
-      //   This could be omtimised if we could iterate all simple stages in one
-      //   go.  Then the section could check for most non-data events.  That
-      //   would mean no need to pass flushes etc. down the local pipes so less
-      //   checks all round.  There are slight problems with the input stage
-      //   though (because it can "create" nd-events).
-      //
-      // TODO:
-      //   It would improve latency further if we did this at the end of each
-      //   stage.  Of course, check is useless on a local pipe...
-
-      typedef stage_sequence::state state;
-
-      packet *p = NERVE_CHECK_PTR(read_input());
-      switch (p->event()) {
-      case packet::event::data:
-        data_loop_.step();
-        return data_loop_.buffering() ? state::buffering : state::complete;
-      case packet::event::abandon:
-        data_loop_.abandon_reset();
-        // fallthrough
-      default:
-        this->non_data_step(stages(), p);
-        return state::complete;
-      }
-    }
+    stage_sequence::step_state sequence_step();
 
     private:
+    typedef progressive_buffer_type::stages_type stages_type;
 
-    stages_type &stages() { return stages_; }
+    stages_type &stages() { return data_loop_.stages(); }
 
-    stages_type stages_;
-    progressive_buffer data_loop_;
+    progressive_buffer_type data_loop_;
   };
 } // ns pipeline
 
