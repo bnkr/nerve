@@ -70,7 +70,7 @@ void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
     const stage_config::category_type this_cat = stage_conf->category();
 
     if (this_cat != last_cat) {
-      sequence = sec.create_sequence(this_cat);
+      sequence = NERVE_CHECK_PTR(sec.create_sequence(this_cat));
     }
 
     configure_stage(*NERVE_CHECK_PTR(sequence), *stage_conf);

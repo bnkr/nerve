@@ -8,7 +8,7 @@
 #include "stage_data.hpp"
 #include "connectors.hpp"
 
-#include <vector>
+#include "../util/indirect.hpp"
 #include <boost/type_traits/remove_pointer.hpp>
 
 namespace pipeline {
@@ -51,7 +51,18 @@ namespace pipeline {
    */
   class section {
     public:
-    typedef std::vector<stage_sequence*> sequences_type;
+
+    //! Must be separate because the sequence is polymorphic.
+    struct sequence_destructor {
+      // Storing the number of bytes allocated doesn't actually increase our
+      // overhead.  If we didn't store it then we'd need to store some kind of
+      // run-time type information anyway (e.g the stage_category_type)
+      void operator()(stage_sequence *const ss) { pooled::tracked_byte_free(ss); }
+    };
+
+    typedef pooled::container<stage_sequence*>::vector vector_type;
+    typedef indirect_owned<vector_type, sequence_destructor> sequences_type;
+
     typedef boost::remove_pointer<sequences_type::value_type>::type sequence_type;
 
     typedef stage_category_type category_type;

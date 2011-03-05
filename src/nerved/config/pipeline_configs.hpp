@@ -26,6 +26,9 @@
 #include <boost/bind.hpp>
 #include <algorithm>
 
+// TODO:
+//   This lot should use the indirect_owned container thing.
+
 namespace config {
   template<class Iterator>
   typename boost::indirect_iterator<Iterator> make_deref_iter(Iterator i) {

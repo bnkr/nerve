@@ -47,6 +47,8 @@ namespace pooled {
   }
 
   //! \ingroup grp_pooled
+  //! This *does not* work polymorphically because we'd have to store the number
+  //! of bytes allocated.
   template<class T>
   void free(T *ptr) {
     ptr->~T();

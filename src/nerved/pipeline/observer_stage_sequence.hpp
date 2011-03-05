@@ -52,5 +52,9 @@ namespace pipeline {
     stages_type &stages() { return stages_; }
     stages_type stages_;
   };
+
+  //! \ingroup grp_pipeline
+  //! Identical sequence for now.
+  typedef observer_stage_sequence output_stage_sequence;
 }
 #endif
