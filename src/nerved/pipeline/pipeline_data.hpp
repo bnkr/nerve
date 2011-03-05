@@ -5,6 +5,7 @@
 #define PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 
 #include <vector>
+#include <boost/utility.hpp>
 
 namespace pipeline {
   struct job;
@@ -12,8 +13,11 @@ namespace pipeline {
 
   //! \ingroup grp_pipeline
   //! Container for the initialised pipeline.
-  class pipeline_data {
+  class pipeline_data : boost::noncopyable {
     public:
+
+    ~pipeline_data();
+
     job *create_job();
 
     //! The start and end pipes for the entire pipeline.
