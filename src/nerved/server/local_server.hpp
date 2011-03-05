@@ -6,7 +6,6 @@
 
 #include "session.hpp"
 
-// #include <boost/asio.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/bind.hpp>

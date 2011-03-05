@@ -21,43 +21,16 @@ namespace pipeline {
   class input_stage_sequence : public stage_sequence {
     public:
 
-    simple_stage *create_stage(config::stage_config &cfg) {
-      NERVE_NIMPL("input stage's stage addition");
-      return NULL;
-    }
+    input_stage_sequence() : is_(NULL) {}
 
     void finalise() {}
 
-    stage_sequence::step_state sequence_step() {
-      packet *p = NERVE_CHECK_PTR(read_input());
-      switch (p->event()) {
-      case packet::event::load:
-        load_event();
-        break;
-      case packet::event::skip:
-        skip_event();
-        break;
-        // TODO : more events
-      default:
-        NERVE_ABORT("event should never happen here");
-      }
+    simple_stage *create_stage(config::stage_config &cfg);
+    stage_sequence::step_state sequence_step();
 
-      // change p.event to "abandon" unless we just read data
-      write_output_wipe(p);
-
-      return stage_sequence::state::complete;
-    }
-
-    // TODO:
-    //   Calls load on the input stage with details of what to load.  Not
-    //   entirely sure on that yet so let's leave it.
-    void load_event() {
-      NERVE_NIMPL("load file event");
-    }
-
-    void skip_event() {
-      NERVE_NIMPL("skip to timestamp event");
-    }
+    private:
+    void load_event();
+    void skip_event();
 
     private:
     input_stage *is_;
