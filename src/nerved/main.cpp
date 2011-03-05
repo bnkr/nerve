@@ -5,11 +5,14 @@
 #include "pipeline/configure.hpp"
 #include "output/configure.hpp"
 #include "player/run.hpp"
+#include "btrace/crash_detector.hpp"
 
 #include <cstdlib>
 
 //! Links each bit of the daemon: cli, config, pipeline, and execution.
 int main(int argc, char **argv) {
+  btrace::crash_detector cd;
+
   cli::settings settings;
   switch (cli::parse(settings, argc, argv)) {
   case cli::parse_fail:
