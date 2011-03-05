@@ -4,7 +4,7 @@
 #include "job.hpp"
 #include "section.hpp"
 
-#include <iostream>
+#include "../util/asserts.hpp"
 
 using namespace pipeline;
 
@@ -14,7 +14,7 @@ void job::finalise() {
 
 section *job::create_section(connector *in, connector *out) {
   section *const s = pooled::alloc<section>();
-  std::cerr << __PRETTY_FUNCTION__ << ": not implemented: assign connectors" << std::endl;
+  NERVE_NIMPL("assigning connectors to created section");
   sections_.push_back(s);
   return s;
 }

@@ -6,9 +6,9 @@
 #include "job.hpp"
 
 #include "../util/pooled.hpp"
+#include "../util/asserts.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <boost/bind.hpp>
 
 using namespace pipeline;
@@ -18,16 +18,16 @@ using namespace pipeline;
  **************/
 
 connector *pipeline_data::start_terminator() {
-  std::cerr << __PRETTY_FUNCTION__ << ": not implemented: returning null" << std::endl;
+  NERVE_NIMPL("the start terminator");
   return NULL;
 }
 connector *pipeline_data::end_terminator() {
-  std::cerr << __PRETTY_FUNCTION__ << ": not implemented: returning null" << std::endl;
+  NERVE_NIMPL("the end terminator");
   return NULL;
 }
 
 connector *pipeline_data::create_pipe() {
-  std::cerr << __PRETTY_FUNCTION__ << ": not implemented: returning null" << std::endl;
+  NERVE_NIMPL("creating a pipe");
   return NULL;
 }
 
