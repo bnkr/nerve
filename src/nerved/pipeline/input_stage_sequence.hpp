@@ -14,13 +14,14 @@ namespace pipeline {
    * \ingroup grp_pipeline
    *
    * Specialist stage sequence for dealing with input event stages.  This is
-   * necesasry to avoid having every stage check if their packets are and
-   * because the input stage results in the creation of non-data events.
+   * necesasry to avoid having every stage check if their packets are special
+   * input events and because the input stage results in the creation of
+   * non-data events while others don't.
    */
   class input_stage_sequence : public stage_sequence {
     public:
 
-    simple_stage *create_stage(config::stage_config &) {
+    simple_stage *create_stage(config::stage_config &cfg) {
       NERVE_NIMPL("input stage's stage addition");
       return NULL;
     }
