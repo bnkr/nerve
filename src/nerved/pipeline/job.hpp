@@ -5,8 +5,8 @@
 #define PIPELINE_JOB_HPP_lih1nqby
 
 #include "section.hpp"
-
-#include <vector>
+#include "../util/pooled.hpp"
+#include "../util/indirect.hpp"
 
 namespace pipeline {
   struct section;
@@ -20,10 +20,8 @@ namespace pipeline {
    */
   class job {
     public:
-    // TODO:
-    //   almost certainly must change to avoid copy and to make sure that
-    //   create_x pointers don't invalidate by a subsequent create.
-    typedef std::vector<section> sections_type;
+    typedef pooled::container<section*>::vector vector_type;
+    typedef indirect_owned<vector_type, pooled_destructor> sections_type;
 
     //! Returned pointer must remain valid.
     section *create_section(connector *, connector *);

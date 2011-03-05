@@ -35,12 +35,8 @@ connector *pipeline_data::create_pipe() {
  * Everything else *
  *******************/
 
-pipeline_data::~pipeline_data() {
-  std::for_each(jobs_.begin(), jobs_.end(), &pooled::free<job>);
-}
-
 job *pipeline_data::create_job() {
-  job *j = pooled::alloc<job>();
+  job *const j = pooled::alloc<job>();
   jobs_.push_back(j);
   return j;
 }

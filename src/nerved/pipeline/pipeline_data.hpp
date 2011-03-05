@@ -4,8 +4,16 @@
 #ifndef PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 #define PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 
+// necessary because it's destroyed in the pooled_destructor so the size is
+// needed.
+//
+// TODO:
+//   Could be a workaround for this?
+#include "job.hpp"
+
 #include <boost/utility.hpp>
 #include "../util/pooled.hpp"
+#include "../util/indirect.hpp"
 
 namespace pipeline {
   struct job;
@@ -15,8 +23,6 @@ namespace pipeline {
   //! Container for the initialised pipeline.
   class pipeline_data : boost::noncopyable {
     public:
-
-    ~pipeline_data();
 
     //! A new job container owned by this object.  Pointer is valid
     //! indefinitely.
@@ -33,7 +39,10 @@ namespace pipeline {
     void finalise();
 
     private:
-    pooled::container<job*>::vector jobs_;
+    typedef pooled::container<job*>::vector vector_type;
+    typedef indirect_owned<vector_type, pooled_destructor> jobs_type;
+
+    jobs_type jobs_;
   };
 }
 
