@@ -18,12 +18,16 @@ namespace pipeline {
   class input_stage_sequence : public stage_sequence {
     public:
 
-    simple_stage *create_stage(config::stage_config &);
+    simple_stage *create_stage(config::stage_config &) {
+      std::cerr << __FUNCTION__ << ": not implemented: returning null" << std::endl;
+      return NULL;
+    }
+
     void finalise() {}
 
     stage_sequence::step_state sequence_step() {
-      packet &p = *NERVE_CHECK_PTR(read_input());
-      switch (p.event()) {
+      packet *p = NERVE_CHECK_PTR(read_input());
+      switch (p->event()) {
       case packet::event::load:
         load_event();
         break;
@@ -36,7 +40,9 @@ namespace pipeline {
       }
 
       // change p.event to "abandon" unless we just read data
-      write_output_wipe(&p);
+      write_output_wipe(p);
+
+      return stage_sequence::state::complete;
     }
 
     // TODO:

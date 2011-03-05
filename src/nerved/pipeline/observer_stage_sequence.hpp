@@ -40,7 +40,11 @@ namespace pipeline {
       return stage_sequence::state::complete;
     }
 
-    simple_stage *create_stage(config::stage_config &);
+    simple_stage *create_stage(config::stage_config &cfg) {
+      std::cerr << __FUNCTION__ << ": not implemented: returning null" << std::endl;
+      return NULL;
+    }
+
     void finalise() {}
 
     private:

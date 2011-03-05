@@ -37,6 +37,8 @@ namespace pipeline {
     //! done with the connector abstraction.
     virtual step_state sequence_step() = 0;
 
+    //! Initialise and store the proper stage for the given config.  Pointer
+    //! remains valid.
     // TODO:
     //   Later I should remove the config object to increase modularity.  No
     //   other part of the pipeline depends on the config except this.
