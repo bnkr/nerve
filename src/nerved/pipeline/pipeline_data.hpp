@@ -4,8 +4,8 @@
 #ifndef PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 #define PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 
-#include <vector>
 #include <boost/utility.hpp>
+#include "../util/pooled.hpp"
 
 namespace pipeline {
   struct job;
@@ -18,6 +18,8 @@ namespace pipeline {
 
     ~pipeline_data();
 
+    //! A new job container owned by this object.  Pointer is valid
+    //! indefinitely.
     job *create_job();
 
     //! The start and end pipes for the entire pipeline.
@@ -31,7 +33,7 @@ namespace pipeline {
     void finalise();
 
     private:
-    std::vector<job*> jobs_;
+    pooled::container<job*>::vector jobs_;
   };
 }
 

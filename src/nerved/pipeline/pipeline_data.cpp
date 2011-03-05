@@ -4,6 +4,7 @@
 #include "pipeline_data.hpp"
 #include "connectors.hpp"
 #include "job.hpp"
+
 #include "../util/pooled.hpp"
 
 #include <algorithm>
