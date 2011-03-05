@@ -38,11 +38,11 @@ namespace pipeline {
     //! done with the connector abstraction.
     virtual step_state sequence_step() = 0;
 
-    //! Initialise and store the proper stage for the given config.  Pointer
-    //! remains valid.
-    // TODO:
-    //   Later I should remove the config object to increase modularity.  No
-    //   other part of the pipeline depends on the config except this.
+    /*!
+     * Initialise and store the proper stage for the given config.  Pointer
+     * remains valid.  This is done as a virtual function so that allocation and
+     * type-safety can be specialised to the sub-class.
+     */
     virtual simple_stage *create_stage(::config::stage_config &) = 0;
 
     //! Prepare to run; set up initial state etc.
