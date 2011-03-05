@@ -24,6 +24,7 @@ namespace cli {
     bool current_equal(const char *a) { return strequal(a, current_arg()); }
 
     void arg_error(const char *);
+    void arg_missing_error(const char *);
     void arg_value_error(const char *, const char *);
     void help();
     void version();
@@ -88,6 +89,9 @@ void cli_parser::parse() {
     }
   }
 
+  if (s_.config_files().empty()) {
+    arg_missing_error("-cfg");
+  }
 }
 
 void cli_parser::help() {
@@ -144,6 +148,11 @@ void cli_parser::arg_error(const char *what) {
 
 void cli_parser::arg_value_error(const char *val, const char *what) {
   std::fprintf(stderr, "nerve: %s '%s': %s\n", current_arg(), val, what);
+  status_ = cli::parse_fail;
+}
+
+void cli_parser::arg_missing_error(const char *which) {
+  std::fprintf(stderr, "nerve: %s is required\n", which);
   status_ = cli::parse_fail;
 }
 
