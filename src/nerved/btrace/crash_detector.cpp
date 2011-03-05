@@ -431,7 +431,7 @@ void console_logger::log(const crash_data &d) {
   std::cerr << "Signal: " << sn << " (" << d.signal() << ")" << std::endl;
   std::cerr << "Reason: " << cn  << " (" << d.code() << ")" << std::endl;
   if (d.memory_fault()) {
-    std::cerr << "Address: " << d.address() << std::endl;
+    std::cerr << "Address: 0x" << std::hex << d.address() << std::dec << std::endl;
   }
 
   if (d.from_process()) {
