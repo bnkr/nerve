@@ -13,8 +13,10 @@ void job::finalise() {
 }
 
 section *job::create_section(connector *in, connector *out) {
-  std::cerr << __PRETTY_FUNCTION__ << ":  returning null" << std::endl;
-  return NULL;
+  section *const s = pooled::alloc<section>();
+  std::cerr << __PRETTY_FUNCTION__ << ": not implemented: assign connectors" << std::endl;
+  sections_.push_back(s);
+  return s;
 }
 
 void pipeline::job::job_thread() {
