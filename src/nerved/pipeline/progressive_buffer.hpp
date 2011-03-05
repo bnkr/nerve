@@ -41,15 +41,15 @@ class progressive_buffer {
 
   typedef packet_return stage_value_type;
 
-  // Stages must be fully initialised.
-  // progressive_buffer(stages_type &stages, junction &pipes)
-  // : stages_(stages), pipes_(pipes)
+  // TODO:
+  //   Deal with the input/output pipes.  Need to pass a junction (or whatever
+  //   will be used).
   progressive_buffer(stages_type &stages)
   : stages_(stages)
-  {
-    NERVE_ASSERT(! stages.empty(), "stages must be ready (read iterable) already");
-    this->reset_start();
-  }
+  { }
+
+  //! Call when the stage list is fully set up.
+  void reset_start() { start(this->stages().begin()); };
 
   // This resets the progressive buffer (not the stages) for When the stages
   // themselves will be abandoned.  This means all the buffers will be empty, so
@@ -107,7 +107,6 @@ class progressive_buffer {
 
   iterator_type start() const;
   void start(iterator_type) const;
-  void reset_start() { start(this->stages().begin()); };
 
   // TODO:
   //   Unspecified for now.  May become a simple return -- we have to see how

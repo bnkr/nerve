@@ -18,6 +18,9 @@ namespace pipeline {
   class input_stage_sequence : public stage_sequence {
     public:
 
+    simple_stage *create_stage(config::stage_config &);
+    void finalise() {}
+
     stage_sequence::step_state sequence_step() {
       packet &p = *NERVE_CHECK_PTR(read_input());
       switch (p.event()) {

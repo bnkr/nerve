@@ -40,6 +40,9 @@ namespace pipeline {
       return stage_sequence::state::complete;
     }
 
+    simple_stage *create_stage(config::stage_config &);
+    void finalise() {}
+
     private:
 
     stages_type &stages() { return stages_; }

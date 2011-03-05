@@ -24,12 +24,13 @@ namespace pipeline {
 
     typedef std::vector<process_stage*> stages_type;
 
-    // TODO:
-    //   This needs to be changed a bit because we add stages later.  There must
-    //   be a finalise method.
     process_stage_sequence()
     : data_loop_(stages_) {
     }
+
+    simple_stage *create_stage(config::stage_config &);
+
+    void finalise() { data_loop_.reset_start(); }
 
     // Constant delay is guaranteed by the use of the progressive buffering loop.
     stage_sequence::step_state sequence_step() {
