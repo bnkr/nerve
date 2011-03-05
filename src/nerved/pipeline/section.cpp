@@ -47,6 +47,7 @@ namespace {
 
 stage_sequence *section::create_sequence(stage_category_type c) {
   stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(c));
+  NERVE_NIMPL("assign section's connectors to new sequence");
   return s;
 }
 

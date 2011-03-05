@@ -5,4 +5,3 @@ Currently, we construct bit by bit.  Ideally we should construct each in one go.
 This means that every pipeline object has a data object.  The data object is
 passed as const to the pipeline object and then we don't have any statefulness.
 This mostly a change to the configure function.
-

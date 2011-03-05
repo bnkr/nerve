@@ -42,7 +42,8 @@ namespace pipeline {
    * - if sequences give us their output packet then we nececssarily need to
    *   handle their input packets too.  This means we need to deal with
    *   progressive buffering which obviates specialised sequences (in effect it
-   *   moves the problem that the current section class solves up one level)
+   *   moves the problem that the current section class solves up one level --
+   *   we'd need specialised per-stage sections)
    *
    * The result is that for every sequence there is a virtual call to write
    * output, but but we don't need to do a buffering/no-return check or event
