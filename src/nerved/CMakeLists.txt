@@ -56,6 +56,7 @@ bbuild_exe(
     pipeline/section.cpp
     pipeline/pipeline_data.cpp
     pipeline/process_stage_sequence.cpp
+    pipeline/observer_stage_sequence.cpp
     pipeline/input_stage_sequence.cpp
     pipeline/progressive_buffer.cpp
     player/run.cpp

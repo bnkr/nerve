@@ -26,7 +26,7 @@ namespace pipeline {
     process_stage_sequence()
     : data_loop_(this->junction()) { }
 
-    simple_stage *create_stage(config::stage_config &cfg);
+    simple_stage *create_stage(stage_sequence::stage_data_type &);
 
     void finalise();
 

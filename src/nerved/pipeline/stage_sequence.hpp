@@ -13,7 +13,7 @@
 #include <algorithm>
 #include <boost/bind.hpp>
 
-namespace config { class stage_config; }
+namespace stages { class stage_data; }
 
 namespace pipeline {
   /*!
@@ -33,6 +33,7 @@ namespace pipeline {
       };
     };
     typedef state::step_state step_state;
+    typedef stages::stage_data stage_data_type;
 
     //! Note: see docs for class section to explain why outputted packets is
     //! done with the connector abstraction.
@@ -43,7 +44,7 @@ namespace pipeline {
      * remains valid.  This is done as a virtual function so that allocation and
      * type-safety can be specialised to the sub-class.
      */
-    virtual simple_stage *create_stage(::config::stage_config &) = 0;
+    virtual simple_stage *create_stage(stage_data_type &) = 0;
 
     //! Prepare to run; set up initial state etc.
     virtual void finalise() = 0;

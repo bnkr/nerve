@@ -15,7 +15,7 @@
 
 #include "parse_location.hpp"
 #include "flex_interface.hpp"
-#include "../stages/information.hpp" // plugin ids, categories etc
+#include "../stages/stage_data.hpp"
 
 #include "../util/c_string.hpp"
 #include "../util/asserts.hpp"
@@ -48,9 +48,13 @@ namespace config {
   //! \ingroup grp_config
   class stage_config : boost::noncopyable {
     public:
-    typedef stage_config * create_type;
-    typedef ::stages::plugin_id_type plugin_id_type;
+    typedef stages::stage_data stage_data_type;
+    typedef stage_data_type::plugin_id_type plugin_id_type;
+
     typedef ::stages::category_type category_type;
+
+    typedef stage_config * create_type;
+
     typedef flex_interface::unique_ptr unique_text_ptr;
     typedef flex_interface::transfer_mem transfer_mem;
     typedef configure_block configs_type;
@@ -61,7 +65,7 @@ namespace config {
     static create_type create() { return pooled::alloc<stage_config>(); }
     static void destroy(create_type p) { pooled::free(p); }
 
-    stage_config() : plugin_id_(plug_id::unset), configs_(NULL) {}
+    stage_config() : configs_(NULL) {}
 
     //@}
 
@@ -93,14 +97,15 @@ namespace config {
     void path(transfer_mem &pt) { path_ = pt.release_exclusive(); }
 
     //! Numeric type for the internal stage or id_plugin for check path.
-    void plugin_id(plugin_id_type i) { plugin_id_ = i; }
-    plugin_id_type plugin_id() const { return plugin_id_; }
+    void plugin_id(plugin_id_type i) { data_.plugin_id(i); }
+    plugin_id_type plugin_id() const { return data_.plugin_id(); }
 
     //! Is the stage built in?
-    bool internal() const {
-      NERVE_ASSERT(plugin_id() != plug_id::unset, "id must be set before querying");
-      return plugin_id() != plug_id::plugin;
-    }
+    bool internal() const { return data_.built_in(); }
+
+    //! Stage module data.
+    const stage_data_type &stage_data() const { return data_; }
+    stage_data_type &stage_data() { return data_; }
 
     //! Place this was declared.
     const parse_location &location() const { return location_; }
@@ -112,8 +117,8 @@ namespace config {
     bool configs_given() const { return configs_ != NULL; }
 
     private:
+    stages::stage_data data_;
     unique_text_ptr path_;
-    plugin_id_type plugin_id_;
     parse_location location_;
     configs_type *configs_;
   };

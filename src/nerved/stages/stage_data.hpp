@@ -16,6 +16,8 @@ namespace stages {
    */
   class stage_data {
     public:
+    typedef ::stages::plugin_id_type plugin_id_type;
+
     stage_data() :
       plugin_id_(plug_id::unset)
     {}
@@ -26,6 +28,10 @@ namespace stages {
     }
 
     plugin_id_type plugin_id() const { return plugin_id_; }
+    void plugin_id(plugin_id_type p) {
+      NERVE_ASSERT(p != plug_id::unset, "can't set to the unset value");
+      plugin_id_ = p;
+    }
 
     private:
     plugin_id_type plugin_id_;

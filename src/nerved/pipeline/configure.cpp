@@ -77,10 +77,7 @@ void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
 }
 
 void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
-  // TODO:
-  //   This will use an object "stages::stage_data" which is shared knowledge
-  //   between pipeline and config so it doesn't break modularity.
-  pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf));
+  pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf.stage_data()));
 
   if (stage_conf.configs_given()) {
     typedef stage_config::configs_type configs_type;

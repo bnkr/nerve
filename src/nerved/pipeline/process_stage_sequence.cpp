@@ -3,9 +3,11 @@
 
 #include "process_stage_sequence.hpp"
 
+#include "../stages/stage_data.hpp"
+
 using namespace pipeline;
 
-simple_stage *process_stage_sequence::create_stage(config::stage_config &cfg) {
+simple_stage *process_stage_sequence::create_stage(stages::stage_data &cfg) {
   NERVE_NIMPL("creating a process stage sequence member");
   return NULL;
 }

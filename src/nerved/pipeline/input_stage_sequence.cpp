@@ -2,19 +2,14 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "input_stage_sequence.hpp"
 
-#include "../config/pipeline_configs.hpp"
 #include "../stages/create.hpp"
 #include "../stages/stage_data.hpp"
 
 using namespace pipeline;
 
-simple_stage *input_stage_sequence::create_stage(config::stage_config &cfg) {
+simple_stage *input_stage_sequence::create_stage(stages::stage_data &cfg) {
   NERVE_ASSERT(is_ == NULL, "must not create an input stage twice");
-  // TODO:
-  //   This object should be in the stage_config object.  Loading plugins is
-  //   still not 100% clear, but it's going to be done mostly by stage_data.
-  stages::stage_data conf;
-  return is_ = NERVE_CHECK_PTR(stages::create_input_stage(conf));
+  return is_ = NERVE_CHECK_PTR(stages::create_input_stage(cfg));
 }
 
 stage_sequence::step_state input_stage_sequence::sequence_step() {
