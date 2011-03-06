@@ -22,9 +22,9 @@ namespace pipeline {
     // This is a little messy because it's using values which are not complete
     // yet.  At this point the progressive buffer can really be seen as part of
     // this object, so I don't think it's worth fixing it.  At least not until
-    // the connectors are completely sorted out.
+    // the pipes are completely sorted out.
     process_stage_sequence()
-    : data_loop_(this->junction()) { }
+    : data_loop_(this->connection()) { }
 
     simple_stage *create_stage(stage_sequence::stage_data_type &);
 

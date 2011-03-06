@@ -16,7 +16,7 @@ using namespace pipeline;
 typedef pipeline::pipe pipe_type;
 
 thread_pipe *pipeline_data::create_thread_pipe() {
-  NERVE_NIMPL("creating a thread");
+  NERVE_NIMPL("creating a thread pipe");
   return NULL;
 }
 

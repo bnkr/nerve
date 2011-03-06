@@ -23,7 +23,7 @@ stage_sequence::step_state process_stage_sequence::sequence_step() {
     // We must check for wipe events first to reduce latency.  Otherwise a
     // buffering stage will continue to do work while there is an abandon event
     // on the queue.
-    packet *p = junction().read_input_wipe();
+    packet *p = connection().read_input_wipe();
     if (p) {
       NERVE_ASSERT(p->event() == packet::event::abandon, "only 'abandon' packets cause wipes");
       data_loop_.abandon_reset();

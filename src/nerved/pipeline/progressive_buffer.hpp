@@ -7,7 +7,7 @@
 #include "packet.hpp"
 #include "packet_return.hpp"
 #include "simple_stages.hpp"
-#include "pipe_junction.hpp"
+#include "connection.hpp"
 
 #include "../util/asserts.hpp"
 #include "../util/indirect.hpp"
@@ -41,12 +41,14 @@ namespace pipeline {
     typedef stages_type::value_type stage_type;
     typedef stages_type::iterator iterator_type;
 
+    typedef polymorphic_connection connection_type;
+
     /*!
-     * Note: the pipe_junction is used so that a) this object is not coupled to
+     * Note: the connection_type is used so that a) this object is not coupled to
      * the sequence object, and b) so that the pipe stuff and be protected.
      */
-    progressive_buffer(pipe_junction &junc)
-    : junc_(junc) {}
+    progressive_buffer(connection_type &junc)
+    : conn_(junc) {}
 
     /*!
      * Prepare the initial state.  This is a bit messy due to initialisation
@@ -55,7 +57,7 @@ namespace pipeline {
      * until the other has been solved.
      *
      * TODO:
-     *   Might be necessary to mess with the connectors here.
+     *   Might be necessary to mess with the pipes here.
      */
     void finalise() { this->reset_start(); }
 
@@ -91,12 +93,12 @@ namespace pipeline {
 
     //! Also resets buffering stage next time if necessary.
     packet *debuffer_input();
-    packet *read_input() { return junc_.read_input(); }
-    void write_output(packet *p) { junc_.write_output(p); }
+    packet *read_input() { return conn_.read_input(); }
+    void write_output(packet *p) { conn_.write_output(p); }
 
     //@}
 
-    pipe_junction &junc_;
+    polymorphic_connection &conn_;
     stages_type stages_;
     iterator_type start_;
   };
