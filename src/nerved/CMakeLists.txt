@@ -20,18 +20,21 @@ else()
 endif()
 
 binfo_find_lib(
-  VAR DL_LIB
-  VAR_DOC "Interface to the dynamic linker"
-  TASK nerved
-  TASK_DOC "Used under debug configurations to get nicer backtraces."
+  VAR DL_LIB VAR_DOC "Interface to the dynamic linker"
+  TASK nerved TASK_DOC "Used under debug configurations to get nicer backtraces."
   NAME dl
 )
 
 binfo_find_lib(
-  VAR BOOST_SYSTEM_LIB
-  VAR_DOC "boost.system library"
-  TASK nerved
-  TASK_DOC "Boost's error checking library used by boost.asio and possilbly other bits."
+  VAR BOOST_THREAD_LIB VAR_DOC "Interface to the dynamic linker"
+  TASK nerved TASK_DOC "Used under debug configurations to get nicer backtraces."
+  NAMES boost_thread-mt boost_thread
+)
+
+
+binfo_find_lib(
+  VAR BOOST_SYSTEM_LIB VAR_DOC "boost.system library"
+  TASK nerved TASK_DOC "Boost's error checking library used by boost.asio and possilbly other bits."
   NAMES boost_system-mt boost_system
 )
 
@@ -76,9 +79,9 @@ bbuild_exe(
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
   LIBS
-    ${DL_LIB} ${BOOST_SYSTEM_LIB}
+    ${DL_LIB} ${BOOST_SYSTEM_LIB} ${BOOST_THREAD_LIB}
   POSSIBLE_VARS
-    LEMON_EXE FLEX_EXE DL_LIB BOOST_SYSTEM_LIB
+  LEMON_EXE FLEX_EXE DL_LIB BOOST_SYSTEM_LIB BOOST_THREAD_LIB
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)

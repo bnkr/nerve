@@ -43,6 +43,7 @@ namespace pipeline {
     void clear();
 
     const jobs_type &jobs() const { return jobs_; }
+    jobs_type &jobs() { return jobs_; }
 
     private:
     jobs_type jobs_;

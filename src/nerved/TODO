@@ -75,9 +75,6 @@ Problems
   - integration of socket and pipeline (perhaps it can be an observer plugin?)
   - this has implications for the player state because multi-threaded access
     will be more tricky
-* loading plugin shared objects (probably will be covered in part by
-  config-proto)
-  - this is the integration of pipeline and config
 * method of debugging the pipeline without being threaded (it's not even
   compiled yet so it's bound to have bugs!)
   - a helper program to load, run, and benchmark a plugin.  Perhaps a special
@@ -85,3 +82,15 @@ Problems
 * gradual initialisation of pipeline objects creates lots of messyness, but it's
   difficult to see exactly how we'd improve on it without doing massive amounts
   of allocation and indirect pointer storage
+* section buffering stuff etc.
+  - it's still not totally clear whether the current section algorithm is right.
+  - it avoids duplicate checks and input handling but incurrs the cost of the
+    virtual connector implementation
+  - the sequences can always guarantee zero or one packets returned
+  - we need to know whether a sequence is buffering regardles of whether we use
+    virtual connectors or not
+  - therefore, the decision is virtual calls vs. several extra comparisons
+    (return, buffering, output events, possily input events)
+  - it's possible we could specialise sections when there are sequences which
+    never buffer in either implementation
+  - this is really a performance issue and needs to be properly benchmarked
