@@ -13,5 +13,6 @@
 
 #include "information.hpp"
 #include "ffmpeg.hpp"
+#include "sdl.hpp"
 
 #endif

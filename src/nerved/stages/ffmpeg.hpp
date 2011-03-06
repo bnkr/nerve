@@ -3,7 +3,7 @@
 #ifndef STAGES_FFMPEG_HPP_bt4bpj6o
 #define STAGES_FFMPEG_HPP_bt4bpj6o
 
-#include "../pipeline/simple_stages.hpp"
+#include "interfaces.hpp"
 
 namespace stages {
   class ffmpeg : public pipeline::input_stage {

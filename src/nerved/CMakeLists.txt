@@ -64,6 +64,7 @@ bbuild_exe(
     stages/information.cpp
     stages/create.cpp
     stages/ffmpeg.cpp
+    stages/sdl.cpp
     btrace/crash_detector.cpp
     btrace/backtrace.cpp
     btrace/demangle.cpp

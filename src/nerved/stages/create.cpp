@@ -27,7 +27,7 @@ namespace {
       case plug_id::ffmpeg:
         return allocate<stages::ffmpeg>(alloc);
       case plug_id::sdl:
-        NERVE_ABORT("sdl builtin not handled yet");
+        return allocate<stages::sdl>(alloc);
       case plug_id::volume:
         NERVE_ABORT("volume builtin not handled yet");
       case plug_id::plugin:
@@ -46,6 +46,15 @@ namespace {
 
 // All we want is some type safety.
 pipeline::input_stage *stages::create_input_stage(stage_data &sd, alloc_func alloc) {
+  // TODO:
+  //   Assert that the plugin really is an input.
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
   return static_cast<pipeline::input_stage*>(ret);
+}
+
+pipeline::observer_stage *stages::create_observer_stage(stage_data &sd, alloc_func alloc) {
+  // TODO:
+  //   Assert that the plugin really is an observer.
+  pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
+  return static_cast<pipeline::observer_stage*>(ret);
 }

@@ -16,13 +16,22 @@ namespace pipeline {
 namespace stages {
   class stage_data;
 
-  //! \ingroup grp_stage
+  // TODO:
+  //   We must integrate the indirect_x containers here.  Tricky because we end
+  //   up needing templates somehow.  Perhaps boost bind can help?  The problem
+  //   is that the create function decides on the type to allocate...
+
+  //! \ingroup grp_stages
   //! Allocation strategy for stage objects.
   typedef void*(*alloc_func)(size_t);
 
-  //! \ingroup grp_stage
+  //! \ingroup grp_stages
   //! Create an input stage.  A non-input stage is invalid.
   pipeline::input_stage *create_input_stage(stage_data &, alloc_func = &pooled::tracked_byte_alloc);
+
+  //! \ingroup grp_stages
+  //! Create an observer stage.  A non-input stage is invalid.
+  pipeline::observer_stage *create_observer_stage(stage_data &, alloc_func = &pooled::tracked_byte_alloc);
 }
 
 #endif
