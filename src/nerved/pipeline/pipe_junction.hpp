@@ -36,7 +36,7 @@ namespace pipeline {
     }
 
     //! Push onto the output queue.
-    void write_output(packet *p) {
+    void write_output(packet *) {
       NERVE_NIMPL("writing a packet");
     }
 
