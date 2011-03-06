@@ -56,4 +56,52 @@ class indirect_owned : boost::noncopyable {
   destructor_type d_;
 };
 
+namespace detail {
+  //! A matching destructor for allocation done in using tracked alloc (which is
+  //! necesary because the stages can be differing sizes).
+  template<class T>
+    struct tracked_destructor {
+      void operator()(T *const p) { pooled::tracked_byte_free(p); }
+    };
+}
+
+//! \ingroup grp_util
+//! Owned polymorphic classes where allocation is abstracted.
+template<class T>
+struct indirect_owned_polymorph :
+  protected
+  ::indirect_owned<
+    typename pooled::container<T*>::vector,
+    detail::tracked_destructor<T>
+  >
+{
+
+  typedef ::indirect_owned<
+    typename pooled::container<T*>::vector,
+    typename detail::tracked_destructor<T>
+  > parent_type;
+
+  typedef typename parent_type::iterator iterator;
+  typedef typename parent_type::const_iterator const_iterator;
+  typedef typename parent_type::size_type size_type;
+  typedef typename parent_type::pointer_type pointer_type;
+  typedef typename parent_type::value_type value_type;
+
+  using parent_type::begin;
+  using parent_type::end;
+
+  using parent_type::empty;
+  using parent_type::size;
+
+  //! Allocate a polymorphic relation of T and push it to the back of the
+  //! container
+  template<class U>
+  U *alloc_back() {
+    U* const p = (U*) pooled::tracked_byte_alloc(sizeof(U));
+    new (p) U();
+    push_back(p);
+    return p;
+  }
+};
+
 #endif
