@@ -8,8 +8,17 @@
 namespace stages {
   class ffmpeg : public pipeline::input_stage {
     public:
+    typedef pipeline::input_stage::skip_type skip_type;
+    typedef pipeline::input_stage::load_type load_type;
+
     void abandon();
     void flush();
+    void finish();
+    void configure(const char *k, const char *v);
+    void skip(skip_type);
+    void load(load_type);
+    void pause();
+    pipeline::packet *read();
   };
 }
 

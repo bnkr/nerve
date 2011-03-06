@@ -22,6 +22,9 @@ stage_sequence::step_state input_stage_sequence::sequence_step() {
     skip_event();
     break;
     // TODO : more events
+  case packet::event::data:
+    p = is_->read();
+    break;
   default:
     NERVE_ABORT("event should never happen here");
   }
