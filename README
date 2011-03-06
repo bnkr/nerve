@@ -2,25 +2,16 @@ Intro
 -----
 
 Nerve is yet another entry into the massive list of audio players, and an entry
-into the much smaller list of daemon-based players.  The idea of nerve is to
-focus on audio output quality and *only* audio output.  The player simply 
-maintains a play list and your settings for output processing.  In fact, even 
-this is optional to an extent.
+into the much smaller list of daemon-based players.  Nerve's purpose is to only
+focus on audio quality and leave all data and user interface parts abstracted.
 
-The primary aim in output quality is to go to any lengths to get gap-less output
-from *all* files -- not just if they support some special field or the phase of
-the moon is right but for every file.
+Specifically, nerve has the following features:
 
-The secondary aims are as follows:
-
-- Fast :).  Most importantly low or no overhead for plug-ins and using your
-  hardware instead of software if possible.
-- Use mature input/output libraries.
-- Simple and general method of IPC.
-- No cruft; deal only with files and keep the code short and sweet.
-- Use Amarok as an optional front-end.
-- Don't mess with the hardware volume!
-- Multi-threaded plug-in pipeline.
+* gapless output as much as possible
+* multi-threaded processing pipeline
+* doesn't mess with the hardware volume control
+* no music library (nerve is not a database server)
+* controlled over a socket
 
 Installation
 ------------
@@ -50,8 +41,8 @@ Getting Started
 - read the man page for nerved(1) daemon.
 - look in the configuration files.  They are well commented.
 - configure your plug-ins.  It helps to know a little about your hardware and
-  audio collection for this.  For example, if all your hardware is good it will 
-  support many sample rates and you will not need a sample rate conversion 
+  audio collection for this.  For example, if all your hardware is good it will
+  support many sample rates and you will not need a sample rate conversion
   plug-in.
 - start the nerve daemon.
 - pick a client and use it!
@@ -59,16 +50,16 @@ Getting Started
 Similar Work
 ------------
 
-I have no enemies, only rivals :)
+Some other good implementations:
 
 * mpd - http://www.musicpd.org/
-  Good gapless support, but only for lame encoded mp3s.  Comparatively slow.  
-  More mature than nerve.  Very big code-base.  Has an entire media library 
+  Good gapless support, but only for lame encoded mp3s.  Comparatively slow.
+  More mature than nerve.  Very big code-base.  Has an entire media library
   thing which basically wraps the file system.  Network transparent IPC.
 * XMMS2 - http://wiki.xmms2.xmms.se/
-  Same comments as mpd although xmms2 has many more clients than mpd and 
+  Same comments as mpd although xmms2 has many more clients than mpd and
   is rather faster.
 * mocp - http://moc.daper.net/
   Only one UI but still client/server.
 * yauap - http://savannah.nongnu.org/projects/yauap
-  Reasonably fast and works as an Amarok back end.  Adds gaps ^^.
+  Reasonably fast and works as an Amarok back end.  Adds gaps, though.
