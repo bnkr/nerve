@@ -14,4 +14,6 @@ the modules are set up and the entry points for each one.
   post-setup main().
 * stages/ -- loading plugins and implementation of built-in stages.  Entry point
   is create.hpp which is queried by pipeline.  Bits of stages are also used by
+* btrace/ -- debugging library
+* para/ -- parallelism library
   config.

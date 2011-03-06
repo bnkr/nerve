@@ -31,15 +31,8 @@ aren't connectors without doing the connectors first.
     but to hold pointers to pipes
 
 .stages
-* stages::create bits
-* sequences' create_x methods
-
-.other bits
-* storage and alloc of stages in stage sequence using indirect_owned<vector>.
-  - it is common code so it should really be abstracted; copy what's in the
-    progressive buffer
-  - need to leave this until we know more about it because it depends how the
-    allocation is done
+* therea are more sequences' create_x methods to finish
+* also the storage usage is not unified (they all need to use indirect.hpp)
 
 Pipeline Algorithms
 -------------------
