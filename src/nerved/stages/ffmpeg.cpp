@@ -1,4 +1,16 @@
+// Copyright (C) 2011, James Webber.
+// Distributed under a 3-clause BSD license.  See COPYING.
+#include "ffmpeg.hpp"
 
+using stages::ffmpeg;
+
+void ffmpeg::abandon() {
+}
+
+void ffmpeg::flush() {
+}
+
+#if 0
     ffmpeg::initialiser ff;
 
   ffmpeg::packet pkt;
@@ -16,4 +28,6 @@
 
     push_packet(decoded);
   }
+
+#endif
 

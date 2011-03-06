@@ -78,12 +78,9 @@ void configure_sequences(pipeline::section &sec, section_config &sec_conf) {
 }
 
 void configure_stage(stage_sequence &seq, stage_config &stage_conf) {
-  // Passing the stage_conf here breaks the encapsulation we had in the rest of
-  // this configure function, but the only other way is a huge switch statement
-  // and billions of downcasts.
-  //
   // TODO:
-  //   Perhaps we could have stage_creator sc(stage_conf); seq.create_stage(sc);
+  //   This will use an object "stages::stage_data" which is shared knowledge
+  //   between pipeline and config so it doesn't break modularity.
   pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf));
 
   if (stage_conf.configs_given()) {

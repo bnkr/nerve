@@ -9,7 +9,9 @@ the modules are set up and the entry points for each one.
 * config/ -- configuration file parser and storage
 * output/ -- logging and error reporting
 * pipeline/ -- pipeline objects (stages, sequences, ...)
-* stages/ -- built-in stages
 * server/ -- client-serve communication bits
 * player/ -- running the pipeline, server, and player state; essentially a
   post-setup main().
+* stages/ -- loading plugins and implementation of built-in stages.  Entry point
+  is create.hpp which is queried by pipeline.  Bits of stages are also used by
+  config.

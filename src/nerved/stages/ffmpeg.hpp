@@ -7,6 +7,9 @@
 
 namespace stages {
   class ffmpeg : public pipeline::input_stage {
+    public:
+    void abandon();
+    void flush();
   };
 }
 

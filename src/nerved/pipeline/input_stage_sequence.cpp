@@ -3,40 +3,18 @@
 #include "input_stage_sequence.hpp"
 
 #include "../config/pipeline_configs.hpp"
-#include "../stages/built_in_stages.hpp"
+#include "../stages/create.hpp"
+#include "../stages/stage_data.hpp"
 
 using namespace pipeline;
 
-namespace {
-  template<class T>
-  T *do_alloc() { return (T*) pooled::tracked_byte_alloc(sizeof(T)); }
-}
-
-
 simple_stage *input_stage_sequence::create_stage(config::stage_config &cfg) {
-  namespace plug_id = stages::plug_id;
-
   NERVE_ASSERT(is_ == NULL, "must not create an input stage twice");
-  NERVE_NIMPL("input stage's stage addition");
-
-  simple_stage *ret = NULL;
-
-  switch (cfg.plugin_id()) {
-  case plug_id::ffmpeg:
-    ret = do_alloc<stages::ffmpeg>();
-    break;
-  case plug_id::plugin:
-    NERVE_ABORT("don't know how to deal with a plugin");
-    break;
-  case plug_id::unset:
-    NERVE_ABORT("unset stage id is impossible");
-    break;
-  case plug_id::sdl:
-  case plug_id::volume:
-    NERVE_ABORT("this type of stage cannot be handled by this sequence");
-  }
-
-  return NERVE_CHECK_PTR(ret);
+  // TODO:
+  //   This object should be in the stage_config object.  Loading plugins is
+  //   still not 100% clear, but it's going to be done mostly by stage_data.
+  stages::stage_data conf;
+  return is_ = NERVE_CHECK_PTR(stages::create_input_stage(conf));
 }
 
 stage_sequence::step_state input_stage_sequence::sequence_step() {

@@ -58,9 +58,11 @@ bbuild_exe(
     pipeline/process_stage_sequence.cpp
     pipeline/input_stage_sequence.cpp
     pipeline/progressive_buffer.cpp
-    stages/information.cpp
     player/run.cpp
     util/pooled.cpp
+    stages/information.cpp
+    stages/create.cpp
+    stages/ffmpeg.cpp
     btrace/crash_detector.cpp
     btrace/backtrace.cpp
     btrace/demangle.cpp

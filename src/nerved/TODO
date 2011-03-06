@@ -30,27 +30,12 @@ aren't connectors without doing the connectors first.
   - currently they hold a pipe junction by value... there seems to be no option
     but to hold pointers to pipes
 
-.create stage
-* stage creator function in +stages+
-* returns a simple_stage based on a stage_data
-
-create_stage (in every sequence type)
-* initialising a stage based on a built-in implementation
-  - create_stage
-  - the data needs to be better centralised (by using stage_data) so config can
-    use it as well
-  - perhaps a stage_data object can be initialised in the config object
-  - prolly the stage data stuff should go in stages (that would make rather a
-    lot more sense!)
-* initialising a stage based on a loadable plugin
-  - the stages module will have some "stage_data" object
-  - it will be initialised in the config and loaded/partially loaded as needed
-  - the create_stage methods will take this config
-  - the stuff in the configs about stage data (the plug_id constants etc.) can
-    be moved into stage module
+.stages
+* stages::create bits
+* sequences' create_x methods
 
 .other bits
-* storage of stages using indirect_owned<vector>.
+* storage and alloc of stages in stage sequence using indirect_owned<vector>.
   - it is common code so it should really be abstracted; copy what's in the
     progressive buffer
   - need to leave this until we know more about it because it depends how the
@@ -78,8 +63,11 @@ real output.
 Plugins
 -------
 
-* implement input and output stages
-* properly deal with the design for loading built and shared object plugins
+.Stage Data Tidy
+* plan a way to get the stage type from a plugin for config
+* modify stage_config's category stuff to use the plugin's data
+* move stage_data object into config to implement this method
+* modify stages::create_x to load a plugin properly
 
 Problems
 --------
