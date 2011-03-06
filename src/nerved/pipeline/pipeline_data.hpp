@@ -4,12 +4,10 @@
 #ifndef PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 #define PIPELINE_PIPELINE_DATA_HPP_04jolpd6
 
-// necessary because it's destroyed in the pooled_destructor so the size is
+// Necessary because it's destroyed in the pooled_destructor so the size is
 // needed.
-//
-// TODO:
-//   Could be a workaround for this?
 #include "job.hpp"
+#include "terminators.hpp"
 
 #include <boost/utility.hpp>
 #include "../util/pooled.hpp"
@@ -17,7 +15,7 @@
 
 namespace pipeline {
   struct job;
-  struct connector;
+  struct pipe;
 
   //! \ingroup grp_pipeline
   //! Container for the initialised pipeline.
@@ -30,11 +28,11 @@ namespace pipeline {
     job *create_job();
 
     //! The start and end pipes for the entire pipeline.
-    connector *start_terminator();
-    connector *end_terminator();
+    pipeline::start_terminator *start_terminator() { return &start_terminator_; }
+    pipeline::end_terminator *end_terminator() { return &end_terminator_; }
 
     //! Gets a new pipe to connect multi-threaded sections.
-    connector *create_pipe();
+    thread_pipe *create_thread_pipe();
 
     //! Check and finish the pipeline objects after configuration.
     void finalise();
@@ -47,6 +45,8 @@ namespace pipeline {
 
     private:
     jobs_type jobs_;
+    pipeline::start_terminator start_terminator_;
+    pipeline::end_terminator end_terminator_;
   };
 }
 

@@ -2,8 +2,9 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 
 #include "pipeline_data.hpp"
-#include "connectors.hpp"
 #include "job.hpp"
+#include "terminators.hpp"
+#include "thread_pipe.hpp"
 
 #include "../util/asserts.hpp"
 
@@ -11,28 +12,13 @@
 #include <boost/bind.hpp>
 
 using namespace pipeline;
+// ambiguous otherwise
+typedef pipeline::pipe pipe_type;
 
-/**************
- * Connectors *
- **************/
-
-connector *pipeline_data::start_terminator() {
-  NERVE_NIMPL("the start terminator");
+thread_pipe *pipeline_data::create_thread_pipe() {
+  NERVE_NIMPL("creating a thread");
   return NULL;
 }
-connector *pipeline_data::end_terminator() {
-  NERVE_NIMPL("the end terminator");
-  return NULL;
-}
-
-connector *pipeline_data::create_pipe() {
-  NERVE_NIMPL("creating a pipe");
-  return NULL;
-}
-
-/*******************
- * Everything else *
- *******************/
 
 void pipeline_data::clear() {
   jobs_.clear();
