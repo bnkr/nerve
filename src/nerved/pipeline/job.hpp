@@ -20,8 +20,7 @@ namespace pipeline {
    */
   class job {
     public:
-    typedef pooled::container<section*>::vector vector_type;
-    typedef indirect_owned<vector_type, pooled_destructor> sections_type;
+    typedef indirect_owned_monotype<section> sections_type;
 
     //! Returned pointer must remain valid.
     section *create_section(connector *, connector *);

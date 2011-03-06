@@ -13,9 +13,8 @@ void job::finalise() {
 }
 
 section *job::create_section(connector *in, connector *out) {
-  section *const s = pooled::alloc<section>();
+  section *const s = sections_.alloc_back();
   NERVE_NIMPL("assigning connectors to created section");
-  sections_.push_back(s);
   return s;
 }
 

@@ -65,6 +65,10 @@ namespace detail {
     };
 }
 
+// TODO:
+//   The indirect_owned things are nice, but there's no way to change
+//   the container type.  Isn't there something in boost which would help?
+
 //! \ingroup grp_util
 //! Owned polymorphic classes where allocation is abstracted.
 template<class T>
@@ -101,6 +105,40 @@ struct indirect_owned_polymorph :
     new (p) U();
     push_back(p);
     return p;
+  }
+};
+
+//! \ingroup grp_util
+//! Abstracts allocation when there is only ever one type.
+template<class T>
+struct indirect_owned_monotype : protected
+  ::indirect_owned<
+    typename pooled::container<T*>::vector,
+    pooled_destructor
+  >
+{
+
+  typedef ::indirect_owned<
+    typename pooled::container<T*>::vector,
+    pooled_destructor
+  > parent_type;
+
+  typedef typename parent_type::iterator iterator;
+  typedef typename parent_type::const_iterator const_iterator;
+  typedef typename parent_type::size_type size_type;
+  typedef typename parent_type::pointer_type pointer_type;
+  typedef typename parent_type::value_type value_type;
+
+  using parent_type::begin;
+  using parent_type::end;
+
+  using parent_type::empty;
+  using parent_type::size;
+
+  T *alloc_back() {
+    T *v = pooled::alloc<T>();
+    push_back(v);
+    return v;
   }
 };
 

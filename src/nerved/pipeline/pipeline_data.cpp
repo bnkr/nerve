@@ -5,7 +5,6 @@
 #include "connectors.hpp"
 #include "job.hpp"
 
-#include "../util/pooled.hpp"
 #include "../util/asserts.hpp"
 
 #include <algorithm>
@@ -35,11 +34,7 @@ connector *pipeline_data::create_pipe() {
  * Everything else *
  *******************/
 
-job *pipeline_data::create_job() {
-  job *const j = pooled::alloc<job>();
-  jobs_.push_back(j);
-  return j;
-}
+job *pipeline_data::create_job() { return jobs_.alloc_back(); }
 
 void pipeline_data::finalise() {
   std::for_each(jobs_.begin(), jobs_.end(), boost::bind(&job::finalise, _1));

@@ -39,8 +39,7 @@ namespace pipeline {
     void finalise();
 
     private:
-    typedef pooled::container<job*>::vector vector_type;
-    typedef indirect_owned<vector_type, pooled_destructor> jobs_type;
+    typedef indirect_owned_monotype<job> jobs_type;
 
     jobs_type jobs_;
   };
