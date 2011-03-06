@@ -2,6 +2,8 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "logging.hpp"
 
+#include "../util/asserts.hpp"
+
 #include <cstdio>
 #include <boost/date_time.hpp>
 
@@ -17,38 +19,44 @@ namespace {
     const char *type;
   };
 
-  const char *module_to_name(modules_type m) {
-    switch (m) {
-    case modules::config:
+  const char *source_to_name(source_type s) {
+    switch (s) {
+    case source::config:
       return "config";
-    case modules::player:
+    case source::player:
       return "player";
-    case modules::server:
+    case source::server:
       return "server";
-    case modules::pipeline:
-      return "server";
+    case source::pipeline:
+      return "pipeline";
     }
+
+    NERVE_ABORT("impossible value for message source");
+    return "(invalid)";
   }
 
-  const char *type_to_name(messages_type t) {
-    switch (t) {
-    case messages::error:
+  const char *type_to_name(cat_type c) {
+    switch (c) {
+    case cat::error:
       return "error";
-    case messages::warn:
+    case cat::warn:
       return "warn";
-    case messages::info:
+    case cat::info:
       return "info";
-    case messages::trace:
+    case cat::trace:
       return "trace";
-    case messages::fatal:
+    case cat::fatal:
       return "fatal";
     }
+
+    NERVE_ABORT("impossible value for message type");
+    return "(invalid)";
   }
 
-  enum_names enums_to_name(modules_type m, messages_type t) {
+  enum_names enums_to_name(source_type s, cat_type c) {
     enum_names ns;
-    ns.module = module_to_name(m);
-    ns.type = type_to_name(t);
+    ns.module = source_to_name(s);
+    ns.type = type_to_name(c);
     return ns;
   }
 
@@ -81,7 +89,7 @@ detail::log_data detail::log_data::s_instance_;
  * Message Context *
  *******************/
 
-void message::write_prefix(modules_type m, messages_type t) {
+void message::write_prefix(source_type s, cat_type c) {
   namespace pt = boost::posix_time;
   namespace gt = boost::gregorian;
   const pt::ptime now = pt::second_clock::local_time();
@@ -93,7 +101,7 @@ void message::write_prefix(modules_type m, messages_type t) {
   const unsigned short hours = time.hours();
   const unsigned short minutes = time.minutes();
   const unsigned short seconds = time.seconds();
-  const enum_names names = enums_to_name(m, t);
+  const enum_names names = enums_to_name(s, c);
 
   detail::log_data &ld = detail::get_data();
 
@@ -101,7 +109,7 @@ void message::write_prefix(modules_type m, messages_type t) {
   ld.mutex().lock();
 
   ld.printf(
-    "%s %d %d:%d:%d: %s: %s",
+    "%s %d %d:%d:%d [%s.%s] ",
     month, day, hours, minutes, seconds,
     names.module, names.type
   );
@@ -122,13 +130,13 @@ void message::vprintf(const char *f, va_list args) {
  * Per-Module Logger *
  *********************/
 
-logger::logger(modules_type m)
-: module_(m) {
+logger::logger(source_type s)
+: source_(s) {
 }
 
-void logger::write(messages_type t, const char *f, ...) {
-  if (! message::should_write(*this, t)) return;
-  message ms(*this, t);
+void logger::write(cat_type c, const char *f, ...) {
+  if (! message::should_write(*this, c)) return;
+  message ms(*this, c);
   va_list args;
   va_start(args, f);
   ms.vprintf(f, args);
@@ -137,8 +145,8 @@ void logger::write(messages_type t, const char *f, ...) {
 
 #define LOGGER_FUNC(category__)\
   void logger::category__(const char *format, ...) {\
-    if (! message::should_write(*this, messages::category__)) return;\
-    message ms(*this, messages::category__);\
+    if (! message::should_write(*this, cat::category__)) return;\
+    message ms(*this, cat::category__);\
     va_list args;\
     va_start(args, format);\
     ms.vprintf(format, args);\

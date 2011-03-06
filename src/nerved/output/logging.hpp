@@ -9,11 +9,20 @@
 #include <boost/thread.hpp>
 #include <boost/utility.hpp>
 
+#ifdef __GNUC__
+// Starts at 2 because +this+ is an implict argument.
+#define ATTR_PRINTF   __attribute__ ((format (printf, 2, 3)))
+#define ATTR_PRINTF_1 __attribute__ ((format (printf, 3, 4)))
+#else
+#define ATTR_PRINTF
+#define ATTR_PRINTF_1
+#endif
+
 namespace output {
   //! \ingroup grp_output
   //! List of message sources.
-  namespace modules {
-    enum modules_e {
+  namespace source {
+    enum source_e {
       config,
       pipeline,
       server,
@@ -23,18 +32,18 @@ namespace output {
 
   //! \ingroup grp_output
   //! List of message severities.
-  namespace messages {
-    enum messages_e {
-      trace,
-      info,
-      warn,
+  namespace cat {
+    enum cat_e {
+      fatal,
       error,
-      fatal
+      warn,
+      info,
+      trace
     };
   }
 
-  typedef modules::modules_e   modules_type;
-  typedef messages::messages_e messages_type;
+  typedef source::source_e source_type;
+  typedef cat::cat_e       cat_type;
 
   namespace detail {
     //! Used by other logging bits.  This class does no checking of whether a
@@ -46,14 +55,19 @@ namespace output {
 
       static log_data &instance() { return s_instance_; }
 
-      bool should_write(modules_type m, messages_type t) {
-        // TODO:
-        //   Other properties apply here.
-        return console_ || log_;
+      cat_type severity_limit() { return cat::trace; }
+
+      bool any_outputs() const { return console_ || log_; }
+      bool category_enabled(cat_type c) {
+        return (int) c <= (int) severity_limit();
+      }
+
+      bool should_write(source_type, cat_type c) {
+        return any_outputs() && category_enabled(c);
       }
 
       //! Write the actual data.
-      void printf(const char *format, ...) {
+      void printf(const char *format, ...) ATTR_PRINTF {
         va_list args;
         va_start(args, format);
         this->vprintf(format, args);
@@ -87,24 +101,24 @@ namespace output {
   //! Instance of the logger for a particular module.
   class logger : boost::noncopyable {
     public:
-    explicit logger(modules_type);
+    explicit logger(source_type);
 
-    bool should_write(messages_type t) {
-      return detail::get_data().should_write(module_, t);
+    bool should_write(cat_type c) const {
+      return detail::get_data().should_write(source_, c);
     }
 
-    void write(messages_type, const char *f, ...);
+    void write(cat_type, const char *f, ...) ATTR_PRINTF_1;
 
-    void error(const char *f, ...);
-    void fatal(const char *f, ...);
-    void warn(const char *f, ...);
-    void info(const char *f, ...);
-    void trace(const char *f, ...);
+    void error(const char *f, ...) ATTR_PRINTF;
+    void fatal(const char *f, ...) ATTR_PRINTF;
+    void warn(const char *f, ...) ATTR_PRINTF;
+    void info(const char *f, ...) ATTR_PRINTF;
+    void trace(const char *f, ...) ATTR_PRINTF;
 
-    modules_type module() const { return module_; }
+    source_type source() const { return source_; }
 
     private:
-    modules_type module_;
+    source_type source_;
   };
 
   //! \ingroup grp_output
@@ -113,27 +127,27 @@ namespace output {
   //! automatically check whether a message should be written.
   class message : boost::noncopyable {
     public:
-    inline static bool should_write(modules_type m, messages_type t) {
-      return detail::get_data().should_write(m, t);
+    inline static bool should_write(source_type s, cat_type c) {
+      return detail::get_data().should_write(s, c);
     }
 
-    inline static bool should_write(logger &l, messages_type t) {
-      return detail::get_data().should_write(l.module(), t);
+    inline static bool should_write(logger &l, cat_type c) {
+      return detail::get_data().should_write(l.source(), c);
     }
 
-    message(modules_type m, messages_type t)
-    { write_prefix(m, t); }
+    message(source_type s, cat_type c)
+    { write_prefix(s, c); }
 
-    message(logger &l, messages_type t)
-    { write_prefix(l.module(), t); }
+    message(logger &l, cat_type c)
+    { write_prefix(l.source(), c); }
 
     ~message() { detail::get_data().mutex().unlock(); }
 
-    void printf(const char *f, ...);
+    void printf(const char *f, ...) ATTR_PRINTF;
     void vprintf(const char *f, va_list);
 
     private:
-    void write_prefix(modules_type m, messages_type t);
+    void write_prefix(source_type s, cat_type c);
   };
 
   // TODO:
