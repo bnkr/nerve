@@ -109,7 +109,7 @@ void message::write_prefix(source_type s, cat_type c) {
   ld.mutex().lock();
 
   ld.printf(
-    "%s %d %d:%d:%d [%s.%s] ",
+    "%s %02d %02d:%02d:%02d [%s.%s] ",
     month, day, hours, minutes, seconds,
     names.module, names.type
   );
