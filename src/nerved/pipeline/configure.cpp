@@ -29,18 +29,21 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
   output::logger log(output::source::pipeline);
 
+  // TODO:
+  //   This might be wrong.  Iterating the jobs might not give the correct
+  //   order of sections so that we can use a simple "last_sec" value.
+  struct {
+    section_config *cur_conf;
+    section *last_sec;
+  } loop_state;
+  loop_state.last_sec = NULL;
+
   int job_num = 0;
   for (job_iter_t job_conf = pc.begin(); job_conf != pc.end(); ++job_conf) {
     pipeline::job &job = *NERVE_CHECK_PTR(pd.create_job());
     ++job_num;
 
-    struct {
-      section_config *cur_conf;
-      section *last_sec;
-    } loop_state;
-
     loop_state.cur_conf = NERVE_CHECK_PTR(job_conf->job_first());
-    loop_state.last_sec = NULL;
 
     do {
       NERVE_ASSERT(&(*job_conf) == &(loop_state.cur_conf->parent_job()), "link order shouldn't go into another job_conf");
@@ -50,12 +53,20 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       section_config *const prev = cc.pipeline_previous();
       section_config *const next = cc.pipeline_next();
 
+      if (log.should_write(output::cat::info)) {
+        log.info(
+          "configure section '%s' in thread %d (%s -> [%s] -> %s)\n",
+          loop_state.cur_conf->name(), job_num,
+          prev ? prev->name() : "(start)",
+          loop_state.cur_conf->name(),
+          next ? next->name() : "(end)"
+        );
+      }
+
       connector *const in = prev ? NERVE_CHECK_PTR(loop_state.last_sec)->output_pipe() : pd.start_terminator();
       connector *const out = next ? pd.create_pipe() : pd.end_terminator();
 
       section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
-
-      log.info("configure section '%s' in thread %d\n", loop_state.cur_conf->name(), job_num);
 
       configure_sequences(log, *sec_to_configure, cc);
       loop_state.last_sec = NERVE_CHECK_PTR(sec_to_configure);
