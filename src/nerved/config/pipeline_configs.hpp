@@ -26,6 +26,8 @@
 #include <boost/bind.hpp>
 #include <algorithm>
 
+namespace pipeline { class job; }
+
 // TODO:
 //   This lot should use the indirect_owned container thing.
 
@@ -268,7 +270,9 @@ class job_config : boost::noncopyable {
 
   job_config()
   : job_first_(NULL),
-    job_last_(NULL) {}
+    job_last_(NULL),
+    configured_job_(NULL)
+  {}
 
   ~job_config() {
     std::for_each(sections().begin(), sections().end(), section_config::destroy);
@@ -296,10 +300,18 @@ class job_config : boost::noncopyable {
   void job_last(section_config *s) { job_last_ = NERVE_CHECK_PTR(s); }
   section_config *job_last()  { return job_last_; }
 
+  //! Pointer to the pipeline object which has been created.  This is a bit of a
+  //! hack to store it here but it means we don't have to allocate anything or
+  //! do extra passes in order to configure by iterating over sections.  The
+  //! section creation can test sec_conf.parent_job().configured_job().
+  pipeline::job *configured_job() const { return configured_job_; }
+  void configured_job(pipeline::job *v) { configured_job_ = v; }
+
   private:
   sections_type sections_;
   section_config *job_first_;
   section_config *job_last_;
+  pipeline::job *configured_job_;
 };
 
 //! \ingroup grp_config
@@ -402,6 +414,10 @@ class configure_block_container : boost::noncopyable {
 
 //! \ingroup grp_config
 class pipeline_config : boost::noncopyable {
+  // TODO:
+  //   This needs a better name because it's going to get various other bits in
+  //   it too.  Perhaps I could get away with just encapsulating it somewhere
+  //   else, though?
   public:
   typedef pooled::container<job_config::create_type>::vector jobs_type;
   typedef boost::indirect_iterator<jobs_type::iterator> job_iterator_type;

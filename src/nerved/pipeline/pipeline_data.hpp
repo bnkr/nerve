@@ -23,6 +23,7 @@ namespace pipeline {
   //! Container for the initialised pipeline.
   class pipeline_data : boost::noncopyable {
     public:
+    typedef indirect_owned_monotype<job> jobs_type;
 
     //! A new job container owned by this object.  Pointer is valid
     //! indefinitely.
@@ -41,9 +42,9 @@ namespace pipeline {
     //! Remove all memory etc.
     void clear();
 
-    private:
-    typedef indirect_owned_monotype<job> jobs_type;
+    const jobs_type &jobs() const { return jobs_; }
 
+    private:
     jobs_type jobs_;
   };
 }

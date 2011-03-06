@@ -22,6 +22,7 @@ namespace stage_cat = config::stage_cat;
 
 static void configure_sequences(output::logger &, pipeline::section &, section_config &);
 static void configure_stage(output::logger &, pipeline::stage_sequence &, stage_config &);
+static job *configure_job(output::logger &, pipeline_data &, job_config &job_conf);
 
 configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, const cli::settings &) {
   typedef pipeline_config::job_iterator_type    job_iter_t;
@@ -29,75 +30,49 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
   output::logger log(output::source::pipeline);
 
-  struct {
-    section_config *cur_conf;
-    section *last_sec;
-  } loop_state;
-  loop_state.last_sec = NULL;
+  section_config *sec_conf = NERVE_CHECK_PTR(pc.pipeline_first());
+  section *last_sec = NULL;
 
-  // debugging
-  std::map<section_config*, section*> created;
+  // Only for trace output.
+  job *last_job = NULL;
+  std::map<job*, int> job_nums;
 
-  int job_num = 0;
-  for (job_iter_t job_conf = pc.begin(); job_conf != pc.end(); ++job_conf) {
-    pipeline::job &job = *NERVE_CHECK_PTR(pd.create_job());
-    ++job_num;
+  // We must loop over sections instead of jobs because we meed to visit each
+  // section in pipeline order so that the previous section is fully constructed
+  // before the next.  Otherwise we have initialise the connectors (and possibly
+  // some other stuff) in another pass of the data.
+  do {
+    section_config &sc = *NERVE_CHECK_PTR(sec_conf);
+    job_config &jc = sc.parent_job();
+    job &job =
+      (jc.configured_job() != NULL) ? *jc.configured_job() : *configure_job(log, pd, jc);
 
-    loop_state.cur_conf = NERVE_CHECK_PTR(job_conf->job_first());
+    section_config *const prev = sc.pipeline_previous();
+    section_config *const next = sc.pipeline_next();
 
-    do {
-      NERVE_ASSERT(&(*job_conf) == &(loop_state.cur_conf->parent_job()), "link order shouldn't go into another job_conf");
-
-      section_config &cc = *NERVE_CHECK_PTR(loop_state.cur_conf);
-
-      section_config *const prev = cc.pipeline_previous();
-      section_config *const next = cc.pipeline_next();
-
-      if (log.should_write(output::cat::info)) {
-        log.info(
-          "configure section '%s' in thread %d (%s -> [%s] -> %s)\n",
-          loop_state.cur_conf->name(), job_num,
-          prev ? prev->name() : "(start)",
-          loop_state.cur_conf->name(),
-          next ? next->name() : "(end)"
-        );
+    if (log.should_write(output::cat::info)) {
+      pipeline::job *const this_job = &job;
+      if (! job_nums.count(this_job)) {
+        job_nums[this_job] = last_job ? job_nums[last_job] + 1 : 1;
+        last_job = this_job;
       }
+      const int job_num = job_nums[this_job];
 
-      if (prev) {
-        // TODO:
-        //   These asserts fire on weird-order.conf because the sections are not
-        //   specified in pipeline order.  We iterate jobs, so it ends up that
-        //   we traverse in non-pipeline order.  This is fixible by:
-        //
-        //   - iterating sections in pipeline order
-        //   - allocating jobs the first time we see them
-        //   - store allocated jobs in the job config:
-        //
-        //   if (! sec_conf->parent_job()->allocated_job()) {
-        //     allocate_job as per config
-        //     store job
-        //   }
-        NERVE_ASSERT(created.count(prev), "we must have allocated something for the previous section");
-        NERVE_ASSERT(
-          created[prev] == loop_state.last_sec,
-          "the last_sec state must denote what we created for this section config"
-        );
-      }
+      log.info(
+        "configure section '%s' in job %d (%s -> [%s] -> %s)\n",
+        sc.name(), job_num,
+        prev ? prev->name() : "(start)", sc.name(), next ? next->name() : "(end)"
+      );
+    }
 
-      connector *const in = prev ? NERVE_CHECK_PTR(loop_state.last_sec)->output_pipe() : pd.start_terminator();
-      connector *const out = next ? pd.create_pipe() : pd.end_terminator();
-      std::cerr << "previous section is " << (void*) loop_state.last_sec << std::endl;
+    connector *const in = prev ? NERVE_CHECK_PTR(last_sec)->output_pipe() : pd.start_terminator();
+    connector *const out = next ? pd.create_pipe() : pd.end_terminator();
 
-      section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
-      std::cerr << "created section is " << (void*) sec_to_configure << std::endl;
+    section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
 
-      created[loop_state.cur_conf] = sec_to_configure;
-
-      configure_sequences(log, *sec_to_configure, cc);
-      loop_state.last_sec = NERVE_CHECK_PTR(sec_to_configure);
-
-    } while ((loop_state.cur_conf = NERVE_CHECK_PTR(loop_state.cur_conf)->job_next()) != NULL);
-  }
+    configure_sequences(log, *sec_to_configure, sc);
+    last_sec = NERVE_CHECK_PTR(sec_to_configure);
+  } while ((sec_conf = sec_conf->pipeline_next()) != NULL);
 
   pd.finalise();
   pc.clear();
@@ -105,6 +80,13 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   log.info("finished configuration\n");
 
   return configure_ok;
+}
+
+job *configure_job(output::logger &log, pipeline_data &pd, job_config &job_conf) {
+  log.info("create job %d\n", pd.jobs().size() + 1);
+  pipeline::job *const j = NERVE_CHECK_PTR(pd.create_job());
+  job_conf.configured_job(j);
+  return j;
 }
 
 void configure_sequences(output::logger &log, pipeline::section &sec, section_config &sec_conf) {
