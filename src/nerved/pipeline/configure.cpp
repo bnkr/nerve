@@ -72,7 +72,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       ? NERVE_CHECK_PTR(NERVE_CHECK_PTR(last_sec)->connection().out())
       : NERVE_CHECK_PTR(pd.start_terminator());
     pipe *const out = next
-      ? NERVE_CHECK_PTR(static_cast<pipe*>(pd.create_thread_pipe()))
+      ? NERVE_CHECK_PTR(static_cast<pipe*>(last_sec->create_thread_pipe()))
       : NERVE_CHECK_PTR(static_cast<pipe*>(pd.end_terminator()));
 
     section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));

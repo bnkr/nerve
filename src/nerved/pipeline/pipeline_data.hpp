@@ -31,9 +31,6 @@ namespace pipeline {
     pipeline::start_terminator *start_terminator() { return &start_terminator_; }
     pipeline::end_terminator *end_terminator() { return &end_terminator_; }
 
-    //! Gets a new pipe to connect multi-threaded sections.
-    thread_pipe *create_thread_pipe();
-
     //! Check and finish the pipeline objects after configuration.
     void finalise();
 

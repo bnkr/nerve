@@ -6,6 +6,7 @@
 
 #include "stage_sequence.hpp"
 #include "connection.hpp"
+#include "thread_pipe.hpp"
 
 #include "../stages/information.hpp"
 #include "../util/indirect.hpp"
@@ -67,13 +68,21 @@ namespace pipeline {
     //   functions...
     typedef polymorphic_connection connection_type;
 
-    explicit section() {}
+    explicit section() : thread_pipe_allocated_(false) {}
 
     connection_type &connection() { return conn_; }
 
     //! Create a new sequence in this section which is valid for the given
     //! stage category.  Pointers must remain valid.
     stage_sequence *create_sequence(stages::category_type t, pipe *, pipe *);
+
+    //! Stored locally to avoids allocation for the price of making this object
+    //! waste space when it's one of the terminators.
+    thread_pipe *create_thread_pipe() {
+      NERVE_ASSERT(thread_pipe_allocated_ == false, "thread pipe may only be used once per section");
+      thread_pipe_allocated_ = true;
+      return &thread_pipe_;
+    }
 
     //! Called post-initialisation to ready everything for running.  Iow no more
     //! sequences to add.
@@ -119,6 +128,8 @@ namespace pipeline {
     iterator_type start_;
     sequences_type sequences_;
 
+    bool thread_pipe_allocated_;
+    thread_pipe thread_pipe_;
     connection_type conn_;
   };
 }

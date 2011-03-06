@@ -51,7 +51,7 @@ Style and general enhancments.
 
 */
 
-#include <nerved_config.hpp>
+// #include <nerved_config.hpp>
 #include "../../wrappers/ffmpeg.hpp"
 #include "packet_state.hpp"
 
