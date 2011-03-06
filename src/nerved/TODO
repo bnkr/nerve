@@ -41,15 +41,6 @@ aren't connectors without doing the connectors first.
   - need to leave this until we know more about it because it depends how the
     allocation is done
 
-Logging Output
---------------
-
-This doesn't really become useful until track changing etc. is done.  So we need
-the playlist state, socket server, and input handling done at the very least.
-
-* use output in the config logging part
-* add trace output calls all over the place
-
 Pipeline Algorithms
 -------------------
 

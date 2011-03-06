@@ -29,6 +29,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   typedef job_config::section_iterator_type     section_iter_t;
 
   output::logger log(output::source::pipeline);
+  log.trace("configuring pipeline\n");
 
   section_config *sec_conf = NERVE_CHECK_PTR(pc.pipeline_first());
   section *last_sec = NULL;
@@ -50,7 +51,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
     section_config *const prev = sc.pipeline_previous();
     section_config *const next = sc.pipeline_next();
 
-    if (log.should_write(output::cat::info)) {
+    if (log.should_write(output::cat::trace)) {
       pipeline::job *const this_job = &job;
       if (! job_nums.count(this_job)) {
         job_nums[this_job] = last_job ? job_nums[last_job] + 1 : 1;
@@ -58,7 +59,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       }
       const int job_num = job_nums[this_job];
 
-      log.info(
+      log.trace(
         "configure section '%s' in job %d (%s -> [%s] -> %s)\n",
         sc.name(), job_num,
         prev ? prev->name() : "(start)", sc.name(), next ? next->name() : "(end)"
@@ -77,13 +78,13 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   pd.finalise();
   pc.clear();
 
-  log.info("finished configuration\n");
+  log.trace("finished configuration\n");
 
   return configure_ok;
 }
 
 job *configure_job(output::logger &log, pipeline_data &pd, job_config &job_conf) {
-  log.info("create job %d\n", pd.jobs().size() + 1);
+  log.trace("create job %d\n", pd.jobs().size() + 1);
   pipeline::job *const j = NERVE_CHECK_PTR(pd.create_job());
   job_conf.configured_job(j);
   return j;
@@ -98,7 +99,7 @@ void configure_sequences(output::logger &log, pipeline::section &sec, section_co
     const stage_config::category_type this_cat = stage_conf->category();
 
     if (this_cat != last_cat) {
-      log.info("add %s sequence under section '%s'\n", stage_conf->category_name(), sec_conf.name());
+      log.trace("add %s sequence under section '%s'\n", stage_conf->category_name(), sec_conf.name());
       sequence = NERVE_CHECK_PTR(sec.create_sequence(this_cat));
     }
 
@@ -109,7 +110,7 @@ void configure_sequences(output::logger &log, pipeline::section &sec, section_co
 void configure_stage(output::logger &log, stage_sequence &seq, stage_config &stage_conf) {
   pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf.stage_data()));
 
-  log.info("add stage %s\n", stage_conf.name());
+  log.trace("add stage %s\n", stage_conf.name());
 
   if (stage_conf.configs_given()) {
     typedef stage_config::configs_type configs_type;
@@ -122,7 +123,7 @@ void configure_stage(output::logger &log, stage_sequence &seq, stage_config &sta
     for (iter_t conf = pairs.begin(); conf != pairs.end(); ++conf) {
       const char *const key = conf->field();
       const char *const value = conf->value();
-      log.info("stage %s: %s = %s\n", stage_conf.name(), key, value);
+      log.trace("stage %s: %s = %s\n", stage_conf.name(), key, value);
       stage->configure(key, value);
     }
   }

@@ -4,6 +4,7 @@
 #include "cli/parse.hpp"
 #include "pipeline/configure.hpp"
 #include "output/configure.hpp"
+#include "output/logging.hpp"
 #include "player/run.hpp"
 #include "btrace/crash_detector.hpp"
 
@@ -29,6 +30,9 @@ int main(int argc, char **argv) {
   case output::configure_ok:
     break;
   }
+
+  output::logger log(output::source::main);
+  log.info("%s started\n", argv[0]);
 
   // TODO:
   //   Should use a name which represents all configs (because there will
@@ -64,5 +68,6 @@ int main(int argc, char **argv) {
   // easier to detect leaks
   pipe_data.clear();
 
+  log.info("terminating successfully\n");
   return EXIT_SUCCESS;
 }

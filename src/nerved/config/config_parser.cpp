@@ -8,6 +8,8 @@
 #include "parse_context.hpp"
 #include "semantic_checker.hpp"
 
+#include "../output/logging.hpp"
+
 #include <cstdio>
 #include <cassert>
 #include <cstring>
@@ -56,12 +58,16 @@ config_parser::config_parser(const config_parser::params &p) : p_(p) {
 }
 
 bool config_parser::parse(config::pipeline_config &output, const config_parser::files_type &fs) {
+  NERVE_ASSERT(! fs.empty(), "empty files should have been caught already");
   parse_context context(output);
   std::for_each(fs.begin(), fs.end(), boost::bind(&config_parser::parse_file, this, boost::ref(context), _1));
   return ! context.reporter().error();
 }
 
 bool config_parser::parse_file(config::parse_context &context, const char *file) {
+  output::logger lg(output::source::config);
+  lg.trace("parsing %s\n", file);
+
   stdio_ptr fh;
 
   context.reporter().location().new_file(file);

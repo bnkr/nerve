@@ -1,4 +1,10 @@
 .differing stream for each message type
 * log_data: make a lists of streams
 * log_data: should_write needs to check those streams
-* log_data: the outputting methods need to also
+
+.differing formats
+* output methods need to distinguish between log and console streams and give
+  them different formats
+* especially the prefix
+* also colours would be nice
+

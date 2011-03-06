@@ -5,6 +5,7 @@
 #define CONFIG_ERROR_REPORTER_HPP_tkskcau9
 
 #include "parse_location.hpp"
+#include "../output/logging.hpp"
 
 #include <cstdarg>
 #include <cstdio>
@@ -26,8 +27,6 @@ namespace config {
     //   constants.  Then we can document everything together.
 
     explicit error_reporter() : error_(false), fatal_error_(false) {
-      // so it syncs properly with the trace output
-      stream_ = stdout;
     }
 
     void report() { error_ = true;  }
@@ -63,15 +62,15 @@ namespace config {
     private:
 
     void write_report(const parse_location &loc, const char *format, va_list args) {
-      std::fprintf(stream_, "%s:%d: ", loc.file(), loc.line());
-      std::vfprintf(stream_, format, args);
-      std::fprintf(stream_, "\n");
+      output::message m(output::source::config, output::cat::error);
+      m.printf("%s:%d: ", loc.file(), loc.line());
+      m.vprintf(format, args);
+      m.printf("\n");
     }
 
     parse_location location_;
     bool error_;
     bool fatal_error_;
-    FILE *stream_;
   };
 }
 #endif

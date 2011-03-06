@@ -26,7 +26,8 @@ namespace output {
       config,
       pipeline,
       server,
-      player
+      player,
+      main
     };
   }
 

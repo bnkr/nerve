@@ -29,6 +29,8 @@ namespace {
       return "server";
     case source::pipeline:
       return "pipeline";
+    case source::main:
+      return "main";
     }
 
     NERVE_ABORT("impossible value for message source");
