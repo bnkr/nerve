@@ -29,7 +29,5 @@ stage_sequence::step_state observer_stage_sequence::sequence_step() {
 }
 
 simple_stage *observer_stage_sequence::create_stage(stages::stage_data &cfg) {
-  NERVE_NIMPL("creating a stage in an observer sequence");
-  stages::create_observer_stage(cfg);
-  return NULL;
+  return NERVE_CHECK_PTR(stages::create_observer_stage(cfg));
 }
