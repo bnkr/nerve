@@ -36,14 +36,7 @@ namespace pipeline {
     public:
     typedef packet_return stage_value_type;
 
-    //! A matching destructor for allocation done in create_stage (which is
-    //! necesary because the stages can be differing sizes).
-    struct tracked_destructor {
-      void operator()(process_stage *p) { pooled::tracked_byte_free(p); }
-    };
-
-    typedef pooled::container<process_stage*>::vector vector_type;
-    typedef ::indirect_owned<vector_type, tracked_destructor> stages_type;
+    typedef indirect_owned_polymorph<process_stage> stages_type;
 
     typedef stages_type::value_type stage_type;
     typedef stages_type::iterator iterator_type;

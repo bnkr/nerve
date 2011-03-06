@@ -16,28 +16,21 @@ void section::finalise() {
 }
 
 namespace {
-  template<class T>
-  T *alloc_and_cons_type() {
-    T* const p = (T*) pooled::tracked_byte_alloc(sizeof(T));
-    new (p) T();
-    return p;
-  }
-
-  stage_sequence *alloc_and_construct(stages::category_type c) {
+  stage_sequence *alloc_and_construct(section::sequences_type &seq, stages::category_type c) {
     namespace stage_cat = ::stages::stage_cat;
 
     switch (c) {
     case stage_cat::observe:
-      return alloc_and_cons_type<observer_stage_sequence>();
+      return seq.alloc_back<observer_stage_sequence>();
     case stage_cat::process:
-      return alloc_and_cons_type<process_stage_sequence>();
+      return seq.alloc_back<process_stage_sequence>();
     case stage_cat::input:
-      return alloc_and_cons_type<input_stage_sequence>();
+      return seq.alloc_back<input_stage_sequence>();
     case stage_cat::output:
       // TODO:
       //   Output and observes are identical, so this should *not* create a new
       //   sequence -- it should return the previous one.
-      return alloc_and_cons_type<output_stage_sequence>();
+      return seq.alloc_back<output_stage_sequence>();
     case stage_cat::unset:
       NERVE_ABORT("unset should be impossible");
       break;
@@ -48,7 +41,7 @@ namespace {
 }
 
 stage_sequence *section::create_sequence(stages::category_type c) {
-  stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(c));
+  stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(sequences(), c));
   NERVE_NIMPL("assign section's connectors to new sequence");
   return s;
 }

@@ -17,8 +17,7 @@ namespace pipeline {
    */
   class process_stage_sequence : public stage_sequence {
     public:
-
-    typedef progressive_buffer progressive_buffer_type;
+    typedef progressive_buffer::stages_type stages_type;
 
     // This is a little messy because it's using values which are not complete
     // yet.  At this point the progressive buffer can really be seen as part of
@@ -34,11 +33,10 @@ namespace pipeline {
     stage_sequence::step_state sequence_step();
 
     private:
-    typedef progressive_buffer_type::stages_type stages_type;
 
     stages_type &stages() { return data_loop_.stages(); }
 
-    progressive_buffer_type data_loop_;
+    progressive_buffer data_loop_;
   };
 } // ns pipeline
 
