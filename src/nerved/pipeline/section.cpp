@@ -40,9 +40,15 @@ namespace {
   }
 }
 
-stage_sequence *section::create_sequence(stages::category_type c) {
-  stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(sequences(), c));
-  NERVE_NIMPL("assign section's connectors to new sequence");
+namespace {
+  // disambiguate
+  typedef pipeline::pipe pipe_type;
+}
+
+stage_sequence *section::create_sequence(stages::category_type c, pipe_type *in, pipe_type *out) {
+  stage_sequence *const s = NERVE_CHECK_PTR(alloc_and_construct(this->sequences(), c));
+  s->connection().in(in);
+  s->connection().out(out);
   return s;
 }
 

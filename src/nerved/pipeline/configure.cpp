@@ -40,7 +40,7 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
   // We must loop over sections instead of jobs because we meed to visit each
   // section in pipeline order so that the previous section is fully constructed
-  // before the next.  Otherwise we have initialise the connectors (and possibly
+  // before the next.  Otherwise we have initialise the pipes (and possibly
   // some other stuff) in another pass of the data.
   do {
     section_config &sc = *NERVE_CHECK_PTR(sec_conf);
@@ -66,8 +66,12 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
       );
     }
 
-    connector *const in = prev ? NERVE_CHECK_PTR(last_sec)->output_pipe() : pd.start_terminator();
-    connector *const out = next ? pd.create_pipe() : pd.end_terminator();
+    pipe *const in = prev
+      ? NERVE_CHECK_PTR(NERVE_CHECK_PTR(last_sec)->connection().out())
+      : NERVE_CHECK_PTR(pd.start_terminator());
+    pipe *const out = next
+      ? NERVE_CHECK_PTR(static_cast<pipe*>(pd.create_thread_pipe()))
+      : NERVE_CHECK_PTR(static_cast<pipe*>(pd.end_terminator()));
 
     section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
 
@@ -95,12 +99,19 @@ void configure_sequences(output::logger &log, pipeline::section &sec, section_co
 
   pipeline::stage_sequence *sequence = NULL;
   typedef section_config::stage_iterator_type   stage_iter_t;
+
+  pipeline::pipe *input_pipe = NERVE_CHECK_PTR(sec.connection().in());
+  pipeline::pipe *output_pipe = NULL;
+
   for (stage_iter_t stage_conf = sec_conf.begin(); stage_conf != sec_conf.end(); ++stage_conf) {
     const stage_config::category_type this_cat = stage_conf->category();
 
     if (this_cat != last_cat) {
       log.trace("add %s sequence under section '%s'\n", stage_conf->category_name(), sec_conf.name());
-      sequence = NERVE_CHECK_PTR(sec.create_sequence(this_cat));
+      sequence = NERVE_CHECK_PTR(sec.create_sequence(this_cat, input_pipe, output_pipe));
+      input_pipe = output_pipe;
+      const bool last = (++stage_conf) == sec_conf.end();
+      output_pipe = last ? NERVE_CHECK_PTR(sec.connection().out()) : NERVE_CHECK_PTR(sequence->create_local_pipe());
     }
 
     configure_stage(log, *NERVE_CHECK_PTR(sequence), *stage_conf);
