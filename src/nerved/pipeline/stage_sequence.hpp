@@ -6,7 +6,8 @@
 
 #include "simple_stages.hpp"
 #include "packet.hpp"
-#include "pipe_junction.hpp"
+#include "connection.hpp"
+#include "local_pipe.hpp"
 
 #include "../util/asserts.hpp"
 
@@ -34,9 +35,12 @@ namespace pipeline {
     };
     typedef state::step_state step_state;
     typedef stages::stage_data stage_data_type;
+    typedef polymorphic_connection connection_type;
+
+    stage_sequence() : pipe_used_(false) {}
 
     //! Note: see docs for class section to explain why outputted packets is
-    //! done with the connector abstraction.
+    //! done with the pipe abstraction.
     virtual step_state sequence_step() = 0;
 
     /*!
@@ -48,6 +52,17 @@ namespace pipeline {
 
     //! Prepare to run; set up initial state etc.
     virtual void finalise() = 0;
+
+    //! This may or may not get used, but I happen to know that the object is
+    //! trivial so we may as well store it here.
+    local_pipe *create_local_pipe() {
+      NERVE_ASSERT(! pipe_used_, "a sequence can only release a single local pipe");
+      pipe_used_ = true;
+      return &local_pipe_;
+    }
+
+    //! The input/output pipe for this sequence.
+    connection_type &connection() { return connection_; }
 
     protected:
 
@@ -84,23 +99,16 @@ namespace pipeline {
     //! Input/output convenience
     //@{
 
-    //! The input/output pipe for this sequence.
-    pipe_junction &junction() { return junction_; }
-
-    packet *read_input() { return junction_.read_input(); }
-    void write_output(packet *p) { junction_.write_output(p); }
-    void write_output_wipe(packet *p) { junction_.write_output_wipe(p); }
+    packet *read_input() { return connection_.read_input(); }
+    void write_output(packet *p) { connection_.write_output(p); }
+    void write_output_wipe(packet *p) { connection_.write_output_wipe(p); }
 
     //@}
 
     private:
-
-    // TODO:
-    //   Not 100% sure this will be here by value.  Depends on how the
-    //   create_sequence assigns.  It is definitely certain that we need some
-    //   special considerations because of the way the object is initialised
-    //   gradually.
-    pipe_junction junction_;
+    connection_type connection_;
+    bool pipe_used_;
+    local_pipe local_pipe_;
   };
 }
 
