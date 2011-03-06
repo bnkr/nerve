@@ -84,17 +84,14 @@ void parse_context::add_stage(char *text) {
   flex_interface::transfer_mem p(text);
   scoped_new_stage s(*this);
   typedef stage_config::plugin_id_type id_type;
-  id_type id = stage_config::get_plugin_id(text);
-  switch (id) {
-  case plug_id::unset:
-    reporter().report("not a valid stage id or not a loadable plugin: %s", text);
-    break;
-  case plug_id::plugin:
-    this_stage().path(p);
+  id_type id = ::stages::get_built_in_plugin_id(text);
+  if (id == plug_id::unset) {
+    reporter().report("%s: not a built in plugin (loading plugins not implemented)", text);
+    // this_stage().path(p);
+    // this_stage().plugin_id(plug_id::plugin);
+  }
+  else {
     this_stage().plugin_id(id);
-    break;
-  default:
-    this_stage().plugin_id(id);
-    break;
   }
 }
+

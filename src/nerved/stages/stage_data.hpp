@@ -18,13 +18,18 @@ namespace stages {
     public:
     typedef ::stages::plugin_id_type plugin_id_type;
 
+    // TODO:
+    //   This class need to store paths and be able to deal with getting the
+    //   loading done.  We need to know the complete category name and other
+    //   such  stuff.
+
     stage_data() :
       plugin_id_(plug_id::unset)
     {}
 
     bool built_in() const {
       NERVE_ASSERT(plugin_id() != plug_id::unset, "plugin must be set before testing");
-      return stages::built_in_plugin(this->plugin_id());
+      return stages::is_built_in(this->plugin_id());
     }
 
     plugin_id_type plugin_id() const { return plugin_id_; }

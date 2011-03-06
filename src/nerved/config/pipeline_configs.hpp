@@ -72,13 +72,7 @@ namespace config {
     //! \name Enum to text
     //@{
 
-    inline static const char *get_category_name(category_type c) { return ::stages::get_category_name(c); }
-    static const char *get_plugin_id_name(plugin_id_type c);
     static const char *get_stage_name(const stage_config &c);
-
-    //! Finds an identifier for the stage, returning id_plugin if it's a loadable
-    //! plugin, id_unset if it can't be found, or the id of a built-in stage.
-    static plugin_id_type get_plugin_id(const char *name);
 
     //@}
 
@@ -87,7 +81,7 @@ namespace config {
     const char *name() const { return get_stage_name(*this); }
 
     //! What kind of stage it is (e.g process)
-    const char *category_name() const { return get_category_name(this->category()); }
+    const char *category_name() const { return stages::get_category_name(this->category()); }
 
     //! Stage concept (e.g observer).
     category_type category() const;

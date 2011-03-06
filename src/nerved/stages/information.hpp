@@ -56,12 +56,22 @@ namespace stages {
   const char *get_category_name(category_type c);
 
   //! \ingroup grp_stages
-  //! Name of the enumerator.  Always returns a string.
-  const char *get_plugin_name(plugin_id_type);
+  //! Name of the enumerator.  Doesn't handle loaded plugins.  Always returns a string.
+  const char *get_plugin_enum_name(plugin_id_type);
+
+  //! \ingroup grp_stages
+  //! Gets the enum value based on a name.  Doesn't handle loaded plugins, but
+  //! does always return a string.
+  plugin_id_type get_built_in_plugin_id(const char *);
+
+  //! \ingroup grp_stages
+  //! Gets the category type for a known plugin.  Unset if not known or not
+  //! built in.
+  category_type get_built_in_plugin_category(plugin_id_type);
 
   //! \ingroup grp_stages
   //! Is the plugin id a built-in one?
-  inline bool built_in_plugin(plugin_id_type p) {
+  inline bool is_built_in(plugin_id_type p) {
     return p != plug_id::unset && p != plug_id::plugin;
   }
 }
