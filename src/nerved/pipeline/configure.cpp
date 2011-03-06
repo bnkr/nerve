@@ -29,14 +29,14 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
   output::logger log(output::source::pipeline);
 
-  // TODO:
-  //   This might be wrong.  Iterating the jobs might not give the correct
-  //   order of sections so that we can use a simple "last_sec" value.
   struct {
     section_config *cur_conf;
     section *last_sec;
   } loop_state;
   loop_state.last_sec = NULL;
+
+  // debugging
+  std::map<section_config*, section*> created;
 
   int job_num = 0;
   for (job_iter_t job_conf = pc.begin(); job_conf != pc.end(); ++job_conf) {
@@ -63,10 +63,35 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
         );
       }
 
+      if (prev) {
+        // TODO:
+        //   These asserts fire on weird-order.conf because the sections are not
+        //   specified in pipeline order.  We iterate jobs, so it ends up that
+        //   we traverse in non-pipeline order.  This is fixible by:
+        //
+        //   - iterating sections in pipeline order
+        //   - allocating jobs the first time we see them
+        //   - store allocated jobs in the job config:
+        //
+        //   if (! sec_conf->parent_job()->allocated_job()) {
+        //     allocate_job as per config
+        //     store job
+        //   }
+        NERVE_ASSERT(created.count(prev), "we must have allocated something for the previous section");
+        NERVE_ASSERT(
+          created[prev] == loop_state.last_sec,
+          "the last_sec state must denote what we created for this section config"
+        );
+      }
+
       connector *const in = prev ? NERVE_CHECK_PTR(loop_state.last_sec)->output_pipe() : pd.start_terminator();
       connector *const out = next ? pd.create_pipe() : pd.end_terminator();
+      std::cerr << "previous section is " << (void*) loop_state.last_sec << std::endl;
 
       section *const sec_to_configure = NERVE_CHECK_PTR(job.create_section(in, out));
+      std::cerr << "created section is " << (void*) sec_to_configure << std::endl;
+
+      created[loop_state.cur_conf] = sec_to_configure;
 
       configure_sequences(log, *sec_to_configure, cc);
       loop_state.last_sec = NERVE_CHECK_PTR(sec_to_configure);
@@ -76,6 +101,8 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
   pd.finalise();
   pc.clear();
+
+  log.info("finished configuration\n");
 
   return configure_ok;
 }
