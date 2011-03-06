@@ -4,6 +4,7 @@
 
 #include "built_in_stages.hpp"
 #include "stage_data.hpp"
+#include "../pipeline/simple_stages.hpp"
 
 #include "../util/asserts.hpp"
 

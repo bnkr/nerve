@@ -9,6 +9,10 @@
 namespace pipeline {
   class packet;
 
+  // TODO:
+  //   Once all this is a bit more sure it should be put with the rest of the
+  //   stage interfaces.  It needs connectors to be finished first.
+
   //! \ingroup grp_pipeline
   //! Polymoprphic outputtter which is intended to abstract the thread and local
   //! pipes.

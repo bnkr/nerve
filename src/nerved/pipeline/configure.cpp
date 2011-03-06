@@ -5,7 +5,6 @@
 #include "../cli/settings.hpp"
 #include "../config/pipeline_configs.hpp"
 #include "../pipeline/job.hpp"
-#include "../pipeline/input_stage.hpp"
 #include "../pipeline/output_stage.hpp"
 #include "../pipeline/process_stage_sequence.hpp"
 #include "../pipeline/observer_stage_sequence.hpp"

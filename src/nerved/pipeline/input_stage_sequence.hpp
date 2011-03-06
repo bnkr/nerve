@@ -5,11 +5,11 @@
 #define PIPELINE_INPUT_STAGE_SEQUENCE_HPP_h3g7uj1i
 
 #include "stage_sequence.hpp"
-#include "input_stage.hpp"
-
 #include "../util/asserts.hpp"
 
 namespace pipeline {
+  struct input_stage;
+
   /*!
    * \ingroup grp_pipeline
    *

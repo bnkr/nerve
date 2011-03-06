@@ -3,8 +3,14 @@
 #ifndef STAGES_CREATE_HPP_vo8h7vvo
 #define STAGES_CREATE_HPP_vo8h7vvo
 
-#include "../pipeline/input_stage.hpp"
-#include "../pipeline/simple_stages.hpp"
+namespace pipeline {
+  struct input_stage;
+  struct output_stage;
+  struct simple_stage;
+  struct observer_stage;
+  struct process_stage;
+}
+
 #include "../util/pooled.hpp"
 
 namespace stages {

@@ -26,7 +26,7 @@ namespace pipeline {
     virtual void finish() = 0;
     //! Recieve a key and a value configuration which was read from the config
     //! file.
-    virtual void configure(const char *, const char *);
+    virtual void configure(const char *, const char *) = 0;
   };
 
   /*!
@@ -47,6 +47,27 @@ namespace pipeline {
     public:
     virtual void observe(packet*) = 0;
   };
-}
 
+  /*!
+   * \ingroup grp_pipeline
+   *
+   * Requirements about reading are fullfilled by the initial_stage_sequence so
+   * we don't need polymorphic bits.
+   *
+   * We can do a specialised API because we know that at the very least a stage
+   * sequence will always have the input at its start (usually there will be a
+   * specialised stage sequence to deal with input).
+   */
+  class input_stage : public simple_stage {
+    public:
+    typedef void* skip_type;
+    typedef const char * load_type;
+
+    virtual void pause() = 0;
+    virtual void skip(skip_type location) = 0;
+    virtual void load(load_type where) = 0;
+    virtual packet *read() = 0;
+    virtual void finish() = 0;
+  };
+}
 #endif
