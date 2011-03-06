@@ -2,6 +2,8 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "configure.hpp"
 
+#include "thread_pipe.hpp"
+
 #include "../cli/settings.hpp"
 #include "../config/pipeline_configs.hpp"
 #include "../output/logging.hpp"

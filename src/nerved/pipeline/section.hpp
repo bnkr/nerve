@@ -5,7 +5,7 @@
 #define PIPELINE_SECTION_HPP_1auycg4v
 
 #include "stage_sequence.hpp"
-#include "connectors.hpp"
+#include "connection.hpp"
 
 #include "../stages/information.hpp"
 #include "../util/indirect.hpp"
@@ -35,9 +35,9 @@ namespace pipeline {
    * Communication between stages is abstract.  An alternative implementation
    * method is to handle the connections (just the thread pipes) in this object
    * and have direct returns (using packet_return) which is then put on the
-   * section's pipe.  This is not done for the following reasons:
+   * section's thread_pipe.  This is not done for the following reasons:
    *
-   * - thread pipe operations (such as the clear on abandon) couldn't be
+   * - thread thread_pipe operations (such as the clear on abandon) couldn't be
    *   enforced unless the event type is checked again here
    * - if sequences give us their output packet then we nececssarily need to
    *   handle their input packets too.  This means we need to deal with
@@ -58,13 +58,18 @@ namespace pipeline {
     //! \name Initialisation etc.
     //@{
 
+    // Must be polymorphic because we can take the terminator as well.
+    //
+    // TODO:
+    //   It's possible we could factor this out and have en entire sequence do
+    //   the work of the terminators.  It's another performance issue where it's
+    //   not clear which would be faster, because they both involve virtual
+    //   functions...
+    typedef polymorphic_connection connection_type;
+
     explicit section() {}
 
-    connector *input_pipe() { return in_pipe_; }
-    connector *output_pipe() { return out_pipe_; }
-
-    void input_pipe(connector *i) { in_pipe_ = i; }
-    void output_pipe(connector *o) { out_pipe_ = o; }
+    connection_type &connection() { return conn_; }
 
     //! Create a new sequence in this section which is valid for the given
     //! stage category.  Pointers must remain valid.
@@ -90,8 +95,8 @@ namespace pipeline {
         //   The above might be wrong.
         //
         // TODO:
-        //   Unspecified for now because it depends on connectors.
-        // NERVE_CHECK_PTR(*start())->input_connector().would_block()
+        //   Unspecified for now because it depends on pipes.
+        // NERVE_CHECK_PTR(*start())->input_pipe().would_block()
         false;
     }
 
@@ -114,8 +119,7 @@ namespace pipeline {
     iterator_type start_;
     sequences_type sequences_;
 
-    connector *in_pipe_;
-    connector *out_pipe_;
+    connection_type conn_;
   };
 }
 #endif

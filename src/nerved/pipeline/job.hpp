@@ -10,7 +10,7 @@
 
 namespace pipeline {
   struct section;
-  struct connector;
+  struct pipe;
 
   /*!
    * \ingroup grp_pipeline
@@ -23,7 +23,7 @@ namespace pipeline {
     typedef indirect_owned_monotype<section> sections_type;
 
     //! Returned pointer must remain valid.
-    section *create_section(connector *, connector *);
+    section *create_section(pipe *, pipe *);
 
     //! Called after all the "create" whatsits have been done.
     void finalise();

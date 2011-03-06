@@ -12,9 +12,10 @@ void job::finalise() {
   std::for_each(sections().begin(), sections().end(), boost::bind(&section::finalise, _1));
 }
 
-section *job::create_section(connector *in, connector *out) {
+section *job::create_section(pipe *in, pipe *out) {
   section *const s = sections_.alloc_back();
-  NERVE_NIMPL("assigning connectors to created section");
+  s->connection().in(in);
+  s->connection().out(out);
   return s;
 }
 
