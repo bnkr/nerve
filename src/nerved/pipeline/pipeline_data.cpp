@@ -34,6 +34,10 @@ connector *pipeline_data::create_pipe() {
  * Everything else *
  *******************/
 
+void pipeline_data::clear() {
+  jobs_.clear();
+}
+
 job *pipeline_data::create_job() { return jobs_.alloc_back(); }
 
 void pipeline_data::finalise() {

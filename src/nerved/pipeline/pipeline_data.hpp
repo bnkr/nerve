@@ -38,6 +38,9 @@ namespace pipeline {
     //! Check and finish the pipeline objects after configuration.
     void finalise();
 
+    //! Remove all memory etc.
+    void clear();
+
     private:
     typedef indirect_owned_monotype<job> jobs_type;
 

@@ -61,5 +61,8 @@ int main(int argc, char **argv) {
     break;
   }
 
+  // easier to detect leaks
+  pipe_data.clear();
+
   return EXIT_SUCCESS;
 }

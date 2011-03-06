@@ -37,7 +37,7 @@ class indirect_owned : boost::noncopyable {
   indirect_owned() {}
   indirect_owned(destructor_type d) : d_(d) {}
 
-  ~indirect_owned() { std::for_each(c_.begin(), c_.end(), d_); }
+  ~indirect_owned() { clear(); }
 
   bool empty() const { return c_.empty(); }
   size_type size() const { return c_.size(); }
@@ -50,6 +50,11 @@ class indirect_owned : boost::noncopyable {
 
   void push_back(pointer_type p) { c_.push_back(p); }
   value_type &back() { *c_.back(); }
+
+  void clear() {
+    std::for_each(c_.begin(), c_.end(), d_);
+    c_.clear();
+  }
 
   private:
   container_type  c_;
@@ -93,9 +98,9 @@ struct indirect_owned_polymorph :
 
   using parent_type::begin;
   using parent_type::end;
-
   using parent_type::empty;
   using parent_type::size;
+  using parent_type::clear;
 
   //! Allocate a polymorphic relation of T and push it to the back of the
   //! container
@@ -131,9 +136,9 @@ struct indirect_owned_monotype : protected
 
   using parent_type::begin;
   using parent_type::end;
-
   using parent_type::empty;
   using parent_type::size;
+  using parent_type::clear;
 
   T *alloc_back() {
     T *v = pooled::alloc<T>();
