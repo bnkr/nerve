@@ -9,7 +9,7 @@ using namespace pipeline;
 
 simple_stage *input_stage_sequence::create_stage(stages::stage_data &cfg) {
   NERVE_ASSERT(is_ == NULL, "must not create an input stage twice");
-  return is_ = NERVE_CHECK_PTR(stages::create_input_stage(cfg));
+  return is_ = NERVE_CHECK_PTR(::stages::create_input_stage(cfg));
 }
 
 stage_sequence::step_state input_stage_sequence::sequence_step() {

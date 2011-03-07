@@ -17,13 +17,16 @@ void *pooled::tracked_byte_alloc(size_t bs) {
   size_t *as_size_t = (size_t *) base;
   void *user = as_size_t + 1;
   as_size_t[0] = total;
+  NERVE_WIPE(user, bs);
   return user;
 }
 
 void pooled::tracked_byte_free(void *user) {
   NERVE_ASSERT(user, "attempting to free null pointer");
   size_t *as_size_t = (size_t*) user;
-  byte_alloc.deallocate((char*) (as_size_t - 1), as_size_t[-1]);
+  const size_t allocated = as_size_t[-1];
+  NERVE_WIPE(as_size_t - 1, allocated);
+  byte_alloc.deallocate((char*) (as_size_t - 1), allocated);
 }
 
 void *pooled::tracked_byte_realloc(void *ptr, size_t bytes) {

@@ -5,6 +5,7 @@
 #define PIPELINE_TERMINATORS_HPP_u5uc90u4
 
 #include "ipc.hpp"
+#include "packet.hpp"
 
 namespace pipeline {
   struct packet;
@@ -13,8 +14,13 @@ namespace pipeline {
   //! Starts the pipeline.
   class start_terminator : public pipe {
     public:
+    start_terminator() {
+      dummy_packet_.event(packet::event::data);
+    }
+
     void write(packet *) { do_write(); }
     void write_wipe(packet *) { do_write(); }
+
     packet *read() {
       NERVE_NIMPL("reading from the start terminator");
       return NULL;
@@ -22,6 +28,15 @@ namespace pipeline {
 
     private:
     void do_write() { NERVE_ABORT("can't write to the start terminator"); }
+
+    // TODO:
+    //   Almost certainly want something else here because the input stage might
+    //   mess up the packet.
+    //
+    //   Also, I can control the input stage more effectively if there is more
+    //   direct access.  If the input sequence knew about the input terminator
+    //   then it'd be easier...
+    packet dummy_packet_;
   };
 
   //! \ingroup grp_pipeline
@@ -32,7 +47,7 @@ namespace pipeline {
     void write_wipe(packet *) { do_write(); }
 
     packet *read() {
-      NERVE_ABORT("can't write to the start terminator");
+      NERVE_ABORT("can't read from the end terminator");
       return NULL;
     }
 

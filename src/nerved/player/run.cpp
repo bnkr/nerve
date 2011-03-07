@@ -25,7 +25,14 @@ player::run_status player::run(pipeline::pipeline_data &pl, const cli::settings 
     threads.create_thread(boost::bind(&pipeline::job::job_thread, boost::ref(*i)));
   }
 
-  io_service.run();
+  try {
+    io_service.run();
+  }
+  catch (std::exception &e) {
+    log.error("%s\n", e.what());
+    return run_fail;
+  }
+
   threads.join_all();
 
   return run_ok;

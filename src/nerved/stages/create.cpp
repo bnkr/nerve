@@ -16,6 +16,7 @@ namespace {
   template<class T, class Function>
   T *allocate(Function f) {
     void *const p = f(sizeof(T));
+    NERVE_WIPE(p, sizeof(T));
     T *const pt = (T *) p;
     new (pt) T();
     return pt;
@@ -47,14 +48,26 @@ namespace {
 // All we want is some type safety.
 pipeline::input_stage *stages::create_input_stage(stage_data &sd, alloc_func alloc) {
   // TODO:
-  //   Assert that the plugin really is an input.
+  //   Need to modify this when the sd is a loadable plugin.
+  NERVE_ASSERT(
+    stages::get_built_in_plugin_category(sd.plugin_id()) == stage_cat::input,
+    "must only be called for input stage configs"
+  );
+
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
-  return static_cast<pipeline::input_stage*>(ret);
+  std::cout << "created stage " << (void*) ret << std::endl;
+  // TODO:
+  //   All kinds of problems.
+  return NERVE_CHECK_PTR(dynamic_cast<pipeline::input_stage*>(ret));
 }
 
 pipeline::observer_stage *stages::create_observer_stage(stage_data &sd, alloc_func alloc) {
   // TODO:
-  //   Assert that the plugin really is an observer.
+  //   Need to modify this when the sd is a loadable plugin.
+  NERVE_ASSERT(
+    stages::get_built_in_plugin_category(sd.plugin_id()) == stage_cat::observe,
+    "must only be called for input stage configs"
+  );
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
-  return static_cast<pipeline::observer_stage*>(ret);
+  return dynamic_cast<pipeline::observer_stage*>(ret);
 }

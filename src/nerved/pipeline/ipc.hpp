@@ -18,6 +18,7 @@ namespace pipeline {
   //! actual usage of these)
   class pipe {
     public:
+    virtual ~pipe() {}
     virtual void write(packet *) = 0;
     virtual void write_wipe(packet *) = 0;
     virtual packet *read() = 0;

@@ -3,8 +3,10 @@
 
 #ifndef UTIL_ASSERTS_HPP_45mln30x
 #define UTIL_ASSERTS_HPP_45mln30x
+
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 
 namespace asserts {
   namespace detail {
@@ -68,5 +70,9 @@ namespace asserts {
     std::cerr << "  in " << __PRETTY_FUNCTION__ << std::endl;\
     std::cerr << "  not implemented: " << what__ << std::endl;\
   } while (false);
+
+//! \ingroup grp_asserts
+//! Wipe memory.
+#define NERVE_WIPE(p__, size__) std::memset(p__, 0, size__)
 
 #endif

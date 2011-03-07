@@ -39,6 +39,7 @@ namespace pooled {
   typedef std::basic_string<char, std::char_traits<char>, boost::pool_allocator<char> > string;
 
   //! \ingroup grp_pooled
+  //! Don't cast this up or free() won't work.
   template<class T>
   T *alloc() {
     T * const p = (T*) boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::malloc();
@@ -52,6 +53,7 @@ namespace pooled {
   template<class T>
   void free(T *ptr) {
     ptr->~T();
+    NERVE_WIPE(ptr, sizeof(T));
     boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::free(ptr);
   }
 

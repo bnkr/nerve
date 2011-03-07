@@ -26,6 +26,11 @@ namespace pipeline {
     typedef event::id event_type;
 
     event_type event() const { return event_; }
+    void event(event_type e) { event_ = e; }
+
+    //! Is it a packet which causes a wipe?
+    bool wipe() const { return event_ == event::abandon; }
+
     bool non_data() const { return event_ != event::data; }
 
     private:

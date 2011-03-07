@@ -20,6 +20,7 @@ section *job::create_section(pipe *in, pipe *out) {
 }
 
 void pipeline::job::job_thread() {
+  NERVE_ASSERT(! sections().empty(), "thread can't loop on nothing");
 forever:
   typedef sections_type::iterator iter_type;
   bool blocked_already = false;

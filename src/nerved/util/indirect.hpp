@@ -65,9 +65,13 @@ namespace detail {
   //! A matching destructor for allocation done in using tracked alloc (which is
   //! necesary because the stages can be differing sizes).
   template<class T>
-    struct tracked_destructor {
-      void operator()(T *const p) { pooled::tracked_byte_free(p); }
-    };
+  struct tracked_destructor {
+    void operator()(T *const p) {
+      p->~T();
+      NERVE_WIPE(p, sizeof(T));
+      pooled::tracked_byte_free(p);
+    }
+  };
 }
 
 // TODO:

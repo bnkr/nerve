@@ -1,3 +1,10 @@
+Creation Bug
+------------
+
+* after a huge search, there is a bug in the creation of an input stage
+* a stage_data with plugin_id != input is being passed.
+* this causes all kinds of epic fuckups because the pointer gets casted wrongly
+
 Socket and State
 ----------------
 
@@ -12,27 +19,6 @@ work at the very least.
 * socket protocol, i.e. actual client/server communication
 * threading
   - can the server be seen as a plugin?
-
-Pipeline Creation
------------------
-
-The current assert failure is at the input stage creation, but there are earlier
-messups due to the connectors.  It might be difficult to organise the bits that
-aren't connectors without doing the connectors first.
-
-.connectors
-* create_pipe
-* start_terminator
-* end_terminator
-* pipe_junction
-* assigning connectors to sections
-* passing section pipes to sequences
-  - currently they hold a pipe junction by value... there seems to be no option
-    but to hold pointers to pipes
-
-.stages
-* therea are more sequences' create_x methods to finish
-* also the storage usage is not unified (they all need to use indirect.hpp)
 
 Pipeline Algorithms
 -------------------

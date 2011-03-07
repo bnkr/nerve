@@ -21,6 +21,7 @@ namespace pipeline {
   class simple_stage {
     public:
     // propogating events is fullfilled by the stage sequence
+    virtual ~simple_stage() {}
     virtual void abandon() = 0;
     virtual void flush() = 0;
     virtual void finish() = 0;
