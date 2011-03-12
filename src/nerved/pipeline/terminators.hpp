@@ -22,8 +22,7 @@ namespace pipeline {
     void write_wipe(packet *) { do_write(); }
 
     packet *read() {
-      NERVE_NIMPL("reading from the start terminator");
-      return NULL;
+      return &dummy_packet_;
     }
 
     private:
