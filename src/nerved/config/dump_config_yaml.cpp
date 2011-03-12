@@ -6,14 +6,26 @@
 
 #include "pipeline_configs.hpp"
 
+//! Dump the structures which will be created.
+static void thread_yaml(config::pipeline_config &pc);
+//! Dump pipeline order.
+static void order_yaml(config::pipeline_config &pc);
+
 void config::dump_config_yaml(config::pipeline_config &pc) {
+  std::cout << "---" << std::endl;
+  std::cout << "threads: " << std::endl;
+  thread_yaml(pc);
+  std::cout << "stage_order: " << std::endl;
+  order_yaml(pc);
+}
+
+void thread_yaml(config::pipeline_config &pc) {
   using namespace config;
 
   typedef pipeline_config::job_iterator_type    job_iter_t;
   typedef job_config::section_iterator_type     section_iter_t;
   typedef section_config::stage_iterator_type   stage_iter_t;
 
-  std::cout << "---" << std::endl;
   int thread_num = 1;
   for (job_iter_t job = pc.begin(); job != pc.end(); ++job) {
     std::cout << "- thread: " << thread_num << std::endl;
@@ -80,4 +92,20 @@ void config::dump_config_yaml(config::pipeline_config &pc) {
 
     ++thread_num;
   }
+}
+
+
+void order_yaml(config::pipeline_config &pc) {
+  using namespace config;
+
+  section_config *sec = pc.pipeline_first();
+  do {
+    section_config &sc = *NERVE_CHECK_PTR(sec);
+    typedef section_config::stage_iterator_type iter_type;
+
+    for (iter_type stage = sc.begin(); stage != sc.end(); ++stage) {
+      std::cout << "- " << stage->name() << std::endl;
+    }
+
+  } while ((sec = sec->pipeline_next()) != NULL);
 }
