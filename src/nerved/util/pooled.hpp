@@ -47,6 +47,13 @@ namespace pooled {
     return p;
   }
 
+  template<class T, class P1>
+  T *alloc1(P1 &p1) {
+    T * const p = (T*) boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::malloc();
+    new (p) T(p1);
+    return p;
+  }
+
   //! \ingroup grp_pooled
   //! This *does not* work polymorphically because we'd have to store the number
   //! of bytes allocated.
@@ -56,6 +63,11 @@ namespace pooled {
     NERVE_WIPE(ptr, sizeof(T));
     boost::singleton_pool<boost::fast_pool_allocator_tag, sizeof(T)>::free(ptr);
   }
+
+  template<class T>
+  struct call_free {
+    void operator()(T *p) const { ::pooled::free<T>(p); }
+  };
 
   //! \ingroup grp_pooled
   //! Calls free(T).  This is only necessary because there is no unique_ptr yet.

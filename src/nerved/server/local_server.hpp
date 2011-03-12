@@ -5,6 +5,7 @@
 #define SERVER_SOCKET_SERVER_HPP_eamnxrbl
 
 #include "session.hpp"
+#include "../util/pooled.hpp"
 
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
@@ -49,7 +50,7 @@ namespace server {
     //! Binds a session to its socket.  When the socket is connected to, the
     //! session will be started by +handle_accept+.
     void async_accept() {
-      session_ptr new_session(new session(io_service_));
+      session_ptr new_session(session::create_shared(io_service_));
       acceptor_.async_accept(
         new_session->socket(),
         boost::bind(

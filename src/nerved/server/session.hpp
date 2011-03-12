@@ -14,12 +14,6 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 
-// #include <string>
-// #include <cstdlib>
-// #include <iostream>
-// #include <unistd.h>
-// #include <cstdio>
-
 namespace server {
   //! \ingroup grp_server
   //! An individual communication with a client.  Note the inheritance means we
@@ -37,9 +31,19 @@ namespace server {
     typedef boost::asio::local::stream_protocol stream_protocol;
 
     public:
-    session(boost::asio::io_service &io_service)
+    typedef boost::shared_ptr<session> shared_ptr;
+
+    explicit session(boost::asio::io_service &io_service)
       : socket_(io_service)
     { }
+
+    static session *create(boost::asio::io_service &sv) {
+      return ::pooled::alloc1<session>(sv);
+    }
+
+    static shared_ptr create_shared(boost::asio::io_service &sv) {
+      return shared_ptr(::pooled::alloc1<session>(sv), pooled::call_free<session>());
+    }
 
     stream_protocol::socket &socket() { return socket_; }
 
