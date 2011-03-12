@@ -27,9 +27,9 @@ extern void *ParseAlloc(void *(*mallocProc)(size_t));
 extern void ParseFree(void *lemon_interface, void (*freeProc)(void*));
 extern void Parse(void *lemon_interface, int token_id, ::config::flex_interface::token_data, parse_context_type *);
 
-#ifndef NERVE_PARSER_TRACE
-#  error "NERVE_PARSER_TRACE should be defined by nerve_config.hpp"
-#elif NERVE_PARSER_TRACE
+#ifndef NERVE_TRACE_PARSER
+#  error "NERVE_TRACE_PARSER should be defined by nerve_config.hpp"
+#elif NERVE_TRACE_PARSER
 extern void ParseTrace(FILE *stream, char *zPrefix);
 #endif
 
@@ -37,9 +37,9 @@ extern void ParseTrace(FILE *stream, char *zPrefix);
 
 namespace config {
   namespace detail {
-#ifndef NERVE_PARSER_TRACE
-#  error "NERVE_PARSER_TRACE should be defined by nerve_config.hpp"
-#elif NERVE_PARSER_TRACE
+#ifndef NERVE_TRACE_PARSER
+#  error "NERVE_TRACE_PARSER should be defined by nerve_config.hpp"
+#elif NERVE_TRACE_PARSER
     static char parse_trace_prefix[] = "lemon: ";
 #endif
   }
@@ -70,7 +70,7 @@ namespace config {
     lemon_interface(const params &p) {
       state_ = ::ParseAlloc(&pooled::tracked_byte_alloc);
       if (p.trace()) {
-#if NERVE_PARSER_TRACE
+#if NERVE_TRACE_PARSER
         ::ParseTrace(stdout, detail::parse_trace_prefix);
 #endif
       }

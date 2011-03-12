@@ -4,20 +4,22 @@
 # TODO:
 #   This lot should be moved into the main directory.
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(defs "NERVED_DEVELOPER=1")
+  set(generated_debug EXTRA_DEBUG)
+else()
+  set(defs)
+  set(generated_debug)
+endif()
+
 bbuild_parser(
   SOURCES_VAR parser_sources
   TOKENS_FILE_VAR tokens_file
   LEMON "config/grammar.lemon"
   FLEX  "config/lexer.l"
   CXX_FILES
-  EXTRA_DEBUG
+  ${generated_debug}
 )
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(defs "NERVE_LEXER_TRACE=1" "NERVE_PARSER_TRACE=1")
-else()
-  set(defs)
-endif()
 
 binfo_find_lib(
   VAR DL_LIB VAR_DOC "Interface to the dynamic linker"
@@ -30,7 +32,6 @@ binfo_find_lib(
   TASK nerved TASK_DOC "Used under debug configurations to get nicer backtraces."
   NAMES boost_thread-mt boost_thread
 )
-
 
 binfo_find_lib(
   VAR BOOST_SYSTEM_LIB VAR_DOC "boost.system library"
@@ -76,6 +77,8 @@ bbuild_exe(
   CPPDEFS
     # Dependncy on this is handled by bbuild_parser.
     "TOKENS_FILE=\"${tokens_file}\""
+    # TODO:
+    #   This should be done using NERVED_CONFIG, really.
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
   LIBS

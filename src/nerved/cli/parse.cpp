@@ -2,7 +2,7 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 #include "parse.hpp"
 
-#include "../config_defines.hpp"
+#include "../defines.hpp"
 
 #include <cstring>
 #include <cstdio>

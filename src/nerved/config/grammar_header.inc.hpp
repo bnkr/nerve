@@ -23,9 +23,9 @@
 //
 // NOTE: remember to define this *after* assert.hpp is included!  So I can
 // have a parse trace even with no asserts.
-#ifndef NERVE_PARSER_TRACE
-#  error "NERVE_LEXER_TRACE should be defined by config.hpp"
-#elif NERVE_PARSER_TRACE
+#ifndef NERVE_TRACE_PARSER
+#  error "NERVE_TRACE_PARSER should be defined by config.hpp"
+#elif NERVE_TRACE_PARSER
 #  undef NDEBUG
 #else
 #  undef NDEBUG
@@ -72,10 +72,11 @@ const error_data &get_last_error() { return last_error; }
 
 // token name needs to be in the macro because it's declared static (yeah yeah I
 // shouldn't really be using it anyway).
-//
-// TODO:
-//   Shouldn't be using yytokenname.  It only works when ndebug is defined.
-#define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
+#if NERVE_PARSER_TRACE
+#  define ERR_EXPECTED(what__) err_expected(what__, context, ::yyTokenName[get_last_error().token]);
+#else
+#  define ERR_EXPECTED(what__) err_expected(what__, context, "<unknown token>");
+#endif
 
 // TODO:
 //   Both of these should be in the parse context, and the token name stuff

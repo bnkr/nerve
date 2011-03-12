@@ -9,8 +9,8 @@
  */
 
 #include "flex_interface.hpp"
-#include "nerve_config.hpp"
 #include "parse_context.hpp"
+#include "trace_defines.hpp"
 
 #include "../util/asserts.hpp"
 #include "../util/pooled.hpp"
@@ -22,9 +22,11 @@
  * Lexer Action Macros *
  ***********************/
 
+#if NERVE_TRACE_LEXER
 static void print_yytext(const char *);
 // defined in the lexer because the defs aren't made yet
 static const char *state_name(int num);
+#endif
 
 #define LEXER_MSG_YYTEXT(msg__)\
   if (::trace()) {\
@@ -43,9 +45,9 @@ static const char *state_name(int num);
   LEXER_BEGIN_NDEBUG(state__);\
 
 /* alias debug macros */
-#ifndef NERVE_LEXER_TRACE
-#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
-#elif NERVE_LEXER_TRACE
+#ifndef NERVE_TRACE_LEXER
+#  error "NERVE_TRACE_LEXER should be defined by nerve_config.hpp"
+#elif NERVE_TRACE_LEXER
 #  define LEXER_RETURN(tok__) LEXER_RETURN_DEBUG(tok__)
 #  define LEXER_BEGIN(tok__) LEXER_BEGIN_DEBUG(tok__)
 #  define LEXER_MSG(msg__) LEXER_MSG_YYTEXT(msg__)

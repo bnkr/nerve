@@ -94,11 +94,11 @@ inline void dont_call_me() {
   ::yyunput(y,&x);
 }
 
-#ifndef NERVE_LEXER_TRACE
-#  error "NERVE_LEXER_TRACE should be defined by nerve_config.hpp"
+#ifndef NERVE_TRACE_LEXER
+#  error "NERVE_TRACE_LEXER should be defined by nerve_config.hpp"
 #endif
 
-#if NERVE_LEXER_TRACE
+#if NERVE_TRACE_LEXER
 static void print_yytext(const char *text) {
   size_t len = std::strlen(text), i = 0;
   while (i < len) {
