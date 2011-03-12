@@ -1,0 +1,95 @@
+Introduction
+------------
+
+Btrace is a small tracing and debugging library designed for those who prefer
+printf to debuggers.  It includes crash detection, macros, and name demangling,
+amongst some other things.  It is designed so that it can be included in a
+released project.  Macros are all disableable at compile time.
+
+Demangler
+---------
+
+Uses various nonportable methods to find out the demangled represnetation of a
+mangled linkage name.  The output is compiler dependant.
+
+----
+int main() {
+  std::string s;
+  s = demangle_name(typeinfo(int).name());
+  s = demangle_type<int>();
+}
+----
+
+Backtrace
+---------
+
+Finds the backtrace in the current binary.  Compiler and linker internals are
+used to find the stack trace and symbol names.  Dwarf reading is used to get
+file and line information.
+
+----
+int main() {
+  btrace::raw_backtrace bt;
+  // iterate addresses
+  bt.begin();
+  bt.end();
+
+  // many members
+  btrace::pretty_backtrace bt;
+}
+----
+
+This is highly dependant on compiler.  You might get a much more basic error.
+The tendency is for GNUish C libraries and compilers to work the best.
+
+Crash Detector
+--------------
+
+Uses the demangler and the backtrace to print something pretty out when there is
+a crash.
+
+----
+int main() {
+  const btrace::sig::mask_type mask = btrace::sig::all_crashes;
+  btrace::crash_detector cd(mask);
+  // inherit btrace::crash_logger
+  special_logger lg;
+  cd.set_logger(&lg);
+}
+----
+
+When a signal in the mask is caught, btrace's signal action is fired which
+prints out a detailed error message and re-raises the signal.
+
+Assertions
+----------
+
+Replacements for assert.hpp which have documentation and are a bit more
+controlled.  Definition is still conditional, but some assertions can always be
+defined if wanted.
+
+The following function-like macros are defined.  Each one takes an expression as
+the first parameter and an optional documentation string as the second.
+
+* BTRACE_ASSERT -- a normal assertion
+* BTRACE_ASSERT_PTR -- asserts a pointer is non-null and returns that pointer
+* BTRACE_WASSERT -- as above but only ever warns
+* BTRACE_WASSERT_PTR
+* BTRACE_FIXED_ASSERT -- ass BTRACE_ASSERT
+* BTRACE_FIXED_ASSERT_PTR
+
+These macros are controlled by the following defines:
+
+* BTRACE_ASSERT_DISABLE -- disable all assertions except FIXED assertions
+* BTRACE_ASSERT_WARN -- all assertions warn except FIXED assertions
+* BTRACE_NO_DOCS -- ignore documentation strings
+
+General Macros
+--------------
+
+Generalised debugging.
+
+* BTRACE_ABORT(message) -- abort with a reason
+* BTRACE_P(message) -- print stuff out on cout
+
+These respect +BTRACE_NO_DOCS+.
