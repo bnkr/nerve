@@ -7,13 +7,13 @@ Integration
 This todo is just here to say "check the src directories".  I'll start using
 this file when those are all done.
 
-Status (as of 27th Feb 2011):
+Status (as of 12th Mar 2011):
 
 * config: integrated
-* pipeline: connectors to do
-* server: not integrated (see socket-proto)
-* plugins: not prototyped
-* outputs: integration started-ish; see gapless-proto and nerved/stages
+* stages: integrated
+* pipeline: connector multi-threading
+* server: alter pipeline, ipc protocol
+* plugins: modularised (stages) but implemenation not planned
 
 New prototypes:
 

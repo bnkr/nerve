@@ -26,11 +26,20 @@ real output.
 Plugins
 -------
 
-.Stage Data Tidy
 * plan a way to get the stage type from a plugin for config
 * modify stage_config's category stuff to use the plugin's data
 * move stage_data object into config to implement this method
 * modify stages::create_x to load a plugin properly
+
+Build System
+------------
+
+* re-write asciidoc using proper new conventions
+  - this is urgent for most projects
+  - no point doing hacks to assign programs etc; just find the base a2x binary
+    and assume the rest of the toolchain is there.
+* add a hacked up nsis installed
+  - btest wants this too
 
 Problems
 --------
