@@ -36,9 +36,11 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
   section_config *sec_conf = NERVE_CHECK_PTR(pc.pipeline_first());
   section *last_sec = NULL;
 
-  // Only for trace output.
-  job *last_job = NULL;
-  std::map<job*, int> job_nums;
+  struct trace_output_data {
+    job *last_job;
+    std::map<job*, int> num;
+  } trace;
+  trace.last_job = NULL;
 
   // We must loop over sections instead of jobs because we meed to visit each
   // section in pipeline order so that the previous section is fully constructed
@@ -55,11 +57,11 @@ configure_status ::pipeline::configure(pipeline_data &pd, pipeline_config &pc, c
 
     if (log.should_write(output::cat::trace)) {
       pipeline::job *const this_job = &job;
-      if (! job_nums.count(this_job)) {
-        job_nums[this_job] = last_job ? job_nums[last_job] + 1 : 1;
-        last_job = this_job;
+      if (! trace.num.count(this_job)) {
+        trace.num[this_job] = trace.last_job ? trace.num[trace.last_job] + 1 : 1;
+        trace.last_job = this_job;
       }
-      const int job_num = job_nums[this_job];
+      const int job_num = trace.num[this_job];
 
       log.trace(
         "configure section '%s' in job %d (%s -> [%s] -> %s)\n",
@@ -123,9 +125,9 @@ void configure_sequences(output::logger &log, pipeline::section &sec, section_co
 }
 
 void configure_stage(output::logger &log, stage_sequence &seq, stage_config &stage_conf) {
-  pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf.stage_data()));
-
   log.trace("add stage %s\n", stage_conf.name());
+
+  pipeline::simple_stage *const stage = NERVE_CHECK_PTR(seq.create_stage(stage_conf.stage_data()));
 
   if (stage_conf.configs_given()) {
     typedef stage_config::configs_type configs_type;
