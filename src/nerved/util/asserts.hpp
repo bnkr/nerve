@@ -11,21 +11,6 @@
 #include "btrace_defines.hpp"
 #include "../btrace/assert.hpp"
 
-namespace asserts {
-  namespace detail {
-    template<class T> T *check_pointer(int line, const char *file, T *p, const char *code) {
-      if (p == NULL) {
-        std::cerr
-          << "nerve: " << file << ":" << line << ":\n"
-          << "  expression: '" << code << "'\n"
-          << "  must yield a non-null pointer" << std::endl;
-        std::abort();
-      }
-      return p;
-    }
-  }
-}
-
 //! \ingroup grp_asserts
 //! Abort with a sensible message.
 #define NERVE_ABORT(msg__)\
@@ -33,7 +18,6 @@ namespace asserts {
     std::cerr << "nerve: aborting: " << msg__ << std::endl;\
     std::abort();\
   } while (false);
-
 
 //! \ingroup grp_asserts
 //! Assertion with message.
@@ -67,6 +51,12 @@ namespace asserts {
 
 //! \ingroup grp_asserts
 //! Wipe memory.
-#define NERVE_WIPE(p__, size__) std::memset(p__, 0, size__)
+#ifndef NERVE_DEVELOPER
+#  error "Need NERVE_DEVELOPER."
+#elif NERVE_DEVELOPER
+#  define NERVE_WIPE(p__, size__) std::memset(p__, 0, size__)
+#else
+#  define NERVE_WIPE(p__, size__)
+#endif
 
 #endif
