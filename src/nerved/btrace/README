@@ -82,7 +82,8 @@ These macros are controlled by the following defines:
 
 * BTRACE_ASSERT_DISABLE -- disable all assertions except FIXED assertions
 * BTRACE_ASSERT_WARN -- all assertions warn except FIXED assertions
-* BTRACE_NO_DOCS -- ignore documentation strings
+* BTRACE_DISABLE_DOCS -- ignore documentation strings
+* BTRACE_DISABLE_STRINGS -- ignore documentation strings and code strings
 
 General Macros
 --------------
@@ -92,4 +93,4 @@ Generalised debugging.
 * BTRACE_ABORT(message) -- abort with a reason
 * BTRACE_P(message) -- print stuff out on cout
 
-These respect +BTRACE_NO_DOCS+.
+These respect +BTRACE_DISABLE_DOCS+ and +BTRACE_DISABLE_STRINGS+.
