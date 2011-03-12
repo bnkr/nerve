@@ -1,0 +1,147 @@
+NERVE(1)
+=======
+
+NAME
+----
+
+nerve - command-line client for the minimalist daemon music player
+
+SYNOPSIS
+--------
+
+*nerve* 'comand' [ 'args' ... ]
+
+DESCRIPTION
+-----------
+
+The *nerve* command-line interface communicates with the *nerved(1)* daemon to
+alter its state for example doing such revolutionary things as playing files.
+Nerve doesn't have a media libary so all operations are on the file system.
+
+OPTIONS
+-------
+
+General
+~~~~~~~
+
+These options are common everywhere.
+
+*-h*, *--help*::
+  Print some help.  If a command is set then the help might be about the
+  command.
+
+*-f*, *--force*::
+  Bypass some validation, e.g. adding files which don't exist (yet).
+
+*-v*, *--verbose*::
+  Say more stuff.
+
+Playlist
+~~~~~~~~
+
++add+ 'file'...::
+  Takes one or more files to append to the playlist.
+
++remove+ < 'file' | @'num' > ... ::
+  Remove files from the playlist or positions with @-synax.
+
++replace+ [ *-p* | *--play* ] < 'file' | @file > ...::
+  Clear the existing playlist and replace with another one.  The currently
+  playing song will end normally and continue to the new playlist unless *-p* is
+  given in which case it happens immediately.
+
++clear+ [ *-s* | *--stop* ]::
+  Clear the playlist.  The current song keeps playing until the next track
+  change unless *-s* is given.
+
++loop+ [ 'on' | 'off' ]::
+  Toggle or explicitly set playlist looping.
+
++list+::
+  Print everything in the playlist.
+
+Playing
+~~~~~~~
+
++stop+::
+  Stop playing and reset file position to zero.
+
++start+::
+  Begin playing.  Same as seeking to zero when something is already playing.
+
++pause+::
+  Stop playing but keep the position where it is.
+
++seek+ [+|-] < h:m:s | num% >::
+  Seek to position in the file.  When the plus or minus is given then it is an
+  offset.
+
++next+ [ *-w* | --wrap | *-n* | --no-wrap ]::
+  Skip this song and go to the next one.  *-w* or *-n* specify wrapping round
+  the playlist of not wrapping respectively.  If wrapping is off and there is
+  nothing to wrap to then the action is the same as stop.
+
++previous+ [ *-w* | --wrap | *-n* | --no-wrap ]::
+  As +next+ but in the opposite direction.
+
+Output
+~~~~~~
+
++volume+ [+|-] 'number'::
+  Set the volume to a value out of 100.  Setting to zero is not equivilent to
+  muting because the previous volume won't be restored on unmute.  When the plus
+  or minus sign is given then the number is an offset to the current value.
+
++mute+ [ 'on' | 'off' ]::
+  Toggle or explicitly set mute.
+
+Status
+~~~~~~
+
+The command:
+
+  nerve +status+ [ format ]
+
+Will report the daemon's state.
+
+Format is as follows:
+
+*%f*::
+  Path to file playing.
+
+*%s*, *%S*, *%t*, *%T*::
+  Position in the track.  %S and %s are seconds, while %t and $T are human
+  readable times.
+
+*%p*, *%P*::
+  Position of current song in playlist and the total number of songs in the
+  playlist.
+
+*%l*, *%L*::
+  Whether loop is enabled.  *%l* is an integer while *%L* is the text 'enabled'
+  or 'disabled'.
+
+*%%*, *%n*::
+  *%%* escapes a percentage sign and *%n* is a newline.
+
+*%v*::
+  Current volume.
+
+The default format is +%p/%P \'%f' %t/%T %v+ or something similar (i.e don't rely
+on it in scripts).
+
+CONFIGURATION AND ENVIRONMENT
+-----------------------------
+
+None yet.
+
+AUTHOR
+------
+
+Nerve and this manpage are written by James Webber, copyright 2008-2011.  Under
+a 3-clause BSD license.
+
+SEE ALSO
+--------
+
+*nerved(1)*, *mpd(1)*, *xmms2(1)*

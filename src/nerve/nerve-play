@@ -9,20 +9,30 @@ module NervePlay
   class Settings
     def initialize(args)
       @mode = nil
+      @file = nil
 
       op = OptionParser.new
-      other = op.parse(args)
-      if other.empty?
-        cli_fail "no command given"
-      else
-        #lolhax
-        op = OptionParser.new
-        op.on("--quit") { @mode = :quit }
-        op.parse(["--#{other[0]}"])
+      words = op.parse(args)
+      command = words[0] || cli_fail("no command_given")
+      others = words[1..-1]
+
+      #lolhax
+      cp = OptionParser.new
+      cp.on("--queue") { @mode = :queue }
+      cp.on("--daemon-stop") { @mode = :quit }
+      cp.parse(["--#{command}"])
+
+      if queue?
+        @file = others[0] || cli_fail("file is required")
+
+        fail if others.length > 1
       end
     end
 
+    def file; @file; end
+
     def quit?; @mode == :quit; end
+    def queue?; @mode == :queue; end
 
     def cli_fail(msg)
       raise SettingsError, msg
@@ -45,7 +55,9 @@ module NervePlay
       socket = UNIXSocket.new("/tmp/nerve.socket")
 
       if @settings.quit?
-        socket.write("MADAGASCAR")
+        socket.write("MADAGASCAR\n")
+      elsif @settings.queue?
+        socket.write("QUEUE #{@settings.file}\n")
       else
         fail "no command set"
       end

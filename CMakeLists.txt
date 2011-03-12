@@ -101,6 +101,12 @@ add_subdirectory("test")
 ## Building Documentation ##
 ############################
 
+bdoc_asciidoc(
+  TARGET manpage_nerve
+  FORMATS manpage xhtml
+  INPUTS doc/nerve.1.txt
+)
+
 ##################
 ## Packaging ##
 ##################
