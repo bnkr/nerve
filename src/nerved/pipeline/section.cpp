@@ -53,6 +53,7 @@ stage_sequence *section::create_sequence(stages::category_type c, pipe_type *in,
 }
 
 void section::section_step() {
+  NERVE_ASSERT(! sequences().empty(), "can't loop an empty section")
   bool do_reset = true;
   typedef sequence_type::state state;
 
