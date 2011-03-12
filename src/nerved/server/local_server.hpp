@@ -10,6 +10,7 @@
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
 #include <boost/bind.hpp>
+#include <boost/utility.hpp>
 
 #include <string>
 #include <iostream>
@@ -18,7 +19,7 @@
 namespace server {
   //! \ingroup grp_server
   //! Tracks connected clients using the session object.
-  class local_server {
+  class local_server : boost::noncopyable {
     // This class is originally based on example code which is part of the boost
     // ASIO library.
     //

@@ -10,6 +10,7 @@
 #include <boost/system/error_code.hpp>
 
 #include <boost/array.hpp>
+#include <boost/utility.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
@@ -18,7 +19,7 @@ namespace server {
   //! \ingroup grp_server
   //! An individual communication with a client.  Note the inheritance means we
   //! can convert a raw pointer into a shared_ptr (and it has to be public).
-  class session : public boost::enable_shared_from_this<session> {
+  class session : public boost::enable_shared_from_this<session>, boost::noncopyable {
     // This class is originally based on example code which is part of the boost
     // ASIO library.
     //
