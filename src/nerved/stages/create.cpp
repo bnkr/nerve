@@ -55,10 +55,7 @@ pipeline::input_stage *stages::create_input_stage(stage_data &sd, alloc_func all
   );
 
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
-  std::cout << "created stage " << (void*) ret << std::endl;
-  // TODO:
-  //   All kinds of problems.
-  return NERVE_CHECK_PTR(dynamic_cast<pipeline::input_stage*>(ret));
+  return NERVE_CHECK_PTR(static_cast<pipeline::input_stage*>(ret));
 }
 
 pipeline::observer_stage *stages::create_observer_stage(stage_data &sd, alloc_func alloc) {
@@ -70,5 +67,5 @@ pipeline::observer_stage *stages::create_observer_stage(stage_data &sd, alloc_fu
     "must only be called for input stage configs"
   );
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
-  return dynamic_cast<pipeline::observer_stage*>(ret);
+  return static_cast<pipeline::observer_stage*>(ret);
 }
