@@ -5,7 +5,7 @@
 #   This lot should be moved into the main directory.
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(defs "NERVED_DEVELOPER=1")
+  set(defs "NERVE_DEVELOPER=1")
   set(generated_debug EXTRA_DEBUG)
 else()
   set(defs)

@@ -126,6 +126,12 @@ void cli_parser::version() {
     "Under a 3-clause BSD license.\n"
   );
 
+#ifndef NERVE_DEVELOPER
+#  error "Need NERVE_DEVELOPER."
+#elif NERVE_DEVELOPER
+  std::printf("Developer build (that's why the binary's so big).\n");
+#endif
+
   status_ = cli::parse_exit;
 }
 
