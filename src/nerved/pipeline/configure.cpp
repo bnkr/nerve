@@ -114,7 +114,8 @@ void configure_sequences(output::logger &log, pipeline::section &sec, section_co
       log.trace("add %s sequence under section '%s'\n", stage_conf->category_name(), sec_conf.name());
       sequence = NERVE_CHECK_PTR(sec.create_sequence(this_cat, input_pipe, output_pipe));
       input_pipe = output_pipe;
-      const bool last = (++stage_conf) == sec_conf.end();
+      stage_iter_t next = stage_conf;
+      const bool last = ++next == sec_conf.end();
       output_pipe = last ?
         NERVE_CHECK_PTR(sec.connection().out()) :
         NERVE_CHECK_PTR(sequence->create_local_pipe());
