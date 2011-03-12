@@ -1,10 +1,3 @@
-Creation Bug
-------------
-
-* after a huge search, there is a bug in the creation of an input stage
-* a stage_data with plugin_id != input is being passed.
-* this causes all kinds of epic fuckups because the pointer gets casted wrongly
-
 Socket and State
 ----------------
 
@@ -42,18 +35,6 @@ Plugins
 Problems
 --------
 
-* player state (e.g playlist including restoring state data)
-  - this is the integration of socket and pipeline
-* client communication (i.e saying when something has changed)
-  - as above, but it's something that should be thought about in the socket
-    proto anyway
-  - issues with blocking: how do you mix communication over shared memory (i.e
-    the thread pipe) and with a socket
-* mono-threading the socket server (might be that the client communication and
-  playlist stuff mean that it may as well sit in the same thread)
-  - integration of socket and pipeline (perhaps it can be an observer plugin?)
-  - this has implications for the player state because multi-threaded access
-    will be more tricky
 * method of debugging the pipeline without being threaded (it's not even
   compiled yet so it's bound to have bugs!)
   - a helper program to load, run, and benchmark a plugin.  Perhaps a special
