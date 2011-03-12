@@ -1,0 +1,56 @@
+#!/usr/bin/ruby -w
+require 'socket'
+require 'optparse'
+
+module NervePlay
+  # Console-ready exception
+  SettingsError = Class.new(RuntimeError)
+
+  class Settings
+    def initialize(args)
+      @mode = nil
+
+      op = OptionParser.new
+      other = op.parse(args)
+      if other.empty?
+        cli_fail "no command given"
+      else
+        #lolhax
+        op = OptionParser.new
+        op.on("--quit") { @mode = :quit }
+        op.parse(["--#{other[0]}"])
+      end
+    end
+
+    def quit?; @mode == :quit; end
+
+    def cli_fail(msg)
+      raise SettingsError, msg
+    end
+  end
+
+  class CommandLine
+    def initialize(argv)
+      @argv = argv
+    end
+
+    # Output exception info and do the exit codes.
+    def run!
+      run_errorless
+    end
+
+    # Don't handle exceptions
+    def run_errorless
+      @settings = Settings.new(@argv)
+      socket = UNIXSocket.new("/tmp/nerve.socket")
+
+      if @settings.quit?
+        socket.write("MADAGASCAR")
+      else
+        fail "no command set"
+      end
+    end
+  end
+end
+
+NervePlay::CommandLine.new(ARGV).run!
