@@ -5,18 +5,33 @@
 
 namespace btrace {
   namespace detail {
-    void *assert_nonnull(void *p, const char *expr, const *doc);
-    void *wassert_nonnull(void *p, const char *expr, const *doc);
-    void assert_true(bool val, const char *expr, const char *doc);
-    void wassert_true(bool val, const char *expr, const char *doc);
+    typedef const char *cstr_t;
 
-    //! Used by ASSERT_PTR.
-    template<class T> T *assert_nonnull(T *p, const char *expr, const *doc) {
-      return (T*) assert_nonnull((void*) p, expr, doc);
+    // This should help reduce the binary size as the unused functions can be
+    // dropped.  Ditto alsways passing the doc string -- we have to test it for
+    // emptyness anyway so may as well use the same symbol.
+
+    void assert_true(bool);
+    void assert_true(bool, cstr_t file, int line);
+    void assert_true(bool, cstr_t file, int line, cstr_t expr, cstr_t doc);
+
+    void *assert_nn_static(void*);
+    void *assert_nn_static(void*, cstr_t file, int line);
+    void *assert_nn_static(void*, cstr_t file, int line, cstr_t expr, cstr_t doc);
+
+    template<class T>
+    T *assert_nn(T *p) {
+      return (T*) assert_nn_static((void*) p);
     }
 
-    template<class T> T *wassert_nonnull(T *p, const char *expr, const *doc) {
-      return (T*) wassert_nonnull(const_cast<void*>(void*) p, expr, doc);
+    template<class T>
+    T *assert_nn(T *p, cstr_t file, int line) {
+      return (T*) assert_nn_static((void*) p, file, line);
+    }
+
+    template<class T>
+    T *assert_nn(T *p, cstr_t file, int line, cstr_t expr, cstr_t doc) {
+      return (T*) assert_nn_static((void*) p, file, line, expr, doc);
     }
   }
 }

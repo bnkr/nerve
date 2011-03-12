@@ -8,6 +8,9 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "btrace_defines.hpp"
+#include "../btrace/assert.hpp"
+
 namespace asserts {
   namespace detail {
     template<class T> T *check_pointer(int line, const char *file, T *p, const char *code) {
@@ -34,16 +37,7 @@ namespace asserts {
 
 //! \ingroup grp_asserts
 //! Assertion with message.
-#define NERVE_ASSERT(code__, msg__)\
-  do {\
-    if (! (code__)) {\
-      std::cerr\
-          << "nerve: " << __FILE__ << ":" << __LINE__ << ":\n"\
-          << "  assertion: '" << #code__ << "'\n"\
-          << "  " << msg__ << std::endl;\
-      std::abort();\
-    }\
-  } while(false);
+#define NERVE_ASSERT(code__, msg__) BTRACE_ASSERT(code__, msg__)
 
 //! \ingroup grp_asserts
 //! Alias.
@@ -51,7 +45,7 @@ namespace asserts {
 
 //! \ingroup grp_asserts
 //! Check the pointer is non-null and return it.
-#define NERVE_CHECK_PTR(expr__) (::asserts::detail::check_pointer(__LINE__, __FILE__, (expr__), #expr__))
+#define NERVE_CHECK_PTR(expr__) BTRACE_ASSERT_PTR(expr__)
 
 //! \ingroup grp_asserts
 //! Assertion with message but don't abort afterwards.

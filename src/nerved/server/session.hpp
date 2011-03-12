@@ -62,6 +62,13 @@ namespace server {
 
     void handle_read(const boost::system::error_code &error, size_t bytes_transferred) {
       if (! error) {
+        if (std::strncmp(data_.begin(), "MADAGASCAR", bytes_transferred) == 0) {
+          // TODO:
+          //   How do I inform all clients I am shutting down?
+          socket_.get_io_service().stop();
+          return;
+        }
+
         boost::asio::async_write(
           socket_,
           boost::asio::buffer(data_, bytes_transferred),

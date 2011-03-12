@@ -7,12 +7,17 @@
 #include "output/logging.hpp"
 #include "player/run.hpp"
 #include "btrace/crash_detector.hpp"
+#include "defines.hpp"
 
 #include <cstdlib>
 
 //! Links each bit of the daemon: cli, config, pipeline, and execution.
 int main(int argc, char **argv) {
+#ifndef NERVED_CRASH_DETECTOR
+#  error "NERVE_DEVELOPER must be defined"
+#elif NERVED_CRASH_DETECTOR
   btrace::crash_detector cd;
+#endif
 
   cli::settings settings;
   switch (cli::parse(settings, argc, argv)) {
@@ -31,8 +36,14 @@ int main(int argc, char **argv) {
     break;
   }
 
+#if NERVED_CRASH_DETECTOR
+  // TODO:
+  //   Set up a crash logger using output::logger for the crash detector.
+#endif
+
   output::logger log(output::source::main);
   log.info("%s started\n", argv[0]);
+
 
   // TODO:
   //   Should use a name which represents all configs (because there will

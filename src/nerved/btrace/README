@@ -82,8 +82,13 @@ These macros are controlled by the following defines:
 
 * BTRACE_ASSERT_DISABLE -- disable all assertions except FIXED assertions
 * BTRACE_ASSERT_WARN -- all assertions warn except FIXED assertions
-* BTRACE_DISABLE_DOCS -- ignore documentation strings
-* BTRACE_DISABLE_STRINGS -- ignore documentation strings and code strings
+
+Documentation is modified using:
+
+* BTRACE_DOC_NONE -- nothing
+* BTRACE_DOC_LOCATION -- the file/line location
+* BTRACE_DOC_CODE -- the file/line location and the expression in the assertion
+* (none) -- all above and also the documntation string (if any)
 
 General Macros
 --------------

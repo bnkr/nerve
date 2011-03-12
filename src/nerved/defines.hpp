@@ -31,4 +31,8 @@
 #  error "NERVED_VERSION must be defined"
 #endif
 
+#ifndef NERVED_CRASH_DETECTOR
+#  define NERVED_CRASH_DETECTOR NERVE_DEVELOPER
+#endif
+
 #endif

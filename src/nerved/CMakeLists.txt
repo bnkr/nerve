@@ -72,6 +72,7 @@ bbuild_exe(
     btrace/crash_detector.cpp
     btrace/backtrace.cpp
     btrace/demangle.cpp
+    btrace/assert.cpp
   GENERATED_SOURCES
     ${parser_sources}
   CPPDEFS
