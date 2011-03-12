@@ -65,7 +65,8 @@ pipeline::observer_stage *stages::create_observer_stage(stage_data &sd, alloc_fu
   // TODO:
   //   Need to modify this when the sd is a loadable plugin.
   NERVE_ASSERT(
-    stages::get_built_in_plugin_category(sd.plugin_id()) == stage_cat::observe,
+    stages::get_built_in_plugin_category(sd.plugin_id()) == stage_cat::observe ||
+    stages::get_built_in_plugin_category(sd.plugin_id()) == stage_cat::output,
     "must only be called for input stage configs"
   );
   pipeline::simple_stage *const ret = NERVE_CHECK_PTR(create_stage(sd, alloc));
