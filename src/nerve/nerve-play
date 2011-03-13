@@ -1,10 +1,16 @@
 #!/usr/bin/ruby -w
+# Copyright (C) 2011, James Webber.
+# Distributed under a 3-clause BSD license.  See COPYING.
+#
+# This is a simple CLI client for nerved.
 require 'socket'
 require 'optparse'
 
 module NervePlay
   # Console-ready exception
   SettingsError = Class.new(RuntimeError)
+
+  CliExit = Class.new(RuntimeError)
 
   class Settings
     def initialize(args)
@@ -13,7 +19,7 @@ module NervePlay
 
       op = OptionParser.new
       words = op.parse(args)
-      command = words[0] || cli_fail("no command_given")
+      command = words[0] || cli_fail("no command given")
       others = words[1..-1]
 
       #lolhax
@@ -46,7 +52,27 @@ module NervePlay
 
     # Output exception info and do the exit codes.
     def run!
-      run_errorless
+      begin
+        run_errorless
+      rescue CliExit => e
+        Kernel.exit(if e.code == 0 then 0 else 2 end)
+      rescue SettingsError => e
+        STDERR.puts "#{File.basename($0)}: #{e}"
+        Kernel.exit 1
+      rescue Exception => e
+        STDERR.puts "#{File.basename($0)}: bug: unexpected error:"
+        print_exception(e)
+        Kernel.exit 2
+      end
+    end
+
+    def print_exception(e)
+      # TODO:
+      #   I do tis a lot.  It should go in rbunker.
+      STDERR.puts "Class: #{e.class}"
+      STDERR.puts "Message: #{e.message}"
+      STDERR.puts "Trace:"
+      STDERR.puts "> #{e.backtrace.join("\n* ")}"
     end
 
     # Don't handle exceptions
