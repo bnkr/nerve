@@ -13,36 +13,60 @@ module NervePlay
   CliExit = Class.new(RuntimeError)
 
   class Settings
+    GotoHelp = Class.new(RuntimeError)
+
     def initialize(args)
       @mode = nil
       @file = nil
 
-      op = OptionParser.new
-      words = op.parse(args)
-      command = words[0] || cli_fail("no command given")
-      others = words[1..-1]
+      commands =
+        [:add, :remove, :replace, :clear, :list] +
+        [:play, :pause, :stop, :seek, :next, :previous] +
+        [:volume, :mute]  +
+        [:status, :help]
 
-      #lolhax
-      cp = OptionParser.new
-      cp.on("--queue") { @mode = :queue }
-      cp.on("--daemon-stop") { @mode = :quit }
       begin
-        cp.parse(["--#{command}"])
-      rescue OptionParser::InvalidOption
-        cli_fail("command '#{command}' not recognised")
+        op = OptionParser.new
+        op.on("--help") { @help = true ; raise GotoHelp }
+        words = op.parse(args)
+        command = words[0] || cli_fail("no command given")
+        others = words[1..-1]
+
+        #lolhax
+        cp = OptionParser.new
+        commands.each {|c| cp.on("--#{c}") { @mode = c } }
+
+        begin
+          cp.parse(["--#{command}"])
+        rescue OptionParser::InvalidOption
+          msg = "command '#{command}' not recognised"
+
+          if command =~ /^--/
+            msg += " (note that dash arguments always come after the command)"
+          end
+
+          cli_fail(msg)
+        end
+      rescue GotoHelp
+        raise CliExit
       end
 
-      if queue?
-        @file = others[0] || cli_fail("file is required")
+      ap = OptionParser.new
 
-        fail if others.length > 1
+      if add?
+        ap.on("-p", "--play")
+      else
+        #etc
       end
+
+      ap.parse(others)
     end
 
     def file; @file; end
 
     def quit?; @mode == :quit; end
     def queue?; @mode == :queue; end
+    def bye?; @mode == :bye; end
 
     def cli_fail(msg)
       raise SettingsError, msg
@@ -83,12 +107,17 @@ module NervePlay
     def run_errorless
       @settings = Settings.new(@argv)
       socket = UNIXSocket.new("/tmp/nerve.socket")
-      sleep 5
 
       if @settings.quit?
-        socket.write("MADAGASCAR\n")
+        socket.write("MADAGASCAR")
       elsif @settings.queue?
-        socket.write("QUEUE #{@settings.file}\n")
+        socket.write("STATUS")
+        socket.read
+      elsif @settings.bye?
+        #  socket.write("BYE")
+        #  socket.write("pants")
+        p socket.read(1024)
+        p socket.read
       else
         fail "no command set"
       end

@@ -39,8 +39,9 @@ These options are common everywhere.
 Playlist
 ~~~~~~~~
 
-+add+ 'file'...::
-  Takes one or more files to append to the playlist.
++add+ [ *-p* | *--play* | *-n* | *--no-play* ] < 'file' | @file > ...::
+  Takes one or more files to append to the playlist.  If *-p* then the first
+  song added is jumped to.
 
 +remove+ < 'file' | @'num' > ... ::
   Remove files from the playlist or positions with @-synax.
@@ -63,14 +64,15 @@ Playlist
 Playing
 ~~~~~~~
 
-+stop+::
-  Stop playing and reset file position to zero.
-
-+start+::
++play+ [ 'num' ] ::
   Begin playing.  Same as seeking to zero when something is already playing.
+  When 'num' is given, nerve jumps to the song numbers 'num'.
 
 +pause+::
   Stop playing but keep the position where it is.
+
++stop+::
+  Stop playing and reset file position to zero.
 
 +seek+ [+|-] < h:m:s | num% >::
   Seek to position in the file.  When the plus or minus is given then it is an
