@@ -4,6 +4,8 @@
 #ifndef UTIL_POOLED_HPP_fdmqdjzd
 #define UTIL_POOLED_HPP_fdmqdjzd
 
+#include "asserts.hpp"
+
 #include <boost/pool/pool_alloc.hpp>
 
 #include <string>

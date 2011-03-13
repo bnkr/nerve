@@ -64,6 +64,8 @@ bbuild_exe(
     pipeline/input_stage_sequence.cpp
     pipeline/progressive_buffer.cpp
     player/run.cpp
+    server/local_server.cpp
+    server/session.cpp
     util/pooled.cpp
     stages/information.cpp
     stages/create.cpp

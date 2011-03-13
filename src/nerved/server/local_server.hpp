@@ -1,11 +1,10 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
-
 #ifndef SERVER_SOCKET_SERVER_HPP_eamnxrbl
 #define SERVER_SOCKET_SERVER_HPP_eamnxrbl
 
 #include "session.hpp"
-#include "../util/pooled.hpp"
+#include "../output/logging.hpp"
 
 #include <boost/system/system_error.hpp>
 #include <boost/system/error_code.hpp>
@@ -32,39 +31,19 @@ namespace server {
     typedef boost::asio::local::stream_protocol stream_protocol;
 
     public:
-    local_server(boost::asio::io_service &io_service, const char *file)
-      : io_service_(io_service),
-      acceptor_(io_service, stream_protocol::endpoint(file))
-    {
-      async_accept();
-    }
-
-    void handle_accept(session_ptr new_session, const boost::system::error_code &error) {
-      if (! error) {
-        new_session->start();
-        async_accept();
-      }
-    }
+    local_server(boost::asio::io_service &io_service, const char *file);
+    void handle_accept(session_ptr new_session, const boost::system::error_code &error);
 
     protected:
 
     //! Binds a session to its socket.  When the socket is connected to, the
     //! session will be started by +handle_accept+.
-    void async_accept() {
-      session_ptr new_session(session::create_shared(io_service_));
-      acceptor_.async_accept(
-        new_session->socket(),
-        boost::bind(
-          &local_server::handle_accept, this, new_session,
-          boost::asio::placeholders::error
-        )
-      );
-    }
+    void async_accept();
 
     private:
     boost::asio::io_service &io_service_;
     stream_protocol::acceptor acceptor_;
+    ::output::logger log_;
   };
 }
-
 #endif

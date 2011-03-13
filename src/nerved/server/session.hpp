@@ -3,6 +3,9 @@
 #ifndef SERVER_SESSION_HPP_mk6t8fr4
 #define SERVER_SESSION_HPP_mk6t8fr4
 
+#include "protocol.hpp"
+#include "../output/logging.hpp"
+
 #include <boost/asio/local/stream_protocol.hpp>
 #include <boost/asio/placeholders.hpp>
 #include <boost/asio/write.hpp>
@@ -35,52 +38,25 @@ namespace server {
     typedef boost::shared_ptr<session> shared_ptr;
 
     explicit session(boost::asio::io_service &io_service)
-      : socket_(io_service)
+      : socket_(io_service),
+        log_(output::source::server)
     { }
 
-    static session *create(boost::asio::io_service &sv) {
-      return ::pooled::alloc1<session>(sv);
+    ~session() {
+      log_.trace("session %p closed\n", (void*) this);
     }
 
-    static shared_ptr create_shared(boost::asio::io_service &sv) {
-      return shared_ptr(::pooled::alloc1<session>(sv), pooled::call_free<session>());
-    }
+    static shared_ptr create_shared(boost::asio::io_service &sv);
 
     stream_protocol::socket &socket() { return socket_; }
 
-    void start() {
-      socket_.async_read_some(
-        boost::asio::buffer(data_),
-        boost::bind(
-          &session::handle_read,
-          shared_from_this(),
-          boost::asio::placeholders::error,
-          boost::asio::placeholders::bytes_transferred
-        )
-      );
-    }
+    //! Start this session listening.
+    void start();
 
-    void handle_read(const boost::system::error_code &error, size_t bytes_transferred) {
-      if (! error) {
-        if (std::strncmp(data_.begin(), "MADAGASCAR", bytes_transferred) == 0) {
-          // TODO:
-          //   How do I inform all clients I am shutting down?
-          socket_.get_io_service().stop();
-          return;
-        }
+    //! Deal with some data coming in.
+    void handle_read(const boost::system::error_code &error, size_t bytes_transferred);
 
-        boost::asio::async_write(
-          socket_,
-          boost::asio::buffer(data_, bytes_transferred),
-          boost::bind(
-            &session::handle_write,
-            shared_from_this(),
-            boost::asio::placeholders::error
-          )
-        );
-      }
-    }
-
+#if 0
     void handle_write(const boost::system::error_code &error) {
       if (! error) {
         socket_.async_read_some(
@@ -94,13 +70,15 @@ namespace server {
         );
       }
     }
+#endif
 
     private:
     stream_protocol::socket socket_;
     boost::array<char, 1024> data_;
+    output::logger log_;
   };
 
-  typedef boost::shared_ptr<session> session_ptr;
+  typedef session::shared_ptr session_ptr;
 }
 
 #endif

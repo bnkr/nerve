@@ -26,7 +26,11 @@ module NervePlay
       cp = OptionParser.new
       cp.on("--queue") { @mode = :queue }
       cp.on("--daemon-stop") { @mode = :quit }
-      cp.parse(["--#{command}"])
+      begin
+        cp.parse(["--#{command}"])
+      rescue OptionParser::InvalidOption
+        cli_fail("command '#{command}' not recognised")
+      end
 
       if queue?
         @file = others[0] || cli_fail("file is required")
@@ -79,6 +83,7 @@ module NervePlay
     def run_errorless
       @settings = Settings.new(@argv)
       socket = UNIXSocket.new("/tmp/nerve.socket")
+      sleep 5
 
       if @settings.quit?
         socket.write("MADAGASCAR\n")
@@ -87,6 +92,7 @@ module NervePlay
       else
         fail "no command set"
       end
+
     end
   end
 end
