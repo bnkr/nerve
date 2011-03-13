@@ -33,6 +33,7 @@ namespace server {
 
     private:
     typedef boost::asio::local::stream_protocol stream_protocol;
+    typedef stream_protocol::socket socket_type;
 
     public:
     typedef boost::shared_ptr<session> shared_ptr;
@@ -48,7 +49,7 @@ namespace server {
 
     static shared_ptr create_shared(boost::asio::io_service &sv);
 
-    stream_protocol::socket &socket() { return socket_; }
+    socket_type &socket() { return socket_; }
 
     //! Start this session listening.
     void start();

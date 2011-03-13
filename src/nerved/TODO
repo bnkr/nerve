@@ -1,3 +1,28 @@
+Working Pipeline
+----------------
+
+Implement the thread-to-thread communications including some simple input and
+output plugins.  This will help us get the socket stuff done (see notes below).
+
+.output
+* write a file-dump plugin
+* use the configuration to say what file
+
+.input
+* write the ffmpeg input
+* use the existing wrapper, but we'll need to dick around with it a bit to make
+  it more stateful
+
+.thread pipe
+* add para to git
+* implement the stub methods of thread_pipe
+* fully implement the packet class
+
+.state
+* hack anything up to pass a load event to the input plugin
+
+End result: packets are passed down the pipeline until eof.
+
 Socket and State
 ----------------
 
@@ -5,13 +30,56 @@ This is becoming very important because of the way the socket server must
 interract with the pipeline.  It has implications on how the terminators are to
 work at the very least.
 
-* design player state
-  - simple enough if it goes in the server
-* communication between the pipeline (e.g output timestamps) and the server
-* communication between the server and the pipeline (e.g load a file)
-* socket protocol, i.e. actual client/server communication
-* threading
-  - can the server be seen as a plugin?
+.state data
+* must facilitate shared communication between pipeline and server
+* the most simple thing is to put it in the server; that way there is only ever
+  one updator and the pipeline only has to care about events
+* it looks like the most sensible place to put it is in a player::state class.
+  This way we can keep knowledge to a minimum between each component.
+
+.state modification
+* from pipeline to server: timestamps, files, other things...?
+  - communicating with the output plugin (perhaps others?)
+  - therefore the server must read from an event queue somehow
+* mostly from the output plugins and observers
+* from server to pipeline: track changes, skips etc.
+  - involves communicating with the start terminator
+  - therefore the server must write to an event queue
+* re threading, these queue reads must be virtual
+  - we can use the stuff in output plugin's outputter
+* I think I need to do the thread-to-thread communication bits before this
+
+.request/response
+* clients can sign up, but we need a proper protocol for commands and a
+  definition of all available commands
+* if we're sending back state data, how can we ensure still be asynchronus while
+  ensuring that the data does not change (either from another session or due to
+  multi-threaded concerns)?
+* I think a lockless algorithm would be the most sensible so we can, e.g, keep
+  re-evaluating the playlist if it changes.
+
+.multicast
+* we can't have each session doing broadcasting individually because then
+  messages would only be sent when the socket becomes active.  By definition, a
+  boadcast is sent at the behest of the server.
+* we can just hold a list of sessions and iterte them, doing the message
+  sending as we go.
+* what do you do when sending to a server which is in the middle of replying
+  to some other action?  Can that even happen?
+* how does the server listen for pipeline events while also dealing with for
+  poll?
+  - if it's in the same thread as whatever sends the events then it's easy
+    enough to just check whether an event has been sent or not
+  - if it's not then the event sender will need to wake up the socket listener
+    somehow
+
+.threading
+* could the server exist in the same thread as everything else?
+* it hasn't really been designed that way but I suppose it could be done
+* seems somehow messy to me... not sure why.
+* player::run can probably organise everything into the same thread... but how
+  would the user say so?
+* server has to deal with events anyway so why shouln't it go on the pipeline?
 
 Pipeline Algorithms
 -------------------

@@ -2,10 +2,11 @@
 // Distributed under a 3-clause BSD license.  See COPYING.
 
 %%{
-  machine "pants";
+  machine pants;
 
   action pants {
   }
+
 }%%
 
 using namespace server;

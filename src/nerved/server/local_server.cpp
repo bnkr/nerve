@@ -15,7 +15,7 @@ local_server::local_server(boost::asio::io_service &io_service, const char *file
 
 void local_server::handle_accept(session_ptr new_session, const boost::system::error_code &error) {
   if (error) {
-    log_.error("accept: %s\n", error.message().c_str());
+    log_.error("accept error: %s\n", error.message().c_str());
   }
   else {
     new_session->start();
