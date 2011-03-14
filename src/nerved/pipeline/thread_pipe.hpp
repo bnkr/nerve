@@ -6,25 +6,32 @@
 
 #include "ipc.hpp"
 #include "../util/asserts.hpp"
+#include "../para/pipes.hpp"
+
+#include <boost/thread.hpp>
 
 namespace pipeline {
+  struct packet;
+
   //! \ingroup grp_pipeline
   //! Thread-safe buffer.
   class thread_pipe : public pipe {
     public:
 
-    void write(packet *) {
-      NERVE_NIMPL("write to a thread pipe");
-    }
+    thread_pipe() {}
 
-    void write_wipe(packet *) {
-      NERVE_NIMPL("wipe write to a thread pipe");
-    }
+    void write(packet *p) { p_.write(p); }
+    void write_wipe(packet *p) { p_.write_clear(p); }
+    packet *read() { return p_.read(); }
 
-    packet *read() {
-      NERVE_NIMPL("read from a thread pipe");
-      return NULL;
-    }
+    private:
+
+    typedef boost::condition_variable condition_type;
+    typedef boost::mutex lockable_type;
+    typedef para::basic_monitor_sync<condition_type, lockable_type> boost_sync_type;
+
+    para::pipe<packet*, boost_sync_type> p_;
   };
 }
+
 #endif

@@ -19,11 +19,11 @@ player::run_status player::run(pipeline::pipeline_data &pl, const cli::settings 
   std::remove(file);
   server::local_server server(io_service, file);
 
-  // boost::thread_group threads;
-  // typedef pipeline_data::jobs_type::iterator iter_type;
-  // for (iter_type i = pl.jobs().begin(); i != pl.jobs().end(); ++i) {
-  //   threads.create_thread(boost::bind(&pipeline::job::job_thread, boost::ref(*i)));
-  // }
+  boost::thread_group threads;
+  typedef pipeline_data::jobs_type::iterator iter_type;
+  for (iter_type i = pl.jobs().begin(); i != pl.jobs().end(); ++i) {
+    threads.create_thread(boost::bind(&pipeline::job::job_thread, boost::ref(*i)));
+  }
 
   try {
     io_service.run();
@@ -33,7 +33,7 @@ player::run_status player::run(pipeline::pipeline_data &pl, const cli::settings 
     return run_fail;
   }
 
-  // threads.join_all();
+  threads.join_all();
 
   return run_ok;
 }

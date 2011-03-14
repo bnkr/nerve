@@ -1,0 +1,134 @@
+Introduction
+------------
+
+Para is a simple template libray to implement locking and lock-free parallelism.
+
+Monitor Library
+---------------
+
+This section is a simple overview of the monitor library from the bottom level
+classes to the top level.
+
+All monitors have a +MonitorSync+.  This is mrerely a tuple which binds together
+the two synchronisation primitices (the +Locakble+ and the +Waitable+).  One
+could use the +MonitorSync+ to fix some parameters of the types.
+
+  struct MonitorSync {
+    lockable_type &lockable();
+    condition_type &condition();
+  };
+
+The +MonitorSync+ is stored in a +MonitorActions+ type.  This exposes the lockable
+and waitable methods.  The +MonitorActions+ is really just a bridge between the
+synchronisation primitives and the sequence of calls that make up a monitor.
+The +MonitorActions+ is used to supply per-invocation parameters.
+
+  struct MonitorActions {
+    void lock();
+    void wait();
+    void unlock();
+    void notify();
+  };
+
+It is expected that in the most common usage, there would only be one strategy
+per monitor, therefore the minotorale models all hold a sync by default.  It is
+also an option to hold by reference, though.
+
+The +Monitor+ is a scoped object which ensures the proper ordering of calls.  It
+takes a +MonitorActions+ which decides the strategy for the calls themselves.  The
+monitor operates like a scoped lock.
+
+  struct Monitor {
+     // This requirement helps when the monitor is wrapping some other type
+     // (like how the +monitor+ class does).  Usually it just means a
+     // +MonitorActions+ or a +MonitorSync+.
+     Monitor(init_type &);
+
+     actions_type &actions();
+  };
+
+The pointer types respect unique pointer semantics where the object pointed to
+is monitored while the pointer is in scope.  The pointer holds the monitor type
+by value.
+
+Monitor Classes
+---------------
+
+The +monitor+ class is the most simple usage.  It represents using a single
+locking strategy.
+
+----
+struct C {
+  typedef para::default_monitor_sync sync_type;
+  typedef para::monitor<sync_type> monitor_type;
+
+  void use() {
+    monitor_type m(sync_);
+    // thread safe now
+  }
+
+  private:
+  sync_type sync_;
+};
+----
+
+The +monitor+ is based on the +basic_monitor+ template.  It uses that class with
+a default +MonitorActions+.  The following example is equivilent to the above:
+
+----
+struct C {
+  typedef para::default_monitor_sync sync_type;
+  typedef para::simple_actions<sync_type> actions_type;
+  typedef para::basic_monitor<actions_type> monitor_type;
+
+  C() : actions_(sync_) {}
+
+  void use() {
+    monitor_type m(actions_);
+    // thread safe now
+  }
+
+  // this one has a different strategy
+  void another_use() {
+    para::timed_actions strat(sync_, time(2));
+    para::monitor<para::timed_actions> m(strat_);
+    // thread safe now
+  }
+
+  private:
+  sync_type sync_;
+  actions_type actions_;
+};
+----
+
+MonitorSync Types
+-----------------
+
+All obvious:
+
+- basic_monitor_sync<Conditon, Lockable>;
+
+MonitorActions Types
+-----------------
+
+The actions classes' usage is all along the lines of the aboce examples.
+
+- simple_actions
+- lock_timed_actions
+- wait_timed_actions
+- timed_actions
+
+Pointer Types
+-------------
+
+The pointers are all used in the standard way expected for smart pointers.
+The make use of the +init_type+ member of the +Monitor+ concept so the
+monitors which directly take a +MonitorActions+ or wrap a +MonitorSync+ in its
+own +MonitorActions+.
+
+  object o;
+  monitor_ptr<object, monitor<> > ptr(o);
+  // thread safe now
+  pth->something();
+
+
