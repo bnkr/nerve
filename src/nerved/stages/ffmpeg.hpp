@@ -5,7 +5,13 @@
 
 #include "interfaces.hpp"
 
+#include "ffmpeg/file.hpp"
+#include "ffmpeg/audio_stream.hpp"
+#include "ffmpeg/audio_decoder.hpp"
+
 namespace stages {
+  namespace ff = ::fmpeg;
+
   class ffmpeg : public pipeline::input_stage {
     public:
     typedef pipeline::input_stage::skip_type skip_type;
@@ -19,6 +25,12 @@ namespace stages {
     void load(load_type);
     void pause();
     pipeline::packet *read();
+
+    private:
+    ff::file file_;
+    ff::audio_stream input_;
+    ff::audio_decoder decoder_;
+    ff::packet frame_;
   };
 }
 
