@@ -13,40 +13,13 @@ bconfig_project(
 )
 
 #######################
-## Check for headers ##
+## Finding Libraries ##
 #######################
-
-# Unfortunately ffmpeg gets installed all over the place, so we have to check
-# this stuff to get the right include directories.
-#
-# TODO:
-#   Use bconfig.
-find_path(
-  AVCODEC_PATH
-  NAMES "avcodec.h"
-  PATHS "/usr/include/ffmpeg/libavcodec" "/usr/include/ffmpeg" "/usr/include/libavcodec"
-)
-find_path(
-  AVFORMAT_PATH
-  NAMES "avformat.h"
-  PATHS "/usr/include/ffmpeg/libavformat" "/usr/include/ffmpeg" "/usr/include/libavformat"
-)
-mark_as_advanced(AVFORMAT_PATH AVCODEC_PATH)
-
-####################
-## Check for libs ##
-####################
 
 binfo_find_lib(
   NAMES boost_filesystem-mt boost_filesystem
   VAR BOOST_FILESYSTEM_LIB
   VAR_DOC "The boost.filesystem library."
-)
-
-binfo_find_lib(
-  NAMES boost_thread-mt boost_thread
-  VAR BOOST_THREAD_LIB
-  VAR_DOC "The boost.thread library."
 )
 
 binfo_find_lib(
@@ -61,39 +34,14 @@ binfo_find_lib(
   VAR_DOC "The boost.program options commandline parser library."
 )
 
-binfo_find_lib(
-  NAMES avutil
-  VAR AVUTIL_LIB
-  VAR_DOC "Ffmpeg's utility library."
-)
-
-binfo_find_lib(
-  NAMES avcodec
-  VAR AVCODEC_LIB
-  VAR_DOC "Ffmpeg's encoding/decoding library."
-)
-
-binfo_find_lib(
-  NAMES avformat
-  VAR AVFORMAT_LIB
-  VAR_DOC "Ffmpeg's file format library."
-)
-
-# FindSDL doesn't work properly with crosscomp due to the use of sdl-config
-# binary.
-if (NOT CMAKE_CROSS_COMPILING)
-  # defines SDL_LIBRARY and all the stuff from sdl-config bin.
-  find_package(SDL)
-else()
-  message("Warning: SDL library can't be auto-detected when cross-compiling.  You may need")
-  message("         to add additional cflags and include directories.")
-  find_library(SDL_LIBRARY "SDL")
-endif()
-
 ###########################
 ## Building normal stuff ##
 ###########################
 
+# Building all the nerve programs is a bit on the complicated side so my usual
+# convention of keeping it all in one CMakeLists.txt is not used.
+
+add_subdirectory("src/nerved")
 add_subdirectory("src")
 add_subdirectory("test")
 

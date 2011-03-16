@@ -1,25 +1,11 @@
 # Copyright (C) 2011, James Webber.
 # Distributed under a 3-clause BSD license.  See COPYING.
 
-# TODO:
-#   This lot should be moved into the main directory.
-
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(defs "NERVE_DEVELOPER=1")
-  set(generated_debug EXTRA_DEBUG)
+  set(is_debug 1)
 else()
-  set(defs)
-  set(generated_debug)
+  set(is_debug 0)
 endif()
-
-bbuild_parser(
-  SOURCES_VAR parser_sources
-  TOKENS_FILE_VAR tokens_file
-  LEMON "config/grammar.lemon"
-  FLEX  "config/lexer.l"
-  CXX_FILES
-  ${generated_debug}
-)
 
 binfo_find_lib(
   VAR DL_LIB VAR_DOC "Interface to the dynamic linker"
@@ -38,6 +24,95 @@ binfo_find_lib(
   TASK nerved TASK_DOC "Boost's error checking library used by boost.asio and possilbly other bits."
   NAMES boost_system-mt boost_system
 )
+
+binfo_find_lib(
+  NAMES avutil
+  VAR AVUTIL_LIB
+  VAR_DOC "Ffmpeg's utility library."
+)
+
+binfo_find_lib(
+  NAMES avcodec
+  VAR AVCODEC_LIB
+  VAR_DOC "Ffmpeg's encoding/decoding library."
+)
+
+binfo_find_lib(
+  NAMES avformat
+  VAR AVFORMAT_LIB
+  VAR_DOC "Ffmpeg's file format library."
+)
+
+# FindSDL doesn't work properly with crosscomp due to the use of sdl-config
+# binary.
+if (NOT CMAKE_CROSS_COMPILING)
+  # defines SDL_LIBRARY and all the stuff from sdl-config bin.
+  find_package(SDL)
+else()
+  message("Warning: SDL library can't be auto-detected when cross-compiling.  You may need")
+  message("         to add additional cflags and include directories.")
+  find_library(SDL_LIBRARY "SDL")
+endif()
+
+
+# TODO:
+#   This doesn't work because you need to give extra PATHS.
+# binfo_find_dir(
+#   VAR "AVUTIL_H_PATH" VAR_DOC "Path to ffmpeg's avutil.h"
+#   NAME "avutil.h"
+#   TASK "nerved"
+#   TASK_DOC "FFmpeg's avutil include dir.  Distros put ffmpeg in differend places so this path is used to change the -I flags."
+# )
+
+foreach (file avcodec avformat)
+  string(TOUPPER "${file}" file_uc)
+  set(cache_var "${file_uc}_H_PATH")
+  find_path(
+    "${cache_var}"
+    NAMES "${file}.h"
+    DOC "Path to ffmpeg's ${file}.h"
+    PATHS
+      "/usr/include/ffmpeg/lib${file}"
+      "/usr/include/ffmpeg"
+      "/usr/include/lib${file}"
+  )
+
+  binfo_set_task_docs(
+    CACHE_VAR "${cache_var}"
+    TASK "nerved"
+    TASK_DOC
+      "FFmpeg's ${file} include dir.  Distros put ffmpeg in differend places so "
+      "this path is used to change the -I flags."
+  )
+
+  mark_as_advanced(${cache_var})
+
+  if (${cache_var})
+    include_directories("${${cache_var}}")
+  endif()
+endforeach()
+
+if (is_debug)
+  set(generated_debug EXTRA_DEBUG)
+else()
+  set(generated_debug)
+endif()
+
+bbuild_parser(
+  SOURCES_VAR parser_sources
+  TOKENS_FILE_VAR tokens_file
+  LEMON "config/grammar.lemon"
+  FLEX  "config/lexer.l"
+  CXX_FILES
+  ${generated_debug}
+)
+
+if (is_debug)
+  # Primary controller of debug messing about.  See the defines.hpp files.
+  set(defs "NERVE_DEVELOPER=1")
+else()
+  set(defs)
+endif()
 
 bbuild_exe(
   TARGET
@@ -81,13 +156,15 @@ bbuild_exe(
     # Dependncy on this is handled by bbuild_parser.
     "TOKENS_FILE=\"${tokens_file}\""
     # TODO:
-    #   This should be done using NERVED_CONFIG, really.
+    #   This should be done using a macro location to the configure file rather
+    #   than making a huge command-line.
     "NERVED_VERSION=\"${PROJECT_VERSION}\""
     ${defs}
   LIBS
     ${DL_LIB} ${BOOST_SYSTEM_LIB} ${BOOST_THREAD_LIB}
   POSSIBLE_VARS
-  LEMON_EXE FLEX_EXE DL_LIB BOOST_SYSTEM_LIB BOOST_THREAD_LIB
+    LEMON_EXE FLEX_EXE DL_LIB BOOST_SYSTEM_LIB BOOST_THREAD_LIB
+    AVCODEC_H_PATH AVFORMAT_H_PATH
 )
 
 # Wine fails to load dlls if this isn't set.  Don't ask why :)
