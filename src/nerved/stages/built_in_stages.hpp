@@ -12,7 +12,7 @@
 #define STAGES_BUILT_IN_STAGES_HPP_nv6wksg4
 
 #include "information.hpp"
-#include "ffmpeg.hpp"
+#include "ffmpeg_input.hpp"
 #include "sdl.hpp"
 
 #endif

@@ -15,14 +15,14 @@ file::file(const char *const file) {
   // what is this buffer size for?
   const std::size_t buffer_size = 0;
 
-  int ret = av_open_input_file(&format_, file, forced_format, buffer_size, parameters);
+  int ret = ::av_open_input_file(&format_, file, forced_format, buffer_size, parameters);
   if (ret != 0) {
     // TODO: why?  Have to do some of my own validation here I guess.
     throw file_error("couldn't open file");
   }
   assert(format_ != NULL);
 
-  ret = av_find_stream_info(format_);
+  ret = ::av_find_stream_info(format_);
   // TODO:
   //   this fails whenever I open one of my .avi with error code 22.  I can't work
   //   out what this means, and since the code is exactly the same as the tutorial

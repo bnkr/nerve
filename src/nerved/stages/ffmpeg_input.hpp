@@ -1,18 +1,17 @@
 // Copyright (C) 2011, James Webber.
 // Distributed under a 3-clause BSD license.  See COPYING.
-#ifndef STAGES_FFMPEG_HPP_bt4bpj6o
-#define STAGES_FFMPEG_HPP_bt4bpj6o
+#ifndef STAGES_FFMPEG_INPUT_HPP_bt4bpj6o
+#define STAGES_FFMPEG_INPUT_HPP_bt4bpj6o
 
 #include "interfaces.hpp"
 
 #include "ffmpeg/file.hpp"
 #include "ffmpeg/audio_stream.hpp"
-#include "ffmpeg/audio_decoder.hpp"
+#include "ffmpeg/decode_audio.hpp"
+#include "ffmpeg/frame.hpp"
 
 namespace stages {
-  namespace ff = ::fmpeg;
-
-  class ffmpeg : public pipeline::input_stage {
+  class ffmpeg_input : public pipeline::input_stage {
     public:
     typedef pipeline::input_stage::skip_type skip_type;
     typedef pipeline::input_stage::load_type load_type;
@@ -27,10 +26,10 @@ namespace stages {
     pipeline::packet *read();
 
     private:
-    ff::file file_;
-    ff::audio_stream input_;
-    ff::audio_decoder decoder_;
-    ff::packet frame_;
+    ::ffmpeg::file file_;
+    ::ffmpeg::audio_stream stream_;
+    ::ffmpeg::frame frame_;
+    ::ffmpeg::sample_buffer buffer_;
   };
 }
 

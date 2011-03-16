@@ -5,7 +5,11 @@
 
 #include "avlibs.hpp"
 
+#include <algorithm> // swap
+
 namespace ffmpeg {
+  struct frame;
+
   //! \ingroup grp_ffmpeg
   //! Human-readable duration.
   struct human_duration {
@@ -23,19 +27,28 @@ namespace ffmpeg {
     public:
     typedef ffmpeg::human_duration human_duration_type;
 
-    //! \name Constructors/Destructors
+    //! \name Resources
     //@{
 
+    file() : format_(NULL) {}
     //! Open the header and inspect the streams.
-    file(const char * const file);
-    ~file() { ::av_close_input_file(format_); }
+    file(const char * const file) { this->open(file); }
+    ~file() {
+      if (format_) {
+        ::av_close_input_file(format_);
+      }
+    }
+    bool open(const char *const);
+    void swap(ffmpeg::file &other) {
+      std::swap(this->format_, other.format_);
+    }
 
     //@}
 
     //! \name FFmpeg Accessors
     //@{
 
-    //! \brief Return the ffmpeg struct.  Prefer the format accessor members.
+    //! Return the ffmpeg struct.  Prefer the format accessor members.
     const AVFormatContext *av_format_context() const { return format_; };
     AVFormatContext *av_format_context() { return format_; }
 
@@ -94,5 +107,9 @@ namespace ffmpeg {
     private:
     AVFormatContext *format_;
   };
+
+  //! \ingroup grp_ffmpeg
+  //! Read a frame out of file.
+  void read_frame(ffmpeg::frame &, ffmpeg::file &);
 }
 #endif

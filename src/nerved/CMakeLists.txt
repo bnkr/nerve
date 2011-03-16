@@ -144,7 +144,7 @@ bbuild_exe(
     util/pooled.cpp
     stages/information.cpp
     stages/create.cpp
-    stages/ffmpeg.cpp
+    stages/ffmpeg_input.cpp
     stages/sdl.cpp
     btrace/crash_detector.cpp
     btrace/backtrace.cpp

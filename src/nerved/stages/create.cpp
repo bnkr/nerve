@@ -26,7 +26,7 @@ namespace {
     if (sd.built_in()) {
       switch (sd.plugin_id()) {
       case plug_id::ffmpeg:
-        return allocate<stages::ffmpeg>(alloc);
+        return allocate<stages::ffmpeg_input>(alloc);
       case plug_id::sdl:
         return allocate<stages::sdl>(alloc);
       case plug_id::volume:
